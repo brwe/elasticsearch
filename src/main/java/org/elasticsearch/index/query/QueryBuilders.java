@@ -520,6 +520,16 @@ public abstract class QueryBuilders {
         return new CustomScoreQueryBuilder(queryBuilder);
     }
 
+    /**
+     * A query that allows to define a custom scoring script.
+     *
+     * @param queryBuilder The query to custom score
+     */
+    public static RecencyScoreQueryBuilder recencyScoreQuery(QueryBuilder queryBuilder) {
+        return new RecencyScoreQueryBuilder(queryBuilder);
+    }
+    
+    
     public static CustomFiltersScoreQueryBuilder customFiltersScoreQuery(QueryBuilder queryBuilder) {
         return new CustomFiltersScoreQueryBuilder(queryBuilder);
     }
