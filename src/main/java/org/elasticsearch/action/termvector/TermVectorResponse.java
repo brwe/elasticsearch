@@ -19,13 +19,8 @@
 
 package org.elasticsearch.action.termvector;
 
-import java.io.IOException;
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.Set;
-
+import com.google.common.collect.Iterators;
 import org.apache.lucene.index.DocsAndPositionsEnum;
-import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -36,7 +31,6 @@ import org.apache.lucene.util.UnicodeUtil;
 import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.termvector.TermVectorRequest.Flag;
-import org.elasticsearch.common.Base64;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
@@ -46,7 +40,10 @@ import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
 
-import com.google.common.collect.Iterators;
+import java.io.IOException;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.Set;
 
 public class TermVectorResponse extends ActionResponse implements ToXContent {
 
@@ -234,7 +231,7 @@ public class TermVectorResponse extends ActionResponse implements ToXContent {
             builder.field(FieldStrings.END_OFFSET, 0, termFreq, currentEndOffset);
         }
         if (curTerms.hasPayloads()) {
-            builder.array(FieldStrings.PAYLOAD, (Object[])currentPayloads);
+            builder.array(FieldStrings.PAYLOAD, (Object[]) currentPayloads);
         }
     }
 
@@ -251,7 +248,7 @@ public class TermVectorResponse extends ActionResponse implements ToXContent {
             if (curTerms.hasPayloads()) {
                 BytesRef curPaypoad = posEnum.getPayload();
                 currentPayloads[j] = new BytesArray(curPaypoad.bytes, 0, curPaypoad.length);
-                
+
             }
         }
     }
@@ -283,8 +280,8 @@ public class TermVectorResponse extends ActionResponse implements ToXContent {
             builder.field(FieldStrings.SUM_TTF, sumTotalTermFrequencies);
             builder.endObject();
         } else if (docCount == -1) { // this should only be -1 if the field
-                                     // statistics were not requested at all. In
-                                     // this case all 3 values should be -1
+            // statistics were not requested at all. In
+            // this case all 3 values should be -1
             assert ((sumDocFreq == -1)) : "docCount was -1 but sumDocFreq ain't!";
             assert ((sumTotalTermFrequencies == -1)) : "docCount was -1 but sumTotalTermFrequencies ain't!";
         } else {
@@ -318,6 +315,18 @@ public class TermVectorResponse extends ActionResponse implements ToXContent {
     public void setDocVersion(long version) {
         this.docVersion = version;
 
+    }
+
+    public String getIndex() {
+        return index;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public String getId() {
+        return id;
     }
 
 }

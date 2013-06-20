@@ -39,13 +39,15 @@ import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.mlt.MoreLikeThisRequest;
-import org.elasticsearch.action.termvector.TermVectorRequest;
-import org.elasticsearch.action.termvector.TermVectorResponse;
 import org.elasticsearch.action.percolate.PercolateRequest;
 import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.search.*;
 import org.elasticsearch.action.suggest.SuggestRequest;
 import org.elasticsearch.action.suggest.SuggestResponse;
+import org.elasticsearch.action.termvector.MultiTermVectorsRequest;
+import org.elasticsearch.action.termvector.MultiTermVectorsResponse;
+import org.elasticsearch.action.termvector.TermVectorRequest;
+import org.elasticsearch.action.termvector.TermVectorResponse;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.AdminClient;
@@ -431,10 +433,25 @@ public class TransportClient extends AbstractClient {
     public void moreLikeThis(MoreLikeThisRequest request, ActionListener<SearchResponse> listener) {
         internalClient.moreLikeThis(request, listener);
     }
-    
+
+    @Override
+    public ActionFuture<TermVectorResponse> termVector(TermVectorRequest request) {
+        return internalClient.termVector(request);
+    }
+
     @Override
     public void termVector(TermVectorRequest request, ActionListener<TermVectorResponse> listener) {
         internalClient.termVector(request, listener);
+    }
+
+    @Override
+    public ActionFuture<MultiTermVectorsResponse> multiTermVectors(final MultiTermVectorsRequest request) {
+        return internalClient.multiTermVectors(request);
+    }
+
+    @Override
+    public void multiTermVectors(final MultiTermVectorsRequest request, final ActionListener<MultiTermVectorsResponse> listener) {
+        internalClient.multiTermVectors(request, listener);
     }
 
     @Override
