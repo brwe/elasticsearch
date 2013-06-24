@@ -49,8 +49,8 @@ public class MultiTermVectorsRequestBuilder extends ActionRequestBuilder<MultiTe
         return this;
     }
 
-    public MultiTermVectorsRequestBuilder add(MultiTermVectorsRequest.Item item) {
-        request.add(item);
+    public MultiTermVectorsRequestBuilder add(TermVectorRequest termVectorRequest) {
+        request.add(termVectorRequest);
         return this;
     }
 
