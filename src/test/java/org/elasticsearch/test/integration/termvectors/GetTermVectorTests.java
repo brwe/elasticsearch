@@ -124,9 +124,9 @@ public class GetTermVectorTests extends AbstractSharedClusterTest {
         TopDocs search = s.search(new TermQuery(new Term("id", "abc")), 1);
         ScoreDoc[] scoreDocs = search.scoreDocs;
         int doc = scoreDocs[0].doc;
-        Fields fields = dr.getTermVectors(doc);
+        Fields termVectors = dr.getTermVectors(doc);
         EnumSet<Flag> flags = EnumSet.of(Flag.Positions, Flag.Offsets);
-        outResponse.setFields(fields, null, flags, fields);
+        outResponse.setFields(termVectors, null, flags, termVectors);
 
     }
 

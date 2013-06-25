@@ -297,9 +297,9 @@ public class TermVectorResponse extends ActionResponse implements ToXContent {
         return headerRef != null;
     }
 
-    public void setFields(Fields fields, Set<String> selectedFields, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
+    public void setFields(Fields termVectorsByField, Set<String> selectedFields, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
         TermVectorWriter tvw = new TermVectorWriter(this);
-        tvw.setFields(fields, selectedFields, flags, topLevelFields);
+        tvw.setFields(termVectorsByField, selectedFields, flags, topLevelFields);
 
     }
 
