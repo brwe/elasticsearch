@@ -58,6 +58,7 @@ import org.testng.annotations.BeforeMethod;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -317,6 +318,11 @@ public abstract class AbstractSharedClusterTest extends ElasticsearchTestCase {
     protected IndexResponse index(String index, String type, XContentBuilder source) {
         return client().prepareIndex(index, type).setSource(source).execute().actionGet();
     }
+
+    protected IndexResponse index(String index, String type, String id, Map<String, Object> source) {
+        return client().prepareIndex(index, type, id).setSource(source).execute().actionGet();
+    }
+
 
     protected GetResponse get(String index, String type, String id) {
         return client().prepareGet(index, type, id).execute().actionGet();
