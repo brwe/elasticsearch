@@ -85,11 +85,13 @@ public class MultiTermVectorsRequest extends ActionRequest<MultiTermVectorsReque
         return validationException;
     }
 
-    public void add(@Nullable String defaultIndex, @Nullable String defaultType, @Nullable String[] defaultFields, byte[] data, int from, int length) throws Exception {
+    public void add(@Nullable String defaultIndex, @Nullable String defaultType, @Nullable String[] defaultFields,
+                    byte[] data, int from, int length) throws Exception {
         add(defaultIndex, defaultType, defaultFields, new BytesArray(data, from, length));
     }
 
-    public void add(@Nullable String defaultIndex, @Nullable String defaultType, @Nullable String[] defaultFields, BytesReference data) throws Exception {
+    public void add(@Nullable String defaultIndex, @Nullable String defaultType,
+                    @Nullable String[] defaultFields, BytesReference data) throws Exception {
         XContentParser parser = XContentFactory.xContent(data).createParser(data);
         try {
             XContentParser.Token token;
@@ -118,7 +120,11 @@ public class MultiTermVectorsRequest extends ActionRequest<MultiTermVectorsReque
                             if (!token.isValue()) {
                                 throw new ElasticSearchIllegalArgumentException("ids array element should only contain ids");
                             }
-                            add(new TermVectorRequest(defaultIndex, defaultType, parser.text()).selectedFields(defaultFields.clone()));
+                            TermVectorRequest tvr = new TermVectorRequest(defaultIndex, defaultType, parser.text());
+                            if (defaultFields != null) {
+                                tvr.selectedFields(defaultFields.clone());
+                            }
+                            add(tvr);
                         }
                     }
                 }

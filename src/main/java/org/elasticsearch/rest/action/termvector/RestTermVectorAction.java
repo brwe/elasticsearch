@@ -30,6 +30,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.rest.*;
+import org.elasticsearch.rest.action.support.RestXContentBuilder;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -37,6 +38,7 @@ import java.util.Set;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
+import static org.elasticsearch.rest.RestStatus.BAD_REQUEST;
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.rest.action.support.RestXContentBuilder.restContentBuilder;
 
@@ -65,16 +67,15 @@ public class RestTermVectorAction extends BaseRestHandler {
             try {
                 parser = XContentFactory.xContent(request.content()).createParser(request.content());
                 TermVectorRequest.parseRequest(termVectorRequest, parser);
-            } catch (IOException e1) {
-                Set<String> selectedFields = termVectorRequest.selectedFields();
-                String fieldString = "all";
-                if (selectedFields != null) {
-                    Strings.arrayToDelimitedString(termVectorRequest.selectedFields().toArray(new String[1]), " ");
+            } catch (IOException e) {
+                try {
+                    XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
+                    channel.sendResponse(new XContentRestResponse(request, BAD_REQUEST, builder.startObject().field("error", e.getMessage()).endObject()));
+
+                } catch (IOException e1) {
+                    logger.warn("Failed to send response", e1);
+                    return;
                 }
-                logger.error("Something is wrong with your parameters for the term vector request. I am using parameters "
-                        + "\n positions :" + termVectorRequest.positions() + "\n offsets :" + termVectorRequest.offsets() + "\n payloads :"
-                        + termVectorRequest.payloads() + "\n termStatistics :" + termVectorRequest.termStatistics()
-                        + "\n fieldStatistics :" + termVectorRequest.fieldStatistics() + "\nfields " + fieldString, (Object) null);
             } finally {
                 if (parser != null) {
                     parser.close();
