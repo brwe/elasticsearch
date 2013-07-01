@@ -109,7 +109,7 @@ public class MultiTermVectorsRequest extends ActionRequest<MultiTermVectorsReque
 
                             TermVectorRequest.parseRequest(termVectorRequest, parser);
 
-                            if (termVectorRequest.selectedFields() == null) {
+                            if (defaultFields != null) {
                                 termVectorRequest.selectedFields(defaultFields.clone());
                             }
 
