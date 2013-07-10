@@ -133,6 +133,7 @@ public abstract class AbstractTermVectorTests extends AbstractSharedClusterTest 
 
         @Override
         public String toString() {
+
             StringBuilder sb = new StringBuilder("index:").append(index).append(" type:").append(type).append(" id:").append(id);
             for (int i = 0; i < fieldSettings.length; i++) {
                 TestFieldSetting f = fieldSettings[i];
@@ -178,7 +179,8 @@ public abstract class AbstractTermVectorTests extends AbstractSharedClusterTest 
             if (requestPayloads) {
                 requested += "payload,";
             }
-            return String.format("(doc: %s\n requested: %s, fields: %s)",
+            Locale aLocale = new Locale("en","US");
+            return String.format(aLocale, "(doc: %s\n requested: %s, fields: %s)",
                     doc, requested, selectedFields == null ? "NULL" : Join.join(",", selectedFields));
         }
     }
