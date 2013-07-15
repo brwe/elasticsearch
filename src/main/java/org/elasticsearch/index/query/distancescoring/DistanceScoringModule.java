@@ -18,16 +18,14 @@
  */
 package org.elasticsearch.index.query.distancescoring;
 
+import com.google.common.collect.Lists;
+import org.elasticsearch.common.inject.AbstractModule;
+import org.elasticsearch.common.inject.multibindings.Multibinder;
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionParser;
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionParser;
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionParser;
 
 import java.util.List;
-
-import org.elasticsearch.common.inject.AbstractModule;
-import org.elasticsearch.common.inject.multibindings.Multibinder;
-
-import com.google.common.collect.Lists;
 
 /**
  *

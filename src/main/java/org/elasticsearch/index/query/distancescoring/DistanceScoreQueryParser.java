@@ -19,10 +19,6 @@
 
 package org.elasticsearch.index.query.distancescoring;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Set;
-
 import org.apache.lucene.search.Query;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
@@ -32,6 +28,10 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParser;
 import org.elasticsearch.index.query.QueryParsingException;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Set;
 
 /**
  *

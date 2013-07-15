@@ -19,12 +19,12 @@
 
 package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
 
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionBuilder;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionBuilder;
 
 public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctionBuilder {
 

@@ -19,12 +19,12 @@
 
 package org.elasticsearch.index.query.distancescoring;
 
-import java.io.IOException;
-
 import org.elasticsearch.common.lucene.search.function.ScoreFunction;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParsingException;
+
+import java.io.IOException;
 
 public interface DistanceScoreFunctionParser {
 

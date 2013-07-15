@@ -19,11 +19,11 @@
 
 package org.elasticsearch.index.query.distancescoring;
 
-import java.io.IOException;
-
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BaseQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
+
+import java.io.IOException;
 
 public class DistanceScoreQueryBuilder extends BaseQueryBuilder {
 
