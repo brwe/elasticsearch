@@ -71,8 +71,6 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.hits().length, equalTo(2));
         assertThat(sh.getAt(0).getId(), equalTo("2"));
         assertThat(sh.getAt(1).getId(), equalTo("1"));
-        System.out.println(sh.getAt(0).explanation());
-        System.out.println(sh.getAt(1).explanation());
 
     }
 
@@ -107,8 +105,6 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.getAt(0).getId(), equalTo("2"));
         assertThat(sh.getAt(1).getId(), equalTo("1"));
         assertThat(sh.getAt(2).getId(), equalTo("3"));
-        System.out.println(sh.getAt(0).explanation());
-        System.out.println(sh.getAt(1).explanation());
 
     }
 
@@ -145,9 +141,6 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
-        System.out.println(sh.getAt(0).explanation());
-        System.out.println(sh.getAt(1).explanation());
-
     }
 
 }
