@@ -327,7 +327,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
                 final GeoPoint other = geoPointValues.getValue(docId);
                 return distFunction.calculate(reference.lat(), reference.lon(), other.lat(), other.lon(), DistanceUnit.METERS);
             } else {
-                return Float.MAX_VALUE;
+                return 0.0;
             }
         }
 
@@ -370,7 +370,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
                 return valueOfDoc.getValue(docId) - reference;
 
             } else {
-                return Float.MAX_VALUE;
+                return 0.0;
             }
 
         }
