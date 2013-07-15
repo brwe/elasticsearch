@@ -28,13 +28,14 @@ import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
+
 import org.apache.lucene.search.Explanation;
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.GaussDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.LinearDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.MultiplyingFunctionBuilder;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.test.hamcrest.ElasticsearchAssertions;
 import org.elasticsearch.test.integration.AbstractSharedClusterTest;

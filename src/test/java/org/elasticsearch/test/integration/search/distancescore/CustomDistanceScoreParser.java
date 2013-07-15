@@ -1,9 +1,10 @@
 package org.elasticsearch.test.integration.search.distancescore;
 
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.CustomDecayFuntion;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionParser;
+
 import org.apache.lucene.search.ComplexExplanation;
 import org.apache.lucene.search.Explanation;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.CustomDecayFuntion;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.MultiplyingFunctionParser;
 
 public class CustomDistanceScoreParser extends MultiplyingFunctionParser {
 
