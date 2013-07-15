@@ -108,7 +108,7 @@ public class TransportSingleShardTermVectorAction extends TransportShardSingleOp
             Fields topLevelFields = MultiFields.getFields(topLevelReader);
             Versions.DocIdAndVersion docIdAndVersion = Versions.loadDocIdAndVersion(topLevelReader, uidTerm);
             if (docIdAndVersion != null) {
-                termVectorResponse.setFields(topLevelReader.getTermVectors(docIdAndVersion.docId), request.selectedFields(),
+                termVectorResponse.setFields(docIdAndVersion.reader.reader().getTermVectors(docIdAndVersion.docId), request.selectedFields(),
                         request.getFlags(), topLevelFields);
                 termVectorResponse.setDocVersion(docIdAndVersion.version);
             } else {
