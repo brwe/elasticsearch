@@ -19,8 +19,10 @@
 
 package org.elasticsearch.index.query.distancescoring;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
 import org.elasticsearch.common.lucene.search.function.ScoreFunction;
@@ -30,7 +32,6 @@ import org.elasticsearch.index.query.QueryParser;
 import org.elasticsearch.index.query.QueryParsingException;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Set;
 
 /**
@@ -40,19 +41,17 @@ public class DistanceScoreQueryParser implements QueryParser {
 
     public static final String NAME = "distance_score";
 
-    protected HashMap<String, DistanceScoreFunctionParser> functionParsers;
+    protected ImmutableMap<String, DistanceScoreFunctionParser> functionParsers;
 
     @Inject
     public DistanceScoreQueryParser(Set<DistanceScoreFunctionParser> parsers) {
 
-        functionParsers = new HashMap<String, DistanceScoreFunctionParser>();
+        MapBuilder<String, DistanceScoreFunctionParser> builder = MapBuilder.newMapBuilder();
         for (DistanceScoreFunctionParser scoreFunctionParser : parsers) {
-            addParser(scoreFunctionParser);
+            builder.put(scoreFunctionParser.getName(), scoreFunctionParser);
         }
-    }
+        this.functionParsers = builder.immutableMap();
 
-    private void addParser(DistanceScoreFunctionParser scoreFunctionParser) {
-        functionParsers.put(scoreFunctionParser.getName(), scoreFunctionParser);
     }
 
     @Override
