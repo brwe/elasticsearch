@@ -97,7 +97,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
     /**
      * Override this function if you want to produce your own scorer.
      * */
-    public abstract CustomDecayFuntion getDecayFunction();
+    public abstract CustomDecayFunction getDecayFunction();
 
     /**
      * Parses bodies of the kind
@@ -309,7 +309,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         private GeoDistance distFunction;
 
-        public GeoFieldDataScoreFunction(double scale, CustomDecayFuntion func, GeoPoint reference, IndexGeoPointFieldData<?> fieldData) {
+        public GeoFieldDataScoreFunction(double scale, CustomDecayFunction func, GeoPoint reference, IndexGeoPointFieldData<?> fieldData) {
             super(scale, func);
             this.reference = reference;
             this.distFunction = GeoDistance.fromString("arc");
@@ -353,7 +353,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         double reference = 0;
 
-        public NumericFieldDataScoreFunction(double scale, CustomDecayFuntion func, double reference, IndexNumericFieldData<?> valueOfDoc) {
+        public NumericFieldDataScoreFunction(double scale, CustomDecayFunction func, double reference, IndexNumericFieldData<?> valueOfDoc) {
             super(scale, func);
             this.fieldData = valueOfDoc;
             this.reference = reference;
@@ -394,9 +394,9 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
     public static abstract class AbstractDistanceScoreFunction implements ScoreFunction {
 
         private final double scale;
-        private final CustomDecayFuntion func;
+        private final CustomDecayFunction func;
 
-        public AbstractDistanceScoreFunction(double scale, CustomDecayFuntion func) {
+        public AbstractDistanceScoreFunction(double scale, CustomDecayFunction func) {
             this.scale = scale;
             this.func = func;
         }

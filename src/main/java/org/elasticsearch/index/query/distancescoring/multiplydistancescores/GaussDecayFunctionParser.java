@@ -24,26 +24,26 @@ import org.apache.lucene.search.Explanation;
 
 public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
 
-    static CustomDecayFuntion distanceFunction = new GaussScoreFunction();
+    static CustomDecayFunction distanceFunction = new GaussScoreFunction();
     public static String NAME = "gauss";
 
     @Override
-    public CustomDecayFuntion getDecayFunction() {
+    public CustomDecayFunction getDecayFunction() {
         return distanceFunction;
     }
 
-    static class GaussScoreFunction implements CustomDecayFuntion {
+    static class GaussScoreFunction implements CustomDecayFunction {
 
         @Override
         public double evaluate(double value, double scale) {
-            return (float) Math.exp(-0.5 * (value * value) / Math.pow(scale, 2.0));
+            return (float) Math.exp(-0.5 * Math.pow(value, 2.0) / Math.pow(scale, 2.0));
         }
 
         @Override
         public Explanation explainFunction(String distance, double distanceVal, double scale) {
             ComplexExplanation ce = new ComplexExplanation();
             ce.setValue((float) evaluate(distanceVal, scale));
-            ce.setDescription("exp(-0.5*pow(" + distance + ",2.0)/" + scale + ")");
+            ce.setDescription("exp(-0.5*pow(" + distance + ",2.0)/" + "pow(" + scale + ",2.0)" + ")");
             return ce;
 
         }

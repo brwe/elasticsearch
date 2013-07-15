@@ -31,14 +31,14 @@ public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
         return NAME;
     }
 
-    static CustomDecayFuntion distanceFunction = new LinearDecayScoreFunction();
+    static CustomDecayFunction distanceFunction = new LinearDecayScoreFunction();
 
     @Override
-    public CustomDecayFuntion getDecayFunction() {
+    public CustomDecayFunction getDecayFunction() {
         return distanceFunction;
     }
 
-    static class LinearDecayScoreFunction implements CustomDecayFuntion {
+    static class LinearDecayScoreFunction implements CustomDecayFunction {
 
         @Override
         public double evaluate(double value, double scale) {
