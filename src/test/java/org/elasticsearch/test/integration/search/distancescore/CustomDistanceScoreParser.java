@@ -32,13 +32,13 @@ public class CustomDistanceScoreParser extends MultiplyingFunctionParser {
 
         @Override
         public double evaluate(double value, double scale) {
-            return (float) Math.abs(value);
+            return Math.abs(value);
         }
 
         @Override
         public Explanation explainFunction(String distanceString, double distanceVal, double scale) {
             ComplexExplanation ce = new ComplexExplanation();
-            ce.setDescription("No explanaition");
+            ce.setDescription("" + distanceVal);
             return ce;
         }
     }
