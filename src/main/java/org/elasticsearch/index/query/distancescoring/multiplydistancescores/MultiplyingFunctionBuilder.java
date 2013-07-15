@@ -28,12 +28,9 @@ import java.util.List;
 
 public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctionBuilder {
 
-    List<Var> vars = null;
+    List<Var> vars = new ArrayList<Var>();;
 
     public void addVariable(String fieldName, String scale, String reference) {
-        if (vars == null) {
-            vars = new ArrayList<Var>();
-        }
         vars.add(new Var(fieldName, reference, scale));
     }
 
