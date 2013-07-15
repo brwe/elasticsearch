@@ -21,7 +21,7 @@ package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
 
 public class ExponentialDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = new String("exp");
+    private static String NAME = "exp";
 
     @Override
     public String getName() {

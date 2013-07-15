@@ -21,7 +21,7 @@ package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
 
 public class GaussDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = new String("gauss");
+    private static String NAME = "gauss";
 
     @Override
     public String getName() {
