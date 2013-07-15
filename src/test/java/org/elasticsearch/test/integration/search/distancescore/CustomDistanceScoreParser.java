@@ -1,6 +1,6 @@
 package org.elasticsearch.test.integration.search.distancescore;
 
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.CustomDecayFuntion;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.CustomDecayFunction;
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionParser;
 
 import org.apache.lucene.search.ComplexExplanation;
@@ -15,18 +15,18 @@ public class CustomDistanceScoreParser extends MultiplyingFunctionParser {
         return NAME;
     }
 
-    static CustomDecayFuntion distanceFunction;
+    static CustomDecayFunction distanceFunction;
 
     public CustomDistanceScoreParser() {
         distanceFunction = new LinearMultScoreFunction();
     }
 
     @Override
-    public CustomDecayFuntion getDecayFunction() {
+    public CustomDecayFunction getDecayFunction() {
         return distanceFunction;
     }
 
-    static class LinearMultScoreFunction implements CustomDecayFuntion {
+    static class LinearMultScoreFunction implements CustomDecayFunction {
         LinearMultScoreFunction() {
         }
 
