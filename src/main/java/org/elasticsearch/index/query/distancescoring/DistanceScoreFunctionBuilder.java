@@ -17,21 +17,12 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.simplemultiply;
+package org.elasticsearch.index.query.distancescoring;
 
-import org.apache.lucene.search.Explanation;
+import org.elasticsearch.common.xcontent.ToXContent;
 
-/**
- * Implement this interface to provide a decay function that is executed on a
- * distance. For example, this could be an exponential drop of, a triangle
- * function or something of the kind. This is used, for example, by
- * {@link GaussDecayFunctionParser}.
- * 
- * */
+public interface DistanceScoreFunctionBuilder extends ToXContent {
 
-public interface CustomDecayFuntion {
-    public double evaluate(double value, double scale);
-
-    public Explanation explainFunction(String distance, double distanceVal, double scale);
+    public String getName();
 
 }

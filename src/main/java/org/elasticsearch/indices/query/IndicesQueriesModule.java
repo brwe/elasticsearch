@@ -24,7 +24,7 @@ import org.elasticsearch.common.geo.ShapesAvailability;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
 import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.query.distancescoring.FunctionScoreQueryParser;
+import org.elasticsearch.index.query.distancescoring.DistanceScoreQueryParser;
 
 import java.util.Set;
 
@@ -105,7 +105,7 @@ public class IndicesQueriesModule extends AbstractModule {
         qpBinders.addBinding().to(IndicesQueryParser.class).asEagerSingleton();
         qpBinders.addBinding().to(CommonTermsQueryParser.class).asEagerSingleton();
         qpBinders.addBinding().to(SpanMultiTermQueryParser.class).asEagerSingleton();
-        qpBinders.addBinding().to(FunctionScoreQueryParser.class).asEagerSingleton();
+        qpBinders.addBinding().to(DistanceScoreQueryParser.class).asEagerSingleton();
 
         if (ShapesAvailability.JTS_AVAILABLE) {
             qpBinders.addBinding().to(GeoShapeQueryParser.class).asEagerSingleton();

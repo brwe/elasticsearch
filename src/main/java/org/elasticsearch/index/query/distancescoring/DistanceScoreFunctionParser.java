@@ -17,15 +17,24 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.simplemultiply;
+package org.elasticsearch.index.query.distancescoring;
 
-public class GaussDecayFunctionBuilder extends MultiplyingFunctionBuilder {
+import java.io.IOException;
 
-    private static String NAME = new String("gauss");
+import org.elasticsearch.common.lucene.search.function.ScoreFunction;
+import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.query.QueryParseContext;
+import org.elasticsearch.index.query.QueryParsingException;
 
-    @Override
-    public String getName() {
-        return NAME;
-    }
+public interface DistanceScoreFunctionParser {
+
+    public ScoreFunction parse(QueryParseContext parseContext, XContentParser parser) throws IOException, QueryParsingException;
+
+    /**
+     * Returns the name of the function, for example "linear", "gauss" etc. This
+     * name is used for registering the parser in
+     * {@link DistanceScoreQueryParser}.
+     * */
+    public String getName();
 
 }

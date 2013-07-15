@@ -25,11 +25,11 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BaseQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 
-public class FunctionScoreQueryBuilder extends BaseQueryBuilder {
+public class DistanceScoreQueryBuilder extends BaseQueryBuilder {
 
     private final QueryBuilder queryBuilder;
 
-    private ScoreFunctionBuilder scoreBuilder;
+    private DistanceScoreFunctionBuilder scoreBuilder;
 
     /**
      * A query that multiplies the score computed by another query with a
@@ -41,17 +41,17 @@ public class FunctionScoreQueryBuilder extends BaseQueryBuilder {
      *            The query to apply the boost factor to.
      * @param scoreBuilder
      */
-    public FunctionScoreQueryBuilder(QueryBuilder queryBuilder, ScoreFunctionBuilder scoreBuilder) {
+    public DistanceScoreQueryBuilder(QueryBuilder queryBuilder, DistanceScoreFunctionBuilder scoreBuilder) {
         this.queryBuilder = queryBuilder;
         this.scoreBuilder = scoreBuilder;
     }
 
     @Override
     protected void doXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject(FunctionScoreQueryParser.NAME);
+        builder.startObject(DistanceScoreQueryParser.NAME);
         builder.field("query");
         queryBuilder.toXContent(builder, params);
-        builder.field(((ScoreFunctionBuilder) scoreBuilder).getName());
+        builder.field(((DistanceScoreFunctionBuilder) scoreBuilder).getName());
         scoreBuilder.toXContent(builder, params);
         builder.endObject();
     }

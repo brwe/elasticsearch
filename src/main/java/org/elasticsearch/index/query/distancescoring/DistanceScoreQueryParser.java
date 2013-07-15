@@ -36,22 +36,22 @@ import org.elasticsearch.index.query.QueryParsingException;
 /**
  *
  */
-public class FunctionScoreQueryParser implements QueryParser {
+public class DistanceScoreQueryParser implements QueryParser {
 
     public static final String NAME = "distance_score";
 
-    protected HashMap<String, ScoreFunctionParser> functionParsers;
+    protected HashMap<String, DistanceScoreFunctionParser> functionParsers;
 
     @Inject
-    public FunctionScoreQueryParser(Set<ScoreFunctionParser> parsers) {
+    public DistanceScoreQueryParser(Set<DistanceScoreFunctionParser> parsers) {
 
-        functionParsers = new HashMap<String, ScoreFunctionParser>();
-        for (ScoreFunctionParser scoreFunctionParser : parsers) {
+        functionParsers = new HashMap<String, DistanceScoreFunctionParser>();
+        for (DistanceScoreFunctionParser scoreFunctionParser : parsers) {
             addParser(scoreFunctionParser);
         }
     }
 
-    private void addParser(ScoreFunctionParser scoreFunctionParser) {
+    private void addParser(DistanceScoreFunctionParser scoreFunctionParser) {
         functionParsers.put(scoreFunctionParser.getName(), scoreFunctionParser);
     }
 
@@ -75,7 +75,7 @@ public class FunctionScoreQueryParser implements QueryParser {
                 if ("query".equals(currentFieldName)) {
                     query = parseContext.parseInnerQuery();
                 } else {
-                    ScoreFunctionParser scoreFunctionParser = functionParsers.get(currentFieldName);
+                    DistanceScoreFunctionParser scoreFunctionParser = functionParsers.get(currentFieldName);
                     if (scoreFunctionParser == null) {
                         throw new QueryParsingException(parseContext.index(), "[distance_score] query does not support ["
                                 + currentFieldName + "]");

@@ -24,9 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.distancescoring.ScoreFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionBuilder;
 
-public abstract class MultiplyingFunctionBuilder implements ScoreFunctionBuilder {
+public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctionBuilder {
 
     List<Var> vars = null;
 

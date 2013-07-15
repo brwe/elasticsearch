@@ -20,8 +20,8 @@
 package org.elasticsearch.index.query;
 
 
-import org.elasticsearch.index.query.distancescoring.FunctionScoreQueryBuilder;
-import org.elasticsearch.index.query.distancescoring.ScoreFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.DistanceScoreQueryBuilder;
+import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionBuilder;
 
 import java.util.Collection;
 
@@ -540,8 +540,8 @@ public abstract class QueryBuilders {
      * @param queryBuilder The original query.
      * @param scoreBuilder The builder for computing the distance dependent multiplier.
      */
-    public static FunctionScoreQueryBuilder distanceScoreQuery(QueryBuilder queryBuilder, ScoreFunctionBuilder scoreBuilder) {
-        return new FunctionScoreQueryBuilder(queryBuilder, scoreBuilder);
+    public static DistanceScoreQueryBuilder distanceScoreQuery(QueryBuilder queryBuilder, DistanceScoreFunctionBuilder scoreBuilder) {
+        return new DistanceScoreQueryBuilder(queryBuilder, scoreBuilder);
     }
     
     

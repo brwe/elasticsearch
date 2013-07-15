@@ -44,7 +44,7 @@ import org.elasticsearch.index.mapper.core.NumberFieldMapper;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper.GeoStringFieldMapper;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParsingException;
-import org.elasticsearch.index.query.distancescoring.ScoreFunctionParser;
+import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionParser;
 import org.elasticsearch.search.internal.SearchContext;
 
 /**
@@ -92,7 +92,7 @@ import org.elasticsearch.search.internal.SearchContext;
  * 
  * **/
 
-public abstract class MultiplyingFunctionParser implements ScoreFunctionParser {
+public abstract class MultiplyingFunctionParser implements DistanceScoreFunctionParser {
 
     /**
      * Override this function if you want to produce your own scorer.

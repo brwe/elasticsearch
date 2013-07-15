@@ -18,13 +18,14 @@
  */
 package org.elasticsearch.index.query.distancescoring;
 
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionParser;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionParser;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionParser;
+
 import java.util.List;
 
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.ExponentialDecayFunctionParser;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.GaussDecayFunctionParser;
-import org.elasticsearch.index.query.distancescoring.simplemultiply.LinearDecayFunctionParser;
 
 import com.google.common.collect.Lists;
 
@@ -33,7 +34,7 @@ import com.google.common.collect.Lists;
  */
 public class DistanceScoringModule extends AbstractModule {
 
-    private List<Class<? extends ScoreFunctionParser>> parsers = Lists.newArrayList();
+    private List<Class<? extends DistanceScoreFunctionParser>> parsers = Lists.newArrayList();
 
     public DistanceScoringModule() {
         registerParser(LinearDecayFunctionParser.class);
@@ -41,14 +42,14 @@ public class DistanceScoringModule extends AbstractModule {
         registerParser(ExponentialDecayFunctionParser.class);
     }
 
-    public void registerParser(Class<? extends ScoreFunctionParser> parser) {
+    public void registerParser(Class<? extends DistanceScoreFunctionParser> parser) {
         parsers.add(parser);
     }
 
     @Override
     protected void configure() {
-        Multibinder<ScoreFunctionParser> parserMapBinder = Multibinder.newSetBinder(binder(), ScoreFunctionParser.class);
-        for (Class<? extends ScoreFunctionParser> clazz : parsers) {
+        Multibinder<DistanceScoreFunctionParser> parserMapBinder = Multibinder.newSetBinder(binder(), DistanceScoreFunctionParser.class);
+        for (Class<? extends DistanceScoreFunctionParser> clazz : parsers) {
             parserMapBinder.addBinding().to(clazz);
         }
     }
