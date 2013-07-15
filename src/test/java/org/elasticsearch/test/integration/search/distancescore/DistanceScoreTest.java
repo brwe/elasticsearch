@@ -28,6 +28,8 @@ import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+import org.hamcrest.Matchers;
+
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionBuilder;
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionBuilder;
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
@@ -72,7 +74,6 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         System.out.println(sh.getAt(0).explanation());
         System.out.println(sh.getAt(1).explanation());
 
-
     }
 
     @Test
@@ -109,7 +110,6 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         System.out.println(sh.getAt(0).explanation());
         System.out.println(sh.getAt(1).explanation());
 
-
     }
 
     @Test
@@ -126,7 +126,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         refresh();
 
         MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
-        gfb.addGeoVariable("loc", 11, 20, "100km");
+        gfb.addGeoVariable("loc", 11, 20, "1000km");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -142,11 +142,11 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         sh = sr.getHits();
         assertThat(sh.getTotalHits(), equalTo(2l));
         assertThat(sh.hits().length, equalTo(2));
+
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
         System.out.println(sh.getAt(0).explanation());
         System.out.println(sh.getAt(1).explanation());
-
 
     }
 
