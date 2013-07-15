@@ -38,7 +38,7 @@ public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
         return distanceFunction;
     }
 
-    static class LinearDecayScoreFunction implements CustomDecayFunction {
+    final static class LinearDecayScoreFunction implements CustomDecayFunction {
 
         @Override
         public double evaluate(double value, double scale) {

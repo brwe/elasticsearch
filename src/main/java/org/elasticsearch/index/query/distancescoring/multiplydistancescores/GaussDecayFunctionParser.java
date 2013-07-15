@@ -32,7 +32,7 @@ public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
         return distanceFunction;
     }
 
-    static class GaussScoreFunction implements CustomDecayFunction {
+    final static class GaussScoreFunction implements CustomDecayFunction {
 
         @Override
         public double evaluate(double value, double scale) {

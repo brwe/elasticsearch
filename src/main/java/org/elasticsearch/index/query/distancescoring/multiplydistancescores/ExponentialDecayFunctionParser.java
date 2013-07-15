@@ -38,7 +38,7 @@ public class ExponentialDecayFunctionParser extends MultiplyingFunctionParser {
         return distanceFunction;
     }
 
-    static class ExponentialDecayScoreFunction implements CustomDecayFunction {
+    final static class ExponentialDecayScoreFunction implements CustomDecayFunction {
 
         @Override
         public double evaluate(double value, double scale) {
