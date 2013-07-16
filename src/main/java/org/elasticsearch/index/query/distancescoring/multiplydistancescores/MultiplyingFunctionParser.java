@@ -320,7 +320,8 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         private GeoDistance distFunction;
 
-        public GeoFieldDataScoreFunction(GeoPoint reference, double scale, double scaleWeight, CustomDecayFunction func, IndexGeoPointFieldData<?> fieldData) {
+        public GeoFieldDataScoreFunction(GeoPoint reference, double scale, double scaleWeight, CustomDecayFunction func,
+                IndexGeoPointFieldData<?> fieldData) {
             super(scale, scaleWeight, func);
             this.reference = reference;
             this.distFunction = GeoDistance.fromString("arc");
@@ -358,7 +359,8 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         double reference = 0;
 
-        public NumericFieldDataScoreFunction(double reference, double scale, double scaleWeight, CustomDecayFunction func, IndexNumericFieldData<?> valueOfDoc) {
+        public NumericFieldDataScoreFunction(double reference, double scale, double scaleWeight, CustomDecayFunction func,
+                IndexNumericFieldData<?> valueOfDoc) {
             super(scale, scaleWeight, func);
             this.fieldData = valueOfDoc;
             this.reference = reference;
@@ -370,7 +372,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         @Override
         protected double distance(int docId) {
-            return valueOfDoc.getValueMissing(docId, reference)-reference;
+            return valueOfDoc.getValueMissing(docId, reference) - reference;
         }
 
         @Override
@@ -394,11 +396,12 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         private final CustomDecayFunction func;
 
         public AbstractDistanceScoreFunction(double userSuppiedScale, double userSuppliedScaleWeight, CustomDecayFunction func) {
-            if (userSuppiedScale<=0.0) {
+            if (userSuppiedScale <= 0.0) {
                 throw new ElasticSearchIllegalArgumentException("Supplied scale for distance_scoring must be > 0.0.");
             }
-            if (userSuppliedScaleWeight<=0.0 || userSuppliedScaleWeight >=1.0) {
-                throw new ElasticSearchIllegalArgumentException("Supplied value for scale computation in distance_scoring must bein the range ]0.0, 1.0[.");
+            if (userSuppliedScaleWeight <= 0.0 || userSuppliedScaleWeight >= 1.0) {
+                throw new ElasticSearchIllegalArgumentException(
+                        "Supplied value for scale computation in distance_scoring must bein the range ]0.0, 1.0[.");
             }
             this.scale = func.processScale(userSuppiedScale, userSuppliedScaleWeight);
             this.func = func;

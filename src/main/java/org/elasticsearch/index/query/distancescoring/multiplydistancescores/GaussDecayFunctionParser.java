@@ -36,7 +36,8 @@ public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
 
         @Override
         public double evaluate(double value, double scale) {
-            // note that we already compouted scale^2 in process scale so we do not need to squae it here.
+            // note that we already computed scale^2 in processScale() so we do
+            // not need to square it here.
             return (float) Math.exp(-0.5 * Math.pow(value, 2.0) / scale);
         }
 
@@ -51,7 +52,7 @@ public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
 
         @Override
         public double processScale(double userGivenScale, double userGivenValue) {
-            return -0.5*Math.pow(userGivenScale,2.0)/Math.log(userGivenValue);
+            return -0.5 * Math.pow(userGivenScale, 2.0) / Math.log(userGivenValue);
         }
     }
 

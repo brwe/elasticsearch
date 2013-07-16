@@ -42,7 +42,7 @@ public class ExponentialDecayFunctionParser extends MultiplyingFunctionParser {
 
         @Override
         public double evaluate(double value, double scale) {
-            return Math.exp(-scale*Math.abs(value));
+            return Math.exp(-scale * Math.abs(value));
         }
 
         @Override
@@ -58,7 +58,7 @@ public class ExponentialDecayFunctionParser extends MultiplyingFunctionParser {
          * */
         @Override
         public double processScale(double userGivenScale, double userGivenValue) {
-            return -Math.log(userGivenValue)/userGivenScale;
+            return -Math.log(userGivenValue) / userGivenScale;
         }
 
     }

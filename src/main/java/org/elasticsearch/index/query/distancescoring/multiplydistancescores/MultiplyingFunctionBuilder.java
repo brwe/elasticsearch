@@ -37,7 +37,7 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
     public void addVariable(String fieldName, String reference, String scale, String scaleWeight) {
         vars.add(new Var(fieldName, reference, scale, scaleWeight));
     }
-    
+
     public void addVariable(String fieldName, String reference, String scale) {
         addVariable(fieldName, reference, scale, SCALE_DEFAULT);
     }
@@ -72,9 +72,9 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
     }
 
     public void addGeoVariable(String fieldName, double lat, double lon, String scale) {
-        addGeoVariable( fieldName,  lat,  lon,  scale, SCALE_DEFAULT);
+        addGeoVariable(fieldName, lat, lon, scale, SCALE_DEFAULT);
     }
-    
+
     public void addGeoVariable(String fieldName, double lat, double lon, String scale, String scaleWeight) {
         String geoLoc = Double.toString(lat) + ", " + Double.toString(lon);
         addVariable(fieldName, geoLoc, scale, scaleWeight);
