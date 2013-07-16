@@ -97,7 +97,7 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
         }
     }
 
-    public static class WithOrdinals extends GeoPointDoubleArrayAtomicFieldData {
+    static class WithOrdinals extends GeoPointDoubleArrayAtomicFieldData {
 
         private final Ordinals ordinals;
 
@@ -126,10 +126,10 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
 
         @Override
         public GeoPointValues getGeoPointValues() {
-            return new GeoPointValues(lon, lat, ordinals.ordinals());
+            return new GeoPointValuesWithOrdinals(lon, lat, ordinals.ordinals());
         }
 
-        static class GeoPointValues implements org.elasticsearch.index.fielddata.GeoPointValues {
+        public static class GeoPointValuesWithOrdinals extends GeoPointValues {
 
             private final double[] lon;
             private final double[] lat;
@@ -139,7 +139,7 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
             private final ValuesIter valuesIter;
             private final SafeValuesIter safeValuesIter;
 
-            GeoPointValues(double[] lon, double[] lat, Ordinals.Docs ordinals) {
+            GeoPointValuesWithOrdinals(double[] lon, double[] lat, Ordinals.Docs ordinals) {
                 this.lon = lon;
                 this.lat = lat;
                 this.ordinals = ordinals;
@@ -206,12 +206,10 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
                     return this;
                 }
 
-                @Override
                 public boolean hasNext() {
                     return ord != 0;
                 }
 
-                @Override
                 public GeoPoint next() {
                     scratch.reset(lat[ord], lon[ord]);
                     ord = ordsIter.next();
@@ -285,11 +283,11 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
 
         @Override
         public GeoPointValues getGeoPointValues() {
-            return new GeoPointValues(lon, lat, set);
+            return new GeoPointValuesSingleFixedSet(lon, lat, set);
         }
 
 
-        static class GeoPointValues implements org.elasticsearch.index.fielddata.GeoPointValues {
+        static class GeoPointValuesSingleFixedSet extends GeoPointValues {
 
             private final double[] lon;
             private final double[] lat;
@@ -298,7 +296,7 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
             private final GeoPoint scratch = new GeoPoint();
             private final Iter.Single iter = new Iter.Single();
 
-            GeoPointValues(double[] lon, double[] lat, FixedBitSet set) {
+            GeoPointValuesSingleFixedSet(double[] lon, double[] lat, FixedBitSet set) {
                 this.lon = lon;
                 this.lat = lat;
                 this.set = set;
@@ -382,10 +380,10 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
 
         @Override
         public GeoPointValues getGeoPointValues() {
-            return new GeoPointValues(lon, lat);
+            return new GeoPointValuesSingle(lon, lat);
         }
 
-        static class GeoPointValues implements org.elasticsearch.index.fielddata.GeoPointValues {
+        static class GeoPointValuesSingle extends GeoPointValues {
 
             private final double[] lon;
             private final double[] lat;
@@ -393,7 +391,7 @@ public abstract class GeoPointDoubleArrayAtomicFieldData extends AtomicGeoPointF
             private final GeoPoint scratch = new GeoPoint();
             private final Iter.Single iter = new Iter.Single();
 
-            GeoPointValues(double[] lon, double[] lat) {
+            GeoPointValuesSingle(double[] lon, double[] lat) {
                 this.lon = lon;
                 this.lat = lat;
             }
