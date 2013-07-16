@@ -19,6 +19,8 @@
 
 package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
 
+import org.elasticsearch.ElasticSearchIllegalArgumentException;
+
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.ComplexExplanation;
 import org.apache.lucene.search.Explanation;
@@ -310,7 +312,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         private GeoDistance distFunction;
 
         public GeoFieldDataScoreFunction(double scale, CustomDecayFunction func, GeoPoint reference, IndexGeoPointFieldData<?> fieldData) {
-            super(scale, func);
+            super(scale, 0.5, func);
             this.reference = reference;
             this.distFunction = GeoDistance.fromString("arc");
             this.fieldData = fieldData;
@@ -354,7 +356,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         double reference = 0;
 
         public NumericFieldDataScoreFunction(double scale, CustomDecayFunction func, double reference, IndexNumericFieldData<?> valueOfDoc) {
-            super(scale, func);
+            super(scale, 0.5, func);
             this.fieldData = valueOfDoc;
             this.reference = reference;
         }
@@ -365,14 +367,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         @Override
         protected double distance(int docId) {
-
-            if (valueOfDoc.hasValue(docId)) {
-                return valueOfDoc.getValue(docId) - reference;
-
-            } else {
-                return 0.0;
-            }
-
+            return valueOfDoc.getValueMissing(docId, reference)-reference;
         }
 
         @Override
@@ -396,8 +391,14 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         private final double scale;
         private final CustomDecayFunction func;
 
-        public AbstractDistanceScoreFunction(double scale, CustomDecayFunction func) {
-            this.scale = func.processScale(scale, 0.5);
+        public AbstractDistanceScoreFunction(double userSuppiedScale, double userSuppliedValue, CustomDecayFunction func) {
+            if (userSuppiedScale<=0.0) {
+                throw new ElasticSearchIllegalArgumentException("Supplied scale for distance_scoring must be > 0.0.");
+            }
+            if (userSuppliedValue<=0.0 || userSuppliedValue >=1.0) {
+                throw new ElasticSearchIllegalArgumentException("Supplied value for scale computation in distance_scoring must bein the range ]0.0, 1.0[.");
+            }
+            this.scale = func.processScale(userSuppiedScale, userSuppliedValue);
             this.func = func;
         }
 
