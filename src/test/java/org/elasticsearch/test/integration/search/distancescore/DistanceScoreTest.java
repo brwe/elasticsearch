@@ -28,6 +28,10 @@ import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+import org.elasticsearch.action.search.SearchPhaseExecutionException;
+
+import org.elasticsearch.ElasticSearchIllegalArgumentException;
+
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
 
 import org.hamcrest.Matchers;
@@ -188,6 +192,70 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.getAt(1).getId(), equalTo("2"));
     }
     
-    
+    @Test (expectedExceptions=SearchPhaseExecutionException.class)
+    public void testExceptionThrownIfScaleLE0() throws Exception {
+
+        createIndexMapped("test", "type1", "test", "string", "num1", "date");
+        ensureYellow();
+        client().index(
+                indexRequest("test").type("type1").id("1")
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-27").endObject())).actionGet();
+        client().index(
+                indexRequest("test").type("type1").id("2")
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-28").endObject())).actionGet();
+        refresh();
+
+        MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
+        gfb.addVariable("num1", "-1d", "2013-05-28");
+
+        ActionFuture<SearchResponse> response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
+
+        SearchResponse sr = response.actionGet();
+        ElasticsearchAssertions.assertNoFailures(sr);
+        SearchHits sh = sr.getHits();
+        assertThat(sh.hits().length, equalTo(2));
+        assertThat(sh.getAt(0).getId(), equalTo("2"));
+        assertThat(sh.getAt(1).getId(), equalTo("1"));
+
+    }
+
+    @Test
+    public void testValueMissing() throws Exception {
+
+        createIndexMapped("test", "type1", "test", "string", "num1", "date", "num2", "double");
+        ensureYellow();
+        client().index(
+                indexRequest("test").type("type1").id("1")
+                        .source(jsonBuilder().startObject().field("test", "value1").field("num1", "2013-05-27").field("num2", "1.0").endObject())).actionGet();
+        client().index(
+                indexRequest("test").type("type1").id("2")
+                        .source(jsonBuilder().startObject().field("test", "value2").field("num1", "2013-05-28").field("num2", "1.0").endObject())).actionGet();
+        client().index(
+                indexRequest("test").type("type1").id("3")
+                        .source(jsonBuilder().startObject().field("test", "value3").field("num1", "2013-05-30").field("num2", "1.0").endObject())).actionGet();
+        client().index(
+                indexRequest("test").type("type1").id("4")
+                        .source(jsonBuilder().startObject().field("test", "value3").field("num1", "2013-05-30").endObject())).actionGet();
+
+        refresh();
+
+        MultiplyingFunctionBuilder gfb = new LinearDecayFunctionBuilder();
+        gfb.addVariable("num1", "+3d", "2013-05-28");
+
+        ActionFuture<SearchResponse> response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
+
+        SearchResponse sr = response.actionGet();
+        ElasticsearchAssertions.assertNoFailures(sr);
+        SearchHits sh = sr.getHits();
+        assertThat(sh.hits().length, equalTo(3));
+        assertThat(sh.getAt(0).getId(), equalTo("2"));
+        assertThat(sh.getAt(1).getId(), equalTo("1"));
+        assertThat(sh.getAt(2).getId(), equalTo("3"));
+
+    }
 
 }
