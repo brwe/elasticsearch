@@ -113,14 +113,20 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         createIndexMapped("test", "type1", "test", "string", "loc", "geo_point");
         ensureYellow();
         client().index(
-                indexRequest("test").type("type1").id("1")
-                        .source(jsonBuilder().startObject().field("test", "value").startObject("loc").field("lat",10).field("lon",20).endObject().endObject())).actionGet();
+                indexRequest("test")
+                        .type("type1")
+                        .id("1")
+                        .source(jsonBuilder().startObject().field("test", "value").startObject("loc").field("lat", 10).field("lon", 20)
+                                .endObject().endObject())).actionGet();
         client().index(
-                indexRequest("test").type("type1").id("2")
-                        .source(jsonBuilder().startObject().field("test", "value").startObject("loc").field("lat",11).field("lon",22).endObject().endObject())).actionGet();
+                indexRequest("test")
+                        .type("type1")
+                        .id("2")
+                        .source(jsonBuilder().startObject().field("test", "value").startObject("loc").field("lat", 11).field("lon", 22)
+                                .endObject().endObject())).actionGet();
         refresh();
 
-        //Test Gauss
+        // Test Gauss
         MultiplyingFunctionBuilder fb = new GaussDecayFunctionBuilder();
         fb.addGeoVariable("loc", 11, 20, "1000km");
 
@@ -141,7 +147,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
-      //Test Gauss
+        // Test Gauss
         fb = new ExponentialDecayFunctionBuilder();
         fb.addGeoVariable("loc", 11, 20, "1000km");
 
@@ -162,7 +168,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
-      //Test Gauss
+        // Test Gauss
         fb = new LinearDecayFunctionBuilder();
         fb.addGeoVariable("loc", 11, 20, "1000km");
 
@@ -184,8 +190,8 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
     }
-    
-    @Test (expectedExceptions=SearchPhaseExecutionException.class)
+
+    @Test(expectedExceptions = SearchPhaseExecutionException.class)
     public void testExceptionThrownIfScaleLE0() throws Exception {
 
         createIndexMapped("test", "type1", "test", "string", "num1", "date");
@@ -213,6 +219,35 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.getAt(1).getId(), equalTo("1"));
 
     }
+    
+    @Test(expectedExceptions = SearchPhaseExecutionException.class)
+    public void testExceptionThrownIfScaleRefNotBetween0And1() throws Exception {
+
+        createIndexMapped("test", "type1", "test", "string", "num1", "date");
+        ensureYellow();
+        client().index(
+                indexRequest("test").type("type1").id("1")
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-27").endObject())).actionGet();
+        client().index(
+                indexRequest("test").type("type1").id("2")
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-28").endObject())).actionGet();
+        refresh();
+
+        MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
+        gfb.addVariable("num1", "1d", "2013-05-28", "-1");
+
+        ActionFuture<SearchResponse> response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
+
+        SearchResponse sr = response.actionGet();
+        ElasticsearchAssertions.assertNoFailures(sr);
+        SearchHits sh = sr.getHits();
+        assertThat(sh.hits().length, equalTo(2));
+        assertThat(sh.getAt(0).getId(), equalTo("2"));
+        assertThat(sh.getAt(1).getId(), equalTo("1"));
+
+    }
 
     @Test
     public void testValueMissing() throws Exception {
@@ -220,14 +255,20 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         createIndexMapped("test", "type1", "test", "string", "num1", "date", "num2", "double");
         ensureYellow();
         client().index(
-                indexRequest("test").type("type1").id("1")
-                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-27").field("num2", "1.0").endObject())).actionGet();
+                indexRequest("test")
+                        .type("type1")
+                        .id("1")
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-27").field("num2", "1.0")
+                                .endObject())).actionGet();
         client().index(
                 indexRequest("test").type("type1").id("2")
                         .source(jsonBuilder().startObject().field("test", "value").field("num2", "1.0").endObject())).actionGet();
         client().index(
-                indexRequest("test").type("type1").id("3")
-                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-30").field("num2", "1.0").endObject())).actionGet();
+                indexRequest("test")
+                        .type("type1")
+                        .id("3")
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-30").field("num2", "1.0")
+                                .endObject())).actionGet();
         client().index(
                 indexRequest("test").type("type1").id("4")
                         .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-30").endObject())).actionGet();
@@ -247,8 +288,8 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         SearchHits sh = sr.getHits();
         assertThat(sh.hits().length, equalTo(4));
         double[] scores = new double[4];
-        for(int i=0; i<sh.hits().length; i++){
-            scores[Integer.parseInt(sh.getAt(i).getId())-1]= sh.getAt(i).getScore();
+        for (int i = 0; i < sh.hits().length; i++) {
+            scores[Integer.parseInt(sh.getAt(i).getId()) - 1] = sh.getAt(i).getScore();
         }
         assertThat(scores[0], lessThan(scores[1]));
         assertThat(scores[2], lessThan(scores[3]));

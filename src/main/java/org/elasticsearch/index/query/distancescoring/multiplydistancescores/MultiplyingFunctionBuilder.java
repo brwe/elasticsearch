@@ -30,8 +30,12 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
 
     List<Var> vars = new ArrayList<Var>();;
 
+    public void addVariable(String fieldName, String scale, String reference, String scaleReference) {
+        vars.add(new Var(fieldName, reference, scale, scaleReference));
+    }
+    
     public void addVariable(String fieldName, String scale, String reference) {
-        vars.add(new Var(fieldName, reference, scale));
+        vars.add(new Var(fieldName, reference, scale, "0.5"));
     }
 
     @Override
@@ -42,6 +46,7 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
             builder.startObject();
             builder.field("reference", var.reference);
             builder.field("scale", var.scale);
+            builder.field("scale_ref", var.scaleReference);
             builder.endObject();
         }
         builder.endObject();
@@ -52,11 +57,13 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
         String fieldName;
         String reference;
         String scale;
+        String scaleReference;
 
-        public Var(String fieldName, String reference, String scale) {
+        public Var(String fieldName, String reference, String scale, String scaleReference) {
             this.fieldName = fieldName;
             this.reference = reference;
             this.scale = scale;
+            this.scaleReference = scaleReference;
         }
     }
 

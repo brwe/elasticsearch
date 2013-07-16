@@ -166,11 +166,14 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         String parameterName = null;
         String scaleString = null;
         String referenceString = null;
+        double decayReference = 0.5;
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 parameterName = parser.currentName();
             } else if (parameterName.equals("scale")) {
                 scaleString = parser.text();
+            } else if (parameterName.equals("scale_ref")) {
+                decayReference = parser.doubleValue();
             } else if (parameterName.equals("reference")) {
                 referenceString = parser.text();
             } else {
@@ -180,7 +183,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         double reference = mapper.value(referenceString).doubleValue();
         double scale = mapper.value(scaleString).doubleValue();
         IndexNumericFieldData<?> numericFieldData = parseContext.fieldData().getForField(mapper);
-        return new NumericFieldDataScoreFunction(scale, getDecayFunction(), reference, numericFieldData);
+        return new NumericFieldDataScoreFunction(scale, decayReference, getDecayFunction(), reference, numericFieldData);
     }
 
     private ScoreFunction parseGeoVariable(String fieldName, XContentParser parser, QueryParseContext parseContext,
@@ -189,6 +192,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         String parameterName = null;
         GeoPoint reference = new GeoPoint();
         String scaleString = null;
+        double decayReference = 0.5;
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 parameterName = parser.currentName();
@@ -196,6 +200,8 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
                 scaleString = parser.text();
             } else if (parameterName.equals("reference")) {
                 reference = GeoPoint.parse(parser);
+            } else if (parameterName.equals("scale_ref")) {
+                decayReference = parser.doubleValue();
             } else {
                 throw new ElasticSearchParseException("Parameter " + parameterName + " not supported!");
             }
@@ -210,7 +216,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         double scale = DistanceUnit.parse(scaleString, DistanceUnit.METERS, DistanceUnit.METERS);
 
         IndexGeoPointFieldData<?> indexFieldData = parseContext.fieldData().getForField(mapper);
-        return new GeoFieldDataScoreFunction(scale, getDecayFunction(), reference, indexFieldData);
+        return new GeoFieldDataScoreFunction(scale, decayReference, getDecayFunction(), reference, indexFieldData);
 
     }
 
@@ -220,6 +226,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         String parameterName = null;
         String scaleString = null;
         String referenceString = null;
+        double decayReference = 0.5;
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 parameterName = parser.currentName();
@@ -227,6 +234,8 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
                 scaleString = parser.text();
             } else if (parameterName.equals("reference")) {
                 referenceString = parser.text();
+            } else if (parameterName.equals("scale_ref")) {
+                decayReference = parser.doubleValue();
             } else {
                 throw new ElasticSearchParseException("Parameter " + parameterName + " not supported!");
             }
@@ -241,7 +250,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
             scale = val.getMillis();
         }
         IndexNumericFieldData<?> numericFieldData = parseContext.fieldData().getForField(dateFieldMapper);
-        return new NumericFieldDataScoreFunction(scale, getDecayFunction(), reference, numericFieldData);
+        return new NumericFieldDataScoreFunction(scale, decayReference, getDecayFunction(), reference, numericFieldData);
     }
 
     /**
@@ -311,8 +320,8 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         private GeoDistance distFunction;
 
-        public GeoFieldDataScoreFunction(double scale, CustomDecayFunction func, GeoPoint reference, IndexGeoPointFieldData<?> fieldData) {
-            super(scale, 0.5, func);
+        public GeoFieldDataScoreFunction(double scale, double decayReference, CustomDecayFunction func, GeoPoint reference, IndexGeoPointFieldData<?> fieldData) {
+            super(scale, decayReference, func);
             this.reference = reference;
             this.distFunction = GeoDistance.fromString("arc");
             this.fieldData = fieldData;
@@ -349,8 +358,8 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         double reference = 0;
 
-        public NumericFieldDataScoreFunction(double scale, CustomDecayFunction func, double reference, IndexNumericFieldData<?> valueOfDoc) {
-            super(scale, 0.5, func);
+        public NumericFieldDataScoreFunction(double scale, double decayReference, CustomDecayFunction func, double reference, IndexNumericFieldData<?> valueOfDoc) {
+            super(scale, decayReference, func);
             this.fieldData = valueOfDoc;
             this.reference = reference;
         }
