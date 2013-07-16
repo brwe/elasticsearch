@@ -19,6 +19,19 @@
 
 package org.elasticsearch.test.integration.search.distancescore;
 
+import org.elasticsearch.action.ActionFuture;
+import org.elasticsearch.action.search.SearchPhaseExecutionException;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionBuilder;
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.test.hamcrest.ElasticsearchAssertions;
+import org.elasticsearch.test.integration.AbstractSharedClusterTest;
+import org.testng.annotations.Test;
+
 import static org.elasticsearch.client.Requests.indexRequest;
 import static org.elasticsearch.client.Requests.searchRequest;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -27,27 +40,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-
-import org.elasticsearch.action.search.SearchPhaseExecutionException;
-
-import org.elasticsearch.ElasticSearchIllegalArgumentException;
-
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
-
-import org.hamcrest.Matchers;
-
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
-
-import org.apache.lucene.search.Explanation;
-import org.elasticsearch.action.ActionFuture;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.test.hamcrest.ElasticsearchAssertions;
-import org.elasticsearch.test.integration.AbstractSharedClusterTest;
-import org.testng.annotations.Test;
+import static org.hamcrest.Matchers.lessThan;
 
 public class DistanceScoreTest extends AbstractSharedClusterTest {
 
@@ -228,21 +221,22 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         ensureYellow();
         client().index(
                 indexRequest("test").type("type1").id("1")
-                        .source(jsonBuilder().startObject().field("test", "value1").field("num1", "2013-05-27").field("num2", "1.0").endObject())).actionGet();
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-27").field("num2", "1.0").endObject())).actionGet();
         client().index(
                 indexRequest("test").type("type1").id("2")
-                        .source(jsonBuilder().startObject().field("test", "value2").field("num1", "2013-05-28").field("num2", "1.0").endObject())).actionGet();
+                        .source(jsonBuilder().startObject().field("test", "value").field("num2", "1.0").endObject())).actionGet();
         client().index(
                 indexRequest("test").type("type1").id("3")
-                        .source(jsonBuilder().startObject().field("test", "value3").field("num1", "2013-05-30").field("num2", "1.0").endObject())).actionGet();
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-30").field("num2", "1.0").endObject())).actionGet();
         client().index(
                 indexRequest("test").type("type1").id("4")
-                        .source(jsonBuilder().startObject().field("test", "value3").field("num1", "2013-05-30").endObject())).actionGet();
+                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-30").endObject())).actionGet();
 
         refresh();
 
         MultiplyingFunctionBuilder gfb = new LinearDecayFunctionBuilder();
         gfb.addVariable("num1", "+3d", "2013-05-28");
+        gfb.addVariable("num2", "1", "0.0");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -251,10 +245,13 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         SearchResponse sr = response.actionGet();
         ElasticsearchAssertions.assertNoFailures(sr);
         SearchHits sh = sr.getHits();
-        assertThat(sh.hits().length, equalTo(3));
-        assertThat(sh.getAt(0).getId(), equalTo("2"));
-        assertThat(sh.getAt(1).getId(), equalTo("1"));
-        assertThat(sh.getAt(2).getId(), equalTo("3"));
+        assertThat(sh.hits().length, equalTo(4));
+        double[] scores = new double[4];
+        for(int i=0; i<sh.hits().length; i++){
+            scores[Integer.parseInt(sh.getAt(i).getId())-1]= sh.getAt(i).getScore();
+        }
+        assertThat(scores[0], lessThan(scores[1]));
+        assertThat(scores[2], lessThan(scores[3]));
 
     }
 
