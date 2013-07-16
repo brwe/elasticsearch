@@ -33,5 +33,6 @@ public interface CustomDecayFunction {
     public double evaluate(double value, double scale);
 
     public Explanation explainFunction(String distance, double distanceVal, double scale);
+    public double processScale(double userGivenScale, double userGivenValue);
 
 }

@@ -41,5 +41,10 @@ public class CustomDistanceScoreParser extends MultiplyingFunctionParser {
             ce.setDescription("" + distanceVal);
             return ce;
         }
+
+        @Override
+        public double processScale(double userGivenScale, double userGivenValue) {
+            return userGivenScale;
+        }
     }
 }

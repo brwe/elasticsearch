@@ -53,5 +53,10 @@ public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
             return ce;
         }
 
+        @Override
+        public double processScale(double userGivenScale, double userGivenValue) {
+            return userGivenScale/(1.0-userGivenValue);
+        }
+
     }
 }

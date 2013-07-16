@@ -28,6 +28,8 @@ import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
+
 import org.hamcrest.Matchers;
 
 import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionBuilder;
@@ -109,20 +111,21 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
     }
 
     @Test
-    public void testDistanceScoreGeo() throws Exception {
+    public void testDistanceScoreGeoGauss() throws Exception {
 
         createIndexMapped("test", "type1", "test", "string", "loc", "geo_point");
         ensureYellow();
         client().index(
                 indexRequest("test").type("type1").id("1")
-                        .source(jsonBuilder().startObject().field("test", "value").array("loc", 10, 20).endObject())).actionGet();
+                        .source(jsonBuilder().startObject().field("test", "value").startObject("loc").field("lat",10).field("lon",20).endObject().endObject())).actionGet();
         client().index(
                 indexRequest("test").type("type1").id("2")
-                        .source(jsonBuilder().startObject().field("test", "value").array("loc", 20, 30).endObject())).actionGet();
+                        .source(jsonBuilder().startObject().field("test", "value").startObject("loc").field("lat",11).field("lon",22).endObject().endObject())).actionGet();
         refresh();
 
-        MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
-        gfb.addGeoVariable("loc", 11, 20, "1000km");
+        //Test Gauss
+        MultiplyingFunctionBuilder fb = new GaussDecayFunctionBuilder();
+        fb.addGeoVariable("loc", 11, 20, "1000km");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -133,7 +136,49 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
-                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), fb))));
+        sr = response.actionGet();
+        sh = sr.getHits();
+        assertThat(sh.getTotalHits(), equalTo(2l));
+        assertThat(sh.hits().length, equalTo(2));
+
+        assertThat(sh.getAt(0).getId(), equalTo("1"));
+        assertThat(sh.getAt(1).getId(), equalTo("2"));
+      //Test Gauss
+        fb = new ExponentialDecayFunctionBuilder();
+        fb.addGeoVariable("loc", 11, 20, "1000km");
+
+        response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(false).query(termQuery("test", "value"))));
+        sr = response.actionGet();
+        sh = sr.getHits();
+        assertThat(sh.getTotalHits(), equalTo(2l));
+
+        response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), fb))));
+        sr = response.actionGet();
+        sh = sr.getHits();
+        assertThat(sh.getTotalHits(), equalTo(2l));
+        assertThat(sh.hits().length, equalTo(2));
+
+        assertThat(sh.getAt(0).getId(), equalTo("1"));
+        assertThat(sh.getAt(1).getId(), equalTo("2"));
+      //Test Gauss
+        fb = new LinearDecayFunctionBuilder();
+        fb.addGeoVariable("loc", 11, 20, "1000km");
+
+        response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(false).query(termQuery("test", "value"))));
+        sr = response.actionGet();
+        sh = sr.getHits();
+        assertThat(sh.getTotalHits(), equalTo(2l));
+
+        response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), fb))));
         sr = response.actionGet();
         sh = sr.getHits();
         assertThat(sh.getTotalHits(), equalTo(2l));
@@ -142,5 +187,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
     }
+    
+    
 
 }

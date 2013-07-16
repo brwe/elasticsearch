@@ -36,16 +36,22 @@ public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
 
         @Override
         public double evaluate(double value, double scale) {
-            return (float) Math.exp(-0.5 * Math.pow(value, 2.0) / Math.pow(scale, 2.0));
+            // note that we already compouted scale^2 in process scale so we do not need to squae it here.
+            return (float) Math.exp(-0.5 * Math.pow(value, 2.0) / scale);
         }
 
         @Override
         public Explanation explainFunction(String distance, double distanceVal, double scale) {
             ComplexExplanation ce = new ComplexExplanation();
             ce.setValue((float) evaluate(distanceVal, scale));
-            ce.setDescription("exp(-0.5*pow(" + distance + ",2.0)/" + "pow(" + scale + ",2.0)" + ")");
+            ce.setDescription("exp(-0.5*pow(" + distance + ",2.0)/" + scale + ")");
             return ce;
 
+        }
+
+        @Override
+        public double processScale(double userGivenScale, double userGivenValue) {
+            return -0.5*Math.pow(userGivenScale,2.0)/Math.log(userGivenValue);
         }
     }
 

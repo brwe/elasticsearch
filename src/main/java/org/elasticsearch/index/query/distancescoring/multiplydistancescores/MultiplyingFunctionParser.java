@@ -397,7 +397,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
         private final CustomDecayFunction func;
 
         public AbstractDistanceScoreFunction(double scale, CustomDecayFunction func) {
-            this.scale = scale;
+            this.scale = func.processScale(scale, 0.5);
             this.func = func;
         }
 
