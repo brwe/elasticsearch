@@ -325,26 +325,20 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         @Override
         protected double distance(int docId) {
-            if (geoPointValues.hasValue(docId)) {
-                final GeoPoint other = geoPointValues.getValue(docId);
-                return distFunction.calculate(reference.lat(), reference.lon(), other.lat(), other.lon(), DistanceUnit.METERS);
-            } else {
-                return 0.0;
-            }
+            GeoPoint other = geoPointValues.getValueMissing(docId, reference);
+            return distFunction.calculate(reference.lat(), reference.lon(), other.lat(), other.lon(), DistanceUnit.METERS);
         }
 
         @Override
         protected String getDistanceString(int docId) {
-            final GeoPoint other = geoPointValues.getValue(docId);
+            final GeoPoint other = geoPointValues.getValueMissing(docId, reference);
             return "arcDistance(" + other + "(=doc value), " + reference + ") = " + distance(docId);
 
         }
 
         @Override
         protected String getFieldName() {
-
             return fieldData.getFieldNames().fullName();
-
         }
     }
 
@@ -372,8 +366,7 @@ public abstract class MultiplyingFunctionParser implements DistanceScoreFunction
 
         @Override
         protected String getDistanceString(int docId) {
-
-            return "(" + valueOfDoc.getValue(docId) + "(=doc value) - " + reference + ")";
+            return "(" + valueOfDoc.getValueMissing(docId, reference) + "(=doc value) - " + reference + ")";
         }
 
         @Override
