@@ -58,7 +58,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         refresh();
 
         MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
-        gfb.addVariable("num1", "+1d", "2013-05-28");
+        gfb.addVariable("num1", "2013-05-28", "+1d");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -91,7 +91,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         refresh();
 
         MultiplyingFunctionBuilder gfb = new LinearDecayFunctionBuilder();
-        gfb.addVariable("num1", "+3d", "2013-05-28");
+        gfb.addVariable("num1", "2013-05-28", "+3d");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -205,7 +205,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         refresh();
 
         MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
-        gfb.addVariable("num1", "-1d", "2013-05-28");
+        gfb.addVariable("num1", "2013-05-28", "-1d");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -234,7 +234,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         refresh();
 
         MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
-        gfb.addVariable("num1", "1d", "2013-05-28", "-1");
+        gfb.addVariable("num1", "2013-05-28", "1d", "-1");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
@@ -276,8 +276,8 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         refresh();
 
         MultiplyingFunctionBuilder gfb = new LinearDecayFunctionBuilder();
-        gfb.addVariable("num1", "+3d", "2013-05-28");
-        gfb.addVariable("num2", "1", "0.0");
+        gfb.addVariable("num1", "2013-05-28", "+3d");
+        gfb.addVariable("num2", "0.0", "1");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(

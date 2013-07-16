@@ -85,7 +85,7 @@ public class DistanceScorePluginTest extends AbstractNodesTests {
 
         client.admin().indices().prepareRefresh().execute().actionGet();
         MultiplyingFunctionBuilder gfb = new CustomDistanceScoreBuilder();
-        gfb.addVariable("num1", "+1d", "2013-05-28");
+        gfb.addVariable("num1", "2013-05-28", "+1d");
 
         ActionFuture<SearchResponse> response = client.search(searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
                 searchSource().explain(false).query(distanceScoreQuery(termQuery("test", "value"), gfb))));

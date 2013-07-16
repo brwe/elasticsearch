@@ -28,14 +28,18 @@ import java.util.List;
 
 public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctionBuilder {
 
-    List<Var> vars = new ArrayList<Var>();;
+    List<Var> vars = new ArrayList<Var>();
+    public static String REFERNECE = "reference";
+    public static String SCALE = "scale";
+    public static String SCALE_WEIGHT = "scale_weight";
+    public static String SCALE_DEFAULT = "0.5";
 
-    public void addVariable(String fieldName, String scale, String reference, String scaleReference) {
-        vars.add(new Var(fieldName, reference, scale, scaleReference));
+    public void addVariable(String fieldName, String reference, String scale, String scaleWeight) {
+        vars.add(new Var(fieldName, reference, scale, scaleWeight));
     }
     
-    public void addVariable(String fieldName, String scale, String reference) {
-        vars.add(new Var(fieldName, reference, scale, "0.5"));
+    public void addVariable(String fieldName, String reference, String scale) {
+        addVariable(fieldName, reference, scale, SCALE_DEFAULT);
     }
 
     @Override
@@ -44,9 +48,9 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
         for (Var var : vars) {
             builder.field(var.fieldName);
             builder.startObject();
-            builder.field("reference", var.reference);
-            builder.field("scale", var.scale);
-            builder.field("scale_ref", var.scaleReference);
+            builder.field(REFERNECE, var.reference);
+            builder.field(SCALE, var.scale);
+            builder.field(SCALE_WEIGHT, var.scaleWeight);
             builder.endObject();
         }
         builder.endObject();
@@ -57,20 +61,22 @@ public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctio
         String fieldName;
         String reference;
         String scale;
-        String scaleReference;
+        String scaleWeight;
 
-        public Var(String fieldName, String reference, String scale, String scaleReference) {
+        public Var(String fieldName, String reference, String scale, String scaleWeight) {
             this.fieldName = fieldName;
             this.reference = reference;
             this.scale = scale;
-            this.scaleReference = scaleReference;
+            this.scaleWeight = scaleWeight;
         }
     }
 
     public void addGeoVariable(String fieldName, double lat, double lon, String scale) {
-
+        addGeoVariable( fieldName,  lat,  lon,  scale, SCALE_DEFAULT);
+    }
+    
+    public void addGeoVariable(String fieldName, double lat, double lon, String scale, String scaleWeight) {
         String geoLoc = Double.toString(lat) + ", " + Double.toString(lon);
-        addVariable(fieldName, scale, geoLoc);
-
+        addVariable(fieldName, geoLoc, scale, scaleWeight);
     }
 }
