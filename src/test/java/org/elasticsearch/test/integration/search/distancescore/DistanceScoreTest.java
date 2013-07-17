@@ -44,37 +44,9 @@ import static org.hamcrest.Matchers.lessThan;
 
 public class DistanceScoreTest extends AbstractSharedClusterTest {
 
+   
     @Test
-    public void testDistanceScoreTime() throws Exception {
-
-        createIndexMapped("test", "type1", "test", "string", "num1", "date");
-        ensureYellow();
-        client().index(
-                indexRequest("test").type("type1").id("1")
-                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-27").endObject())).actionGet();
-        client().index(
-                indexRequest("test").type("type1").id("2")
-                        .source(jsonBuilder().startObject().field("test", "value").field("num1", "2013-05-28").endObject())).actionGet();
-        refresh();
-
-        MultiplyingFunctionBuilder gfb = new GaussDecayFunctionBuilder();
-        gfb.addVariable("num1", "2013-05-28", "+1d");
-
-        ActionFuture<SearchResponse> response = client().search(
-                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
-                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
-
-        SearchResponse sr = response.actionGet();
-        ElasticsearchAssertions.assertNoFailures(sr);
-        SearchHits sh = sr.getHits();
-        assertThat(sh.hits().length, equalTo(2));
-        assertThat(sh.getAt(0).getId(), equalTo("2"));
-        assertThat(sh.getAt(1).getId(), equalTo("1"));
-
-    }
-
-    @Test
-    public void testLinearScoring() throws Exception {
+    public void testDistanceScoreDate_lin() throws Exception {
 
         createIndexMapped("test", "type1", "test", "string", "num1", "date");
         ensureYellow();
@@ -90,12 +62,12 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         refresh();
 
-        MultiplyingFunctionBuilder gfb = new LinearDecayFunctionBuilder();
-        gfb.addVariable("num1", "2013-05-28", "+3d");
+        MultiplyingFunctionBuilder fb = new LinearDecayFunctionBuilder();
+        fb.addVariable("num1", "2013-05-28", "+3d");
 
         ActionFuture<SearchResponse> response = client().search(
                 searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
-                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
+                        searchSource().explain(true).query(distanceScoreQuery(termQuery("test", "value"), fb))));
 
         SearchResponse sr = response.actionGet();
         ElasticsearchAssertions.assertNoFailures(sr);
@@ -108,7 +80,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
     }
 
     @Test
-    public void testDistanceScoreGeoGauss() throws Exception {
+    public void testDistanceScoreGeo_lin_gauss_exp() throws Exception {
 
         createIndexMapped("test", "type1", "test", "string", "loc", "geo_point");
         ensureYellow();
@@ -147,7 +119,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
-        // Test Gauss
+        // Test Exp
         fb = new ExponentialDecayFunctionBuilder();
         fb.addGeoVariable("loc", 11, 20, "1000km");
 
@@ -168,7 +140,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
 
         assertThat(sh.getAt(0).getId(), equalTo("1"));
         assertThat(sh.getAt(1).getId(), equalTo("2"));
-        // Test Gauss
+        // Test Lin
         fb = new LinearDecayFunctionBuilder();
         fb.addGeoVariable("loc", 11, 20, "1000km");
 
@@ -219,7 +191,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         assertThat(sh.getAt(1).getId(), equalTo("1"));
 
     }
-    
+
     @Test(expectedExceptions = SearchPhaseExecutionException.class)
     public void testExceptionThrownIfScaleRefNotBetween0And1() throws Exception {
 
@@ -250,7 +222,7 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
     }
 
     @Test
-    public void testValueMissing() throws Exception {
+    public void testValueMissing_lin() throws Exception {
 
         createIndexMapped("test", "type1", "test", "string", "num1", "date", "num2", "double");
         ensureYellow();
@@ -293,6 +265,52 @@ public class DistanceScoreTest extends AbstractSharedClusterTest {
         }
         assertThat(scores[0], lessThan(scores[1]));
         assertThat(scores[2], lessThan(scores[3]));
+
+    }
+
+    @Test
+    public void testManyDocs_lin() throws Exception {
+
+        createIndexMapped("test", "type", "test", "string", "date", "date", "num", "double", "geo", "geo_point");
+        ensureYellow();
+        int numDocs = 200;
+
+        for (int i = 0; i < numDocs; i++) {
+            double lat = 100 + (int) (10.0 * (float) (i) / (float) (numDocs));
+            double lon = 100;
+            int day = (int) (29.0 * (float) (i) / (float) (numDocs)) + 1;
+            String dayString = day < 10 ? "0" + Integer.toString(day) : Integer.toString(day);
+            String date = "2013-05-" + dayString;
+            client().index(
+                    indexRequest("test")
+                            .type("type")
+                            .id(Integer.toString(i))
+                            .source(jsonBuilder().startObject().field("test", "value").field("date", date).field("num", i)
+                                    .startObject("geo").field("lat", lat).field("lon", lon).endObject().endObject())).actionGet();
+        }
+
+        refresh();
+
+        MultiplyingFunctionBuilder gfb = new LinearDecayFunctionBuilder();
+        gfb.addVariable("date", "2013-05-30", "+15d");
+        gfb.addGeoVariable("geo", 110, 100, "1000km");
+        gfb.addVariable("num", Integer.toString(numDocs), Integer.toString(numDocs / 2));
+
+        ActionFuture<SearchResponse> response = client().search(
+                searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                        searchSource().explain(true).size(numDocs).query(distanceScoreQuery(termQuery("test", "value"), gfb))));
+
+        SearchResponse sr = response.actionGet();
+        ElasticsearchAssertions.assertNoFailures(sr);
+        SearchHits sh = sr.getHits();
+        assertThat(sh.hits().length, equalTo(numDocs));
+        double[] scores = new double[numDocs];
+        for (int i = 0; i < numDocs; i++) {
+            scores[Integer.parseInt(sh.getAt(i).getId())] = sh.getAt(i).getScore();
+        }
+        for (int i = 0; i < numDocs - 1; i++) {
+            assertThat(scores[i], lessThan(scores[i + 1]));
+        }
 
     }
 
