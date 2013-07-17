@@ -24,11 +24,11 @@ import org.apache.lucene.search.Explanation;
 
 public class ExponentialDecayFunctionParser extends MultiplyingFunctionParser {
 
-    public static String NAME = "exp";
+    public static String[] NAMES = {"exp"};
 
     @Override
-    public String getName() {
-        return NAME;
+    public String[] getNames() {
+        return NAMES;
     }
 
     static CustomDecayFunction distanceFunction = new ExponentialDecayScoreFunction();

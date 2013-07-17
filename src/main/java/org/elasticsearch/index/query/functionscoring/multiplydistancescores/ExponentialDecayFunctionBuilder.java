@@ -21,11 +21,9 @@ package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
 public class ExponentialDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = "exp";
-
     @Override
     public String getName() {
-        return NAME;
+        return ExponentialDecayFunctionParser.NAMES[0];
     }
 
 }

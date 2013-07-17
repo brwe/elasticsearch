@@ -19,6 +19,10 @@
 
 package org.elasticsearch.index.query.functionscoring.customboostscoring;
 
+import org.elasticsearch.common.lucene.search.function.ScoreFunction;
+
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
+
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParser;
 import org.elasticsearch.index.query.QueryParsingException;
@@ -35,58 +39,22 @@ import java.io.IOException;
 /**
  *
  */
-public class CustomBoostFactorQueryParser implements QueryParser {
+public class CustomBoostFactorQueryParser implements ScoreFunctionParser {
 
-    public static final String NAME = "custom_boost_factor";
-
+    public static String[] NAMES = {"boost_factor", "boostFactor"};
+    
     @Inject
     public CustomBoostFactorQueryParser() {
     }
 
     @Override
-    public String[] names() {
-        return new String[]{NAME, Strings.toCamelCase(NAME)};
+    public ScoreFunction parse(QueryParseContext parseContext, XContentParser parser) throws IOException, QueryParsingException {
+        float boostFactor =  parser.floatValue();
+        return new BoostScoreFunction(boostFactor);
     }
 
     @Override
-    public Query parse(QueryParseContext parseContext) throws IOException, QueryParsingException {
-        XContentParser parser = parseContext.parser();
-
-        Query query = null;
-        boolean queryFound = false;
-        float boost = 1.0f;
-        float boostFactor = 1.0f;
-
-        String currentFieldName = null;
-        XContentParser.Token token;
-        while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
-            if (token == XContentParser.Token.FIELD_NAME) {
-                currentFieldName = parser.currentName();
-            } else if (token == XContentParser.Token.START_OBJECT) {
-                if ("query".equals(currentFieldName)) {
-                    query = parseContext.parseInnerQuery();
-                    queryFound = true;
-                } else {
-                    throw new QueryParsingException(parseContext.index(), "[custom_boost_factor] query does not support [" + currentFieldName + "]");
-                }
-            } else if (token.isValue()) {
-                if ("boost_factor".equals(currentFieldName) || "boostFactor".equals(currentFieldName)) {
-                    boostFactor = parser.floatValue();
-                } else if ("boost".equals(currentFieldName)) {
-                    boost = parser.floatValue();
-                } else {
-                    throw new QueryParsingException(parseContext.index(), "[custom_boost_factor] query does not support [" + currentFieldName + "]");
-                }
-            }
-        }
-        if (!queryFound) {
-            throw new QueryParsingException(parseContext.index(), "[constant_factor_query] requires 'query' element");
-        }
-        if (query == null) {
-            return null;
-        }
-        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery(query, new BoostScoreFunction(boostFactor));
-        functionScoreQuery.setBoost(boost);
-        return functionScoreQuery;
+    public String[] getNames() {
+        return NAMES;
     }
 }

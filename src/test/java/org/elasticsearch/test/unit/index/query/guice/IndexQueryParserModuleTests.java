@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.unit.index.query.guice;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import org.elasticsearch.cache.recycler.CacheRecyclerModule;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.inject.AbstractModule;
@@ -77,6 +79,7 @@ public class IndexQueryParserModuleTests {
                 new SimilarityModule(settings),
                 new IndexQueryParserModule(settings),
                 new IndexNameModule(index),
+                new FunctionScoreModule(),
                 new AbstractModule() {
                     @Override
                     protected void configure() {

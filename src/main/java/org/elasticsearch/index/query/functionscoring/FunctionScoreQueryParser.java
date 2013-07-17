@@ -48,7 +48,9 @@ public class FunctionScoreQueryParser implements QueryParser {
 
         MapBuilder<String, ScoreFunctionParser> builder = MapBuilder.newMapBuilder();
         for (ScoreFunctionParser scoreFunctionParser : parsers) {
-            builder.put(scoreFunctionParser.getName(), scoreFunctionParser);
+            for (String name : scoreFunctionParser.getNames()){
+                builder.put(name, scoreFunctionParser);
+            }
         }
         this.functionParsers = builder.immutableMap();
 
@@ -70,7 +72,7 @@ public class FunctionScoreQueryParser implements QueryParser {
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
-            } else if (token == XContentParser.Token.START_OBJECT) {
+            } else {
                 if ("query".equals(currentFieldName)) {
                     query = parseContext.parseInnerQuery();
                 } else {

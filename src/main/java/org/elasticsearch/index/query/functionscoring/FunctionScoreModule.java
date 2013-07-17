@@ -18,6 +18,10 @@
  */
 package org.elasticsearch.index.query.functionscoring;
 
+import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorQueryParser;
+
+import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorQueryBuilder;
+
 import org.elasticsearch.index.query.functionscoring.multiplydistancescores.ExponentialDecayFunctionParser;
 import org.elasticsearch.index.query.functionscoring.multiplydistancescores.GaussDecayFunctionParser;
 import org.elasticsearch.index.query.functionscoring.multiplydistancescores.LinearDecayFunctionParser;
@@ -39,6 +43,7 @@ public class FunctionScoreModule extends AbstractModule {
         registerParser(LinearDecayFunctionParser.class);
         registerParser(GaussDecayFunctionParser.class);
         registerParser(ExponentialDecayFunctionParser.class);
+        registerParser(CustomBoostFactorQueryParser.class);
     }
 
     public void registerParser(Class<? extends ScoreFunctionParser> parser) {

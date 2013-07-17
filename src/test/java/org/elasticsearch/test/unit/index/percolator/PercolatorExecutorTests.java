@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.unit.index.percolator;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -96,6 +98,7 @@ public class PercolatorExecutorTests {
                 new SimilarityModule(settings),
                 new IndexQueryParserModule(settings),
                 new IndexNameModule(index),
+                new FunctionScoreModule(),
                 new AbstractModule() {
                     @Override
                     protected void configure() {

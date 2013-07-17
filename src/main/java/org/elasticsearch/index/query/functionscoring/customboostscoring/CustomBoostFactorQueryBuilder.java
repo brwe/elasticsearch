@@ -37,7 +37,7 @@ import java.io.IOException;
  */
 public class CustomBoostFactorQueryBuilder implements ScoreFunctionBuilder {
 
-    private static String NAME = "boost_factor";
+
 
     private float boostFactor = -1;
 
@@ -57,9 +57,8 @@ public class CustomBoostFactorQueryBuilder implements ScoreFunctionBuilder {
         return builder;
     }
 
-   
     @Override
     public String getName() {
-        return NAME;
+        return CustomBoostFactorQueryParser.NAMES[0];
     }
 }

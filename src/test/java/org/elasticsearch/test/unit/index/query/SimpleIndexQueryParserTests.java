@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.unit.index.query;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorQueryBuilder;
 
 import com.google.common.collect.Lists;
@@ -119,6 +121,7 @@ public class SimpleIndexQueryParserTests {
                 new SimilarityModule(settings),
                 new IndexQueryParserModule(settings),
                 new IndexNameModule(index),
+                new FunctionScoreModule(),
                 new AbstractModule() {
                     @Override
                     protected void configure() {

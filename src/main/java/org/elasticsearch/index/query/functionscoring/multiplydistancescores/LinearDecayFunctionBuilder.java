@@ -21,11 +21,9 @@ package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
 public class LinearDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = "lin";
-
     @Override
     public String getName() {
-        return NAME;
+        return LinearDecayFunctionParser.NAMES[0];
     }
 
 }

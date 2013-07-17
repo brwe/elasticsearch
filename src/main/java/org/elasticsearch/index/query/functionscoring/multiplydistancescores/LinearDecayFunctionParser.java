@@ -24,11 +24,11 @@ import org.apache.lucene.search.Explanation;
 
 public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
 
-    public static String NAME = "lin";
+    public static String[] NAMES = {"lin"};
 
     @Override
-    public String getName() {
-        return NAME;
+    public String[] getNames() {
+        return NAMES;
     }
 
     static CustomDecayFunction distanceFunction = new LinearDecayScoreFunction();

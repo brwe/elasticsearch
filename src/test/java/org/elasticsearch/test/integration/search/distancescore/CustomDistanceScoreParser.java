@@ -9,11 +9,11 @@ import org.apache.lucene.search.Explanation;
 
 public class CustomDistanceScoreParser extends MultiplyingFunctionParser {
 
-    public static String NAME = "linear_mult";
+    public static String[] NAMES = {"linear_mult"};
 
     @Override
-    public String getName() {
-        return NAME;
+    public String[] getNames() {
+        return NAMES;
     }
 
     static CustomDecayFunction distanceFunction;

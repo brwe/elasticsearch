@@ -21,11 +21,11 @@ package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
 public class GaussDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = "gauss";
+   
 
     @Override
     public String getName() {
-        return NAME;
+        return GaussDecayFunctionParser.NAMES[0];
     }
 
 }

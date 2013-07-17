@@ -1,5 +1,5 @@
 {
-    "custom_boost_factor":{
+    "distance_score":{
         "query":{
             "term":{
                 "name.last":"banon"

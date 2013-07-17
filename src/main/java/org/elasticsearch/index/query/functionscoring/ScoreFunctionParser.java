@@ -35,6 +35,6 @@ public interface ScoreFunctionParser {
      * name is used for registering the parser in
      * {@link FunctionScoreQueryParser}.
      * */
-    public String getName();
+    public String[] getNames();
 
 }

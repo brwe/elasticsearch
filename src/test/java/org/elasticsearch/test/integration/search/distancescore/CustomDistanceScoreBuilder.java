@@ -4,11 +4,10 @@ import org.elasticsearch.index.query.functionscoring.multiplydistancescores.Mult
 
 public class CustomDistanceScoreBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = new String("linear_mult");
 
     @Override
     public String getName() {
-        return NAME;
+        return CustomDistanceScoreParser.NAMES[0];
     }
 
 }
