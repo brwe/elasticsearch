@@ -69,13 +69,20 @@ public class FunctionScoreQueryParser implements QueryParser {
         String currentFieldName = null;
         ScoreFunction scoreFunction = null;
         XContentParser.Token token;
+        float boost = (float) 1.0;
+        boolean boostFound = false;
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
             } else {
                 if ("query".equals(currentFieldName)) {
                     query = parseContext.parseInnerQuery();
-                } else {
+                } else if ("boost".equals(currentFieldName)){
+                    boostFound = true;
+                    boost = parser.floatValue();
+                } 
+                else {
+
                     ScoreFunctionParser scoreFunctionParser = functionParsers.get(currentFieldName);
                     if (scoreFunctionParser == null) {
                         throw new QueryParsingException(parseContext.index(), "[distance_score] query does not support ["
@@ -94,7 +101,9 @@ public class FunctionScoreQueryParser implements QueryParser {
             throw new QueryParsingException(parseContext.index(), "[distance_score] requires a 'query'");
         }
         FunctionScoreQuery fQuery = new FunctionScoreQuery(query, scoreFunction);
-        fQuery.setBoost(1);
+        if(boostFound) {
+            fQuery.setBoost(boost);
+        }
         return fQuery;
 
     }
