@@ -516,8 +516,8 @@ public abstract class QueryBuilders {
      *
      * @param queryBuilder The query to apply the boost factor to.
      */
-    public static CustomBoostFactorQueryBuilder customBoostFactorQuery(QueryBuilder queryBuilder) {
-        return new CustomBoostFactorQueryBuilder(queryBuilder);
+    public static FunctionScoreQueryBuilder customBoostFactorQuery(QueryBuilder queryBuilder, CustomBoostFactorQueryBuilder scoreFunctionBuilder) {
+        return new FunctionScoreQueryBuilder(queryBuilder, scoreFunctionBuilder);
     }
 
     /**

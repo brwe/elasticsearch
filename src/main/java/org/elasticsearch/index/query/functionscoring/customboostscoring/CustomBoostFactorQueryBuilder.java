@@ -19,6 +19,10 @@
 
 package org.elasticsearch.index.query.functionscoring.customboostscoring;
 
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionBuilder;
+
+import org.elasticsearch.index.query.functionscoring.FunctionScoreQueryBuilder;
+
 import org.elasticsearch.index.query.BaseQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 
@@ -31,20 +35,11 @@ import java.io.IOException;
  *
  *
  */
-public class CustomBoostFactorQueryBuilder extends BaseQueryBuilder {
+public class CustomBoostFactorQueryBuilder implements ScoreFunctionBuilder {
 
-    private final QueryBuilder queryBuilder;
+    private static String NAME = "boost_factor";
 
     private float boostFactor = -1;
-
-    /**
-     * A query that simply applies the boost factor to another query (multiply it).
-     *
-     * @param queryBuilder The query to apply the boost factor to.
-     */
-    public CustomBoostFactorQueryBuilder(QueryBuilder queryBuilder) {
-        this.queryBuilder = queryBuilder;
-    }
 
     /**
      * Sets the boost factor for this query.
@@ -55,13 +50,16 @@ public class CustomBoostFactorQueryBuilder extends BaseQueryBuilder {
     }
 
     @Override
-    protected void doXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject(CustomBoostFactorQueryParser.NAME);
-        builder.field("query");
-        queryBuilder.toXContent(builder, params);
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException { 
         if (boostFactor != -1) {
-            builder.field("boost_factor", boostFactor);
+            builder.value(boostFactor);
         }
-        builder.endObject();
+        return builder;
+    }
+
+   
+    @Override
+    public String getName() {
+        return NAME;
     }
 }

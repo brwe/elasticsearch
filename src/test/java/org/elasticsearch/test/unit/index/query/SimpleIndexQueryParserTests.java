@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.unit.index.query;
 
+import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorQueryBuilder;
+
 import com.google.common.collect.Lists;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.ExtendedCommonTermsQuery;
@@ -1457,7 +1459,9 @@ public class SimpleIndexQueryParserTests {
     @Test
     public void testCustomBoostFactorQueryBuilder() throws IOException {
         IndexQueryParserService queryParser = queryParser();
-        Query parsedQuery = queryParser.parse(customBoostFactorQuery(termQuery("name.last", "banon")).boostFactor(1.3f)).query();
+        CustomBoostFactorQueryBuilder boostBuilder = new CustomBoostFactorQueryBuilder();
+        boostBuilder.boostFactor((float) 1.3);
+        Query parsedQuery = queryParser.parse(customBoostFactorQuery(termQuery("name.last", "banon"), boostBuilder)).query();
         assertThat(parsedQuery, instanceOf(FunctionScoreQuery.class));
         FunctionScoreQuery functionScoreQuery = (FunctionScoreQuery) parsedQuery;
         assertThat(((TermQuery) functionScoreQuery.getSubQuery()).getTerm(), equalTo(new Term("name.last", "banon")));
