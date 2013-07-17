@@ -19,6 +19,10 @@
 
 package org.elasticsearch.test.integration.search.child;
 
+import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
+
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryBuilder;
+
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -1090,13 +1094,14 @@ public class SimpleChildQuerySearchTests extends AbstractSharedClusterTest {
 
         client().admin().indices().prepareRefresh().execute().actionGet();
 
+        CustomScoreQueryBuilder customScoreBuilder = new CustomScoreQueryBuilder();
         SearchResponse response = client().prepareSearch("test")
                 .setQuery(
                         QueryBuilders.hasChildQuery(
                                 "child",
                                 QueryBuilders.customScoreQuery(
-                                        matchQuery("c_field2", 0)
-                                ).script("doc['c_field1'].value")
+                                        matchQuery("c_field2", 0), customScoreBuilder.script("doc['c_field1'].value")
+                                )
                         ).scoreType("sum")
                 )
                 .execute().actionGet();
@@ -1114,8 +1119,8 @@ public class SimpleChildQuerySearchTests extends AbstractSharedClusterTest {
                         QueryBuilders.hasChildQuery(
                                 "child",
                                 QueryBuilders.customScoreQuery(
-                                        matchQuery("c_field2", 0)
-                                ).script("doc['c_field1'].value")
+                                        matchQuery("c_field2", 0), customScoreBuilder.script("doc['c_field1'].value")
+                                )
                         ).scoreType("max")
                 )
                 .execute().actionGet();
@@ -1133,8 +1138,8 @@ public class SimpleChildQuerySearchTests extends AbstractSharedClusterTest {
                         QueryBuilders.hasChildQuery(
                                 "child",
                                 QueryBuilders.customScoreQuery(
-                                        matchQuery("c_field2", 0)
-                                ).script("doc['c_field1'].value")
+                                        matchQuery("c_field2", 0), customScoreBuilder.script("doc['c_field1'].value")
+                                )
                         ).scoreType("avg")
                 )
                 .execute().actionGet();
@@ -1146,14 +1151,13 @@ public class SimpleChildQuerySearchTests extends AbstractSharedClusterTest {
         assertThat(response.getHits().hits()[1].score(), equalTo(3f));
         assertThat(response.getHits().hits()[2].id(), equalTo("1"));
         assertThat(response.getHits().hits()[2].score(), equalTo(1.5f));
-
         response = client().prepareSearch("test")
                 .setQuery(
                         QueryBuilders.hasParentQuery(
                                 "parent",
                                 QueryBuilders.customScoreQuery(
-                                        matchQuery("p_field1", "p_value3")
-                                ).script("doc['p_field2'].value")
+                                        matchQuery("p_field1", "p_value3"), customScoreBuilder.script("doc['p_field2'].value")
+                                )
                         ).scoreType("score")
                 )
                 .addSort(SortBuilders.fieldSort("c_field3"))

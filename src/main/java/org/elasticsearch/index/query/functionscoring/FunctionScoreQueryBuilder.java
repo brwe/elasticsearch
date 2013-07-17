@@ -19,6 +19,9 @@
 
 package org.elasticsearch.index.query.functionscoring;
 
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryBuilder;
+
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BaseQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -28,6 +31,7 @@ import java.io.IOException;
 public class FunctionScoreQueryBuilder extends BaseQueryBuilder {
 
     private final QueryBuilder queryBuilder;
+    private final FilterBuilder filterBuilder;
 
     private ScoreFunctionBuilder scoreBuilder;
 
@@ -44,13 +48,26 @@ public class FunctionScoreQueryBuilder extends BaseQueryBuilder {
     public FunctionScoreQueryBuilder(QueryBuilder queryBuilder, ScoreFunctionBuilder scoreBuilder) {
         this.queryBuilder = queryBuilder;
         this.scoreBuilder = scoreBuilder;
+        this.filterBuilder = null;
+    }
+
+    public FunctionScoreQueryBuilder(FilterBuilder filterBuilder, ScoreFunctionBuilder scoreBuilder) {
+        this.queryBuilder = null;
+        this.scoreBuilder = scoreBuilder;
+        this.filterBuilder = filterBuilder;
     }
 
     @Override
     protected void doXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject(FunctionScoreQueryParser.NAME);
-        builder.field("query");
-        queryBuilder.toXContent(builder, params);
+        
+        if(queryBuilder!=null) {
+            builder.field("query");
+            queryBuilder.toXContent(builder, params);
+        } else {
+            builder.field("filter");
+            filterBuilder.toXContent(builder, params);
+        }
         builder.field(((ScoreFunctionBuilder) scoreBuilder).getName());
         scoreBuilder.toXContent(builder, params);
         builder.endObject();

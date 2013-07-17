@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.integration.search.sort;
 
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryBuilder;
+
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchPhaseExecutionException;
@@ -160,21 +162,21 @@ public class SimpleSortTests extends AbstractSharedClusterTest {
 
         refresh();
 
-        SearchResponse searchResponse = client().prepareSearch("test").setQuery(customScoreQuery(matchAllQuery()).script("_source.field")).execute().actionGet();
+        SearchResponse searchResponse = client().prepareSearch("test").setQuery(customScoreQuery(matchAllQuery(), new CustomScoreQueryBuilder().script("_source.field"))).execute().actionGet();
         assertThat(searchResponse.getHits().getAt(0).getId(), equalTo("1"));
         assertThat(searchResponse.getHits().getAt(1).score(), Matchers.lessThan(searchResponse.getHits().getAt(0).score()));
         assertThat(searchResponse.getHits().getAt(1).getId(), equalTo("2"));
         assertThat(searchResponse.getHits().getAt(2).score(), Matchers.lessThan(searchResponse.getHits().getAt(1).score()));
         assertThat(searchResponse.getHits().getAt(2).getId(), equalTo("3"));
 
-        searchResponse = client().prepareSearch("test").setQuery(customScoreQuery(matchAllQuery()).script("_source.field")).addSort("_score", SortOrder.DESC).execute().actionGet();
+        searchResponse = client().prepareSearch("test").setQuery(customScoreQuery(matchAllQuery(), new CustomScoreQueryBuilder().script("_source.field"))).addSort("_score", SortOrder.DESC).execute().actionGet();
         assertThat(searchResponse.getHits().getAt(0).getId(), equalTo("1"));
         assertThat(searchResponse.getHits().getAt(1).score(), Matchers.lessThan(searchResponse.getHits().getAt(0).score()));
         assertThat(searchResponse.getHits().getAt(1).getId(), equalTo("2"));
         assertThat(searchResponse.getHits().getAt(2).score(), Matchers.lessThan(searchResponse.getHits().getAt(1).score()));
         assertThat(searchResponse.getHits().getAt(2).getId(), equalTo("3"));
 
-        searchResponse = client().prepareSearch("test").setQuery(customScoreQuery(matchAllQuery()).script("_source.field")).addSort("_score", SortOrder.DESC).execute().actionGet();
+        searchResponse = client().prepareSearch("test").setQuery(customScoreQuery(matchAllQuery(), new CustomScoreQueryBuilder().script("_source.field"))).addSort("_score", SortOrder.DESC).execute().actionGet();
         assertThat(searchResponse.getHits().getAt(2).getId(), equalTo("3"));
         assertThat(searchResponse.getHits().getAt(1).getId(), equalTo("2"));
         assertThat(searchResponse.getHits().getAt(0).getId(), equalTo("1"));

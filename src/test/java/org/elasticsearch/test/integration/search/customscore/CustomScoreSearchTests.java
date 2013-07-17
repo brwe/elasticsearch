@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.integration.search.customscore;
 
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryBuilder;
+
 import org.apache.lucene.search.Explanation;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -177,8 +179,8 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
             logger.info("running min(doc['num1'].value)");
             SearchResponse response = client().search(searchRequest()
                     .searchType(SearchType.QUERY_THEN_FETCH)
-                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"))
-                            .script("c_min = 1000; foreach (x : doc['snum'].values) { c_min = min(Integer.parseInt(x), c_min) } return c_min")))
+                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("c_min = 1000; foreach (x : doc['snum'].values) { c_min = min(Integer.parseInt(x), c_min) } return c_min"))
+                            ))
             ).actionGet();
 
             assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -189,8 +191,8 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
             
             response = client().search(searchRequest()
                     .searchType(SearchType.QUERY_THEN_FETCH)
-                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"))
-                            .script("c_min = 1000; foreach (x : doc['lnum'].values) { c_min = min(x, c_min) } return c_min")))
+                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("c_min = 1000; foreach (x : doc['lnum'].values) { c_min = min(x, c_min) } return c_min"))
+                            ))
             ).actionGet();
 
             assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -201,8 +203,8 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
             
             response = client().search(searchRequest()
                     .searchType(SearchType.QUERY_THEN_FETCH)
-                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"))
-                            .script("c_min = 1000; foreach (x : doc['dnum'].values) { c_min = min(x, c_min) } return c_min")))
+                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("c_min = 1000; foreach (x : doc['dnum'].values) { c_min = min(x, c_min) } return c_min"))
+                            ))
             ).actionGet();
 
             assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -213,8 +215,8 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
             
             response = client().search(searchRequest()
                     .searchType(SearchType.QUERY_THEN_FETCH)
-                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"))
-                            .script("c_min = 1000; foreach (x : doc['gp'].values) { c_min = min(x.lat, c_min) } return c_min")))
+                    .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("c_min = 1000; foreach (x : doc['gp'].values) { c_min = min(x.lat, c_min) } return c_min"))
+                            ))
             ).actionGet();
 
             assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -240,7 +242,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running doc['num1'].value");
         SearchResponse response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value")).script("doc['num1'].value")))
+                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("doc['num1'].value"))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -252,7 +254,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running -doc['num1'].value");
         response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value")).script("-doc['num1'].value")))
+                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("-doc['num1'].value"))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -265,7 +267,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running pow(doc['num1'].value, 2)");
         response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value")).script("pow(doc['num1'].value, 2)")))
+                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("pow(doc['num1'].value, 2)"))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -277,7 +279,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running max(doc['num1'].value, 1)");
         response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value")).script("max(doc['num1'].value, 1d)")))
+                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("max(doc['num1'].value, 1d)"))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -289,7 +291,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running doc['num1'].value * _score");
         response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value")).script("doc['num1'].value * _score")))
+                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("doc['num1'].value * _score"))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -301,7 +303,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running param1 * param2 * _score");
         response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value")).script("param1 * param2 * _score").param("param1", 2).param("param2", 2)))
+                .source(searchSource().explain(true).query(customScoreQuery(termQuery("test", "value"), new CustomScoreQueryBuilder().script("param1 * param2 * _score").param("param1", 2).param("param2", 2))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));
@@ -313,7 +315,7 @@ public class CustomScoreSearchTests extends AbstractSharedClusterTest {
         logger.info("running param1 * param2 * _score with filter instead of query");
         response = client().search(searchRequest()
                 .searchType(SearchType.QUERY_THEN_FETCH)
-                .source(searchSource().explain(true).query(customScoreQuery(termFilter("test", "value")).script("param1 * param2 * _score").param("param1", 2).param("param2", 2)))
+                .source(searchSource().explain(true).query(customScoreQuery(termFilter("test", "value"), new CustomScoreQueryBuilder().script("param1 * param2 * _score").param("param1", 2).param("param2", 2))))
         ).actionGet();
 
         assertThat(response.getHits().totalHits(), equalTo(2l));

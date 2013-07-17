@@ -525,8 +525,8 @@ public abstract class QueryBuilders {
      *
      * @param queryBuilder The query to custom score
      */
-    public static CustomScoreQueryBuilder customScoreQuery(QueryBuilder queryBuilder) {
-        return new CustomScoreQueryBuilder(queryBuilder);
+    public static FunctionScoreQueryBuilder customScoreQuery(QueryBuilder queryBuilder, CustomScoreQueryBuilder customScoreBuilder) {
+        return new FunctionScoreQueryBuilder(queryBuilder, customScoreBuilder);
     }
 
     /**
@@ -535,8 +535,8 @@ public abstract class QueryBuilders {
      *
      * @param filterBuilder The filter that defines which documents are scored by a script.
      */
-    public static CustomScoreQueryBuilder customScoreQuery(FilterBuilder filterBuilder) {
-        return new CustomScoreQueryBuilder(filterBuilder);
+    public static FunctionScoreQueryBuilder customScoreQuery(FilterBuilder filterBuilder, CustomScoreQueryBuilder customScoreBuilder) {
+        return new FunctionScoreQueryBuilder(filterBuilder, customScoreBuilder);
     }
 
      /**

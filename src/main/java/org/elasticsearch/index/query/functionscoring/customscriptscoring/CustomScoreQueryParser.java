@@ -44,6 +44,7 @@ import java.util.Map;
  */
 public class CustomScoreQueryParser implements QueryParser {
 
+    public static String[] NAMES = {"script_score", "scriptScore"};
     public static final String NAME = "custom_score";
 
     @Inject
