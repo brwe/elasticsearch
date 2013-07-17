@@ -17,48 +17,42 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query;
+package org.elasticsearch.index.query.functionscoring;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.BaseQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 
 import java.io.IOException;
 
-/**
- * A query that simply applies the boost factor to another query (multiply it).
- *
- *
- */
-public class CustomBoostFactorQueryBuilder extends BaseQueryBuilder {
+public class FunctionScoreQueryBuilder extends BaseQueryBuilder {
 
     private final QueryBuilder queryBuilder;
 
-    private float boostFactor = -1;
+    private ScoreFunctionBuilder scoreBuilder;
 
     /**
-     * A query that simply applies the boost factor to another query (multiply it).
-     *
-     * @param queryBuilder The query to apply the boost factor to.
+     * A query that multiplies the score computed by another query with a
+     * function centered about a user given reference. The farther the numeric
+     * values of the document are from the user given reference, the lower the
+     * score is weighted.
+     * 
+     * @param queryBuilder
+     *            The query to apply the boost factor to.
+     * @param scoreBuilder
      */
-    public CustomBoostFactorQueryBuilder(QueryBuilder queryBuilder) {
+    public FunctionScoreQueryBuilder(QueryBuilder queryBuilder, ScoreFunctionBuilder scoreBuilder) {
         this.queryBuilder = queryBuilder;
-    }
-
-    /**
-     * Sets the boost factor for this query.
-     */
-    public CustomBoostFactorQueryBuilder boostFactor(float boost) {
-        this.boostFactor = boost;
-        return this;
+        this.scoreBuilder = scoreBuilder;
     }
 
     @Override
     protected void doXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject(CustomBoostFactorQueryParser.NAME);
+        builder.startObject(FunctionScoreQueryParser.NAME);
         builder.field("query");
         queryBuilder.toXContent(builder, params);
-        if (boostFactor != -1) {
-            builder.field("boost_factor", boostFactor);
-        }
+        builder.field(((ScoreFunctionBuilder) scoreBuilder).getName());
+        scoreBuilder.toXContent(builder, params);
         builder.endObject();
     }
 }

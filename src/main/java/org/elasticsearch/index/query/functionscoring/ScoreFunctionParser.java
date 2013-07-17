@@ -17,23 +17,24 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring;
 
-import org.apache.lucene.search.Explanation;
+import org.elasticsearch.common.lucene.search.function.ScoreFunction;
+import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.query.QueryParseContext;
+import org.elasticsearch.index.query.QueryParsingException;
 
-/**
- * Implement this interface to provide a decay function that is executed on a
- * distance. For example, this could be an exponential drop of, a triangle
- * function or something of the kind. This is used, for example, by
- * {@link GaussDecayFunctionParser}.
- * 
- * */
+import java.io.IOException;
 
-public interface CustomDecayFunction {
-    public double evaluate(double value, double scale);
+public interface ScoreFunctionParser {
 
-    public Explanation explainFunction(String distance, double distanceVal, double scale);
+    public ScoreFunction parse(QueryParseContext parseContext, XContentParser parser) throws IOException, QueryParsingException;
 
-    public double processScale(double userGivenScale, double userGivenValue);
+    /**
+     * Returns the name of the function, for example "linear", "gauss" etc. This
+     * name is used for registering the parser in
+     * {@link FunctionScoreQueryParser}.
+     * */
+    public String getName();
 
 }

@@ -18,7 +18,8 @@
  */
 package org.elasticsearch.test.integration.search.distancescore;
 
-import org.elasticsearch.index.query.distancescoring.DistanceScoringModule;
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import org.elasticsearch.plugins.AbstractPlugin;
 
 /**
@@ -36,7 +37,7 @@ public class CustomDistanceScorePlugin extends AbstractPlugin {
         return "Distance score plugin to test pluggable implementation";
     }
 
-    public void onModule(DistanceScoringModule scoreModule) {
+    public void onModule(FunctionScoreModule scoreModule) {
         scoreModule.registerParser(CustomDistanceScoreParser.class);
     }
 

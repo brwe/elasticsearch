@@ -17,15 +17,12 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring;
 
-public class LinearDecayFunctionBuilder extends MultiplyingFunctionBuilder {
+import org.elasticsearch.common.xcontent.ToXContent;
 
-    private static String NAME = "lin";
+public interface ScoreFunctionBuilder extends ToXContent {
 
-    @Override
-    public String getName() {
-        return NAME;
-    }
+    public String getName();
 
 }

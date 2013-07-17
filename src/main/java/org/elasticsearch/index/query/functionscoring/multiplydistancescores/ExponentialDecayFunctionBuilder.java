@@ -17,24 +17,15 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring;
+package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
-import org.elasticsearch.common.lucene.search.function.ScoreFunction;
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.index.query.QueryParseContext;
-import org.elasticsearch.index.query.QueryParsingException;
+public class ExponentialDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-import java.io.IOException;
+    private static String NAME = "exp";
 
-public interface DistanceScoreFunctionParser {
-
-    public ScoreFunction parse(QueryParseContext parseContext, XContentParser parser) throws IOException, QueryParsingException;
-
-    /**
-     * Returns the name of the function, for example "linear", "gauss" etc. This
-     * name is used for registering the parser in
-     * {@link DistanceScoreQueryParser}.
-     * */
-    public String getName();
+    @Override
+    public String getName() {
+        return NAME;
+    }
 
 }

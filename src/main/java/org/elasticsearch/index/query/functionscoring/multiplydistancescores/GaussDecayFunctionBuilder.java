@@ -17,11 +17,11 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
-public class ExponentialDecayFunctionBuilder extends MultiplyingFunctionBuilder {
+public class GaussDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-    private static String NAME = "exp";
+    private static String NAME = "gauss";
 
     @Override
     public String getName() {

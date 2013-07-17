@@ -17,42 +17,51 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring;
+package org.elasticsearch.index.query.functionscoring.customboostscoring;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BaseQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 
+import org.elasticsearch.common.xcontent.XContentBuilder;
+
 import java.io.IOException;
 
-public class DistanceScoreQueryBuilder extends BaseQueryBuilder {
+/**
+ * A query that simply applies the boost factor to another query (multiply it).
+ *
+ *
+ */
+public class CustomBoostFactorQueryBuilder extends BaseQueryBuilder {
 
     private final QueryBuilder queryBuilder;
 
-    private DistanceScoreFunctionBuilder scoreBuilder;
+    private float boostFactor = -1;
 
     /**
-     * A query that multiplies the score computed by another query with a
-     * function centered about a user given reference. The farther the numeric
-     * values of the document are from the user given reference, the lower the
-     * score is weighted.
-     * 
-     * @param queryBuilder
-     *            The query to apply the boost factor to.
-     * @param scoreBuilder
+     * A query that simply applies the boost factor to another query (multiply it).
+     *
+     * @param queryBuilder The query to apply the boost factor to.
      */
-    public DistanceScoreQueryBuilder(QueryBuilder queryBuilder, DistanceScoreFunctionBuilder scoreBuilder) {
+    public CustomBoostFactorQueryBuilder(QueryBuilder queryBuilder) {
         this.queryBuilder = queryBuilder;
-        this.scoreBuilder = scoreBuilder;
+    }
+
+    /**
+     * Sets the boost factor for this query.
+     */
+    public CustomBoostFactorQueryBuilder boostFactor(float boost) {
+        this.boostFactor = boost;
+        return this;
     }
 
     @Override
     protected void doXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject(DistanceScoreQueryParser.NAME);
+        builder.startObject(CustomBoostFactorQueryParser.NAME);
         builder.field("query");
         queryBuilder.toXContent(builder, params);
-        builder.field(((DistanceScoreFunctionBuilder) scoreBuilder).getName());
-        scoreBuilder.toXContent(builder, params);
+        if (boostFactor != -1) {
+            builder.field("boost_factor", boostFactor);
+        }
         builder.endObject();
     }
 }

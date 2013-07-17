@@ -19,11 +19,12 @@
 
 package org.elasticsearch.search;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import com.google.common.collect.ImmutableList;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.inject.SpawnModules;
-import org.elasticsearch.index.query.distancescoring.DistanceScoringModule;
 import org.elasticsearch.search.action.SearchServiceTransportAction;
 import org.elasticsearch.search.controller.SearchPhaseController;
 import org.elasticsearch.search.dfs.DfsPhase;
@@ -46,7 +47,7 @@ public class SearchModule extends AbstractModule implements SpawnModules {
 
     @Override
     public Iterable<? extends Module> spawnModules() {
-        return ImmutableList.of(new TransportSearchModule(), new FacetModule(), new HighlightModule(), new SuggestModule(), new DistanceScoringModule());
+        return ImmutableList.of(new TransportSearchModule(), new FacetModule(), new HighlightModule(), new SuggestModule(), new FunctionScoreModule());
     }
 
     @Override

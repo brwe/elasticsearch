@@ -17,15 +17,23 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
-public class GaussDecayFunctionBuilder extends MultiplyingFunctionBuilder {
+import org.apache.lucene.search.Explanation;
 
-    private static String NAME = "gauss";
+/**
+ * Implement this interface to provide a decay function that is executed on a
+ * distance. For example, this could be an exponential drop of, a triangle
+ * function or something of the kind. This is used, for example, by
+ * {@link GaussDecayFunctionParser}.
+ * 
+ * */
 
-    @Override
-    public String getName() {
-        return NAME;
-    }
+public interface CustomDecayFunction {
+    public double evaluate(double value, double scale);
+
+    public Explanation explainFunction(String distance, double distanceVal, double scale);
+
+    public double processScale(double userGivenScale, double userGivenValue);
 
 }

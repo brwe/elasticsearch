@@ -19,14 +19,15 @@
 
 package org.elasticsearch.test.integration.search.distancescore;
 
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.GaussDecayFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.LinearDecayFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.MultiplyingFunctionBuilder;
+
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.search.SearchPhaseExecutionException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionBuilder;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.test.hamcrest.ElasticsearchAssertions;
 import org.elasticsearch.test.integration.AbstractSharedClusterTest;
@@ -44,7 +45,6 @@ import static org.hamcrest.Matchers.lessThan;
 
 public class DistanceScoreTest extends AbstractSharedClusterTest {
 
-   
     @Test
     public void testDistanceScoreDate_lin() throws Exception {
 

@@ -1,6 +1,6 @@
 package org.elasticsearch.test.integration.search.distancescore;
 
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.MultiplyingFunctionBuilder;
 
 public class CustomDistanceScoreBuilder extends MultiplyingFunctionBuilder {
 

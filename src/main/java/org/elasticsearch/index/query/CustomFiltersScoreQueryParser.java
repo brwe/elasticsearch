@@ -19,6 +19,8 @@
 
 package org.elasticsearch.index.query;
 
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryParser;
+
 import gnu.trove.list.array.TFloatArrayList;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.Query;

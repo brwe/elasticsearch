@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query;
+package org.elasticsearch.index.query.functionscoring.customscriptscoring;
+
+import org.elasticsearch.index.query.*;
 
 import com.google.common.collect.Maps;
 import org.elasticsearch.common.xcontent.XContentBuilder;

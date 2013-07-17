@@ -17,48 +17,45 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
 import org.apache.lucene.search.ComplexExplanation;
 import org.apache.lucene.search.Explanation;
 
-public class ExponentialDecayFunctionParser extends MultiplyingFunctionParser {
+public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
 
-    public static String NAME = "exp";
+    public static String NAME = "lin";
 
     @Override
     public String getName() {
         return NAME;
     }
 
-    static CustomDecayFunction distanceFunction = new ExponentialDecayScoreFunction();
+    static CustomDecayFunction distanceFunction = new LinearDecayScoreFunction();
 
     @Override
     public CustomDecayFunction getDecayFunction() {
         return distanceFunction;
     }
 
-    final static class ExponentialDecayScoreFunction implements CustomDecayFunction {
+    final static class LinearDecayScoreFunction implements CustomDecayFunction {
 
         @Override
         public double evaluate(double value, double scale) {
-            return Math.exp(-scale * Math.abs(value));
+            return Math.max(0.0, (scale - Math.abs(value)) / scale);
         }
 
         @Override
         public Explanation explainFunction(String distance, double distanceVal, double scale) {
             ComplexExplanation ce = new ComplexExplanation();
             ce.setValue((float) evaluate(distanceVal, scale));
-            ce.setDescription("exp(- abs(" + distance + ")/" + scale + ")");
+            ce.setDescription("max(0.0, ((" + scale + " - abs(" + distance + "))/" + scale + ")");
             return ce;
         }
 
-        /**
-         * 
-         * */
         @Override
         public double processScale(double userGivenScale, double userGivenValue) {
-            return -Math.log(userGivenValue) / userGivenScale;
+            return userGivenScale / (1.0 - userGivenValue);
         }
 
     }

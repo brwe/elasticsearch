@@ -17,16 +17,17 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
+
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionBuilder;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class MultiplyingFunctionBuilder implements DistanceScoreFunctionBuilder {
+public abstract class MultiplyingFunctionBuilder implements ScoreFunctionBuilder {
 
     List<Var> vars = new ArrayList<Var>();
     public static String REFERNECE = "reference";

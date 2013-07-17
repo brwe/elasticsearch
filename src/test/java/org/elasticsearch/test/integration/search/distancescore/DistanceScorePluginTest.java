@@ -29,7 +29,8 @@ import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.MultiplyingFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.MultiplyingFunctionBuilder;
+
 
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.search.SearchResponse;

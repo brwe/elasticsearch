@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
+
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
 
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
 
@@ -42,7 +44,6 @@ import org.elasticsearch.index.mapper.core.NumberFieldMapper;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper.GeoStringFieldMapper;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParsingException;
-import org.elasticsearch.index.query.distancescoring.DistanceScoreFunctionParser;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
@@ -84,7 +85,7 @@ import java.util.List;
  * <p>
  * See {@link GaussDecayFunctionBuilder} and {@link GaussDecayFunctionParser}
  * for an example. The parser furthermore needs to be registered in the
- * {@link org.elasticsearch.index.query.distancescoring.DistanceScoringModule
+ * {@link org.elasticsearch.index.query.functionscoring.FunctionScoreModule
  * DistanceScoringModule}. See
  * {@link org.elasticsearch.test.integration.search.distancescore.CustomDistanceScorePlugin
  * CustomDistanceScorePlugin} and
@@ -94,7 +95,7 @@ import java.util.List;
  * 
  * **/
 
-public abstract class MultiplyingFunctionParser implements DistanceScoreFunctionParser {
+public abstract class MultiplyingFunctionParser implements ScoreFunctionParser {
 
     /**
      * Override this function if you want to produce your own scorer.

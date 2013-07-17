@@ -17,7 +17,11 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query;
+package org.elasticsearch.index.query.functionscoring.customscriptscoring;
+
+import org.elasticsearch.index.query.QueryParseContext;
+import org.elasticsearch.index.query.QueryParser;
+import org.elasticsearch.index.query.QueryParsingException;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Explanation;

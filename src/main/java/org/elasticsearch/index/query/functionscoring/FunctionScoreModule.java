@@ -16,38 +16,39 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.index.query.distancescoring;
+package org.elasticsearch.index.query.functionscoring;
+
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.ExponentialDecayFunctionParser;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.GaussDecayFunctionParser;
+import org.elasticsearch.index.query.functionscoring.multiplydistancescores.LinearDecayFunctionParser;
 
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.ExponentialDecayFunctionParser;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.GaussDecayFunctionParser;
-import org.elasticsearch.index.query.distancescoring.multiplydistancescores.LinearDecayFunctionParser;
 
 import java.util.List;
 
 /**
  *
  */
-public class DistanceScoringModule extends AbstractModule {
+public class FunctionScoreModule extends AbstractModule {
 
-    private List<Class<? extends DistanceScoreFunctionParser>> parsers = Lists.newArrayList();
+    private List<Class<? extends ScoreFunctionParser>> parsers = Lists.newArrayList();
 
-    public DistanceScoringModule() {
+    public FunctionScoreModule() {
         registerParser(LinearDecayFunctionParser.class);
         registerParser(GaussDecayFunctionParser.class);
         registerParser(ExponentialDecayFunctionParser.class);
     }
 
-    public void registerParser(Class<? extends DistanceScoreFunctionParser> parser) {
+    public void registerParser(Class<? extends ScoreFunctionParser> parser) {
         parsers.add(parser);
     }
 
     @Override
     protected void configure() {
-        Multibinder<DistanceScoreFunctionParser> parserMapBinder = Multibinder.newSetBinder(binder(), DistanceScoreFunctionParser.class);
-        for (Class<? extends DistanceScoreFunctionParser> clazz : parsers) {
+        Multibinder<ScoreFunctionParser> parserMapBinder = Multibinder.newSetBinder(binder(), ScoreFunctionParser.class);
+        for (Class<? extends ScoreFunctionParser> clazz : parsers) {
             parserMapBinder.addBinding().to(clazz);
         }
     }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.distancescoring;
+package org.elasticsearch.index.query.functionscoring;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.lucene.search.Query;
@@ -37,17 +37,17 @@ import java.util.Set;
 /**
  *
  */
-public class DistanceScoreQueryParser implements QueryParser {
+public class FunctionScoreQueryParser implements QueryParser {
 
     public static final String NAME = "distance_score";
 
-    protected ImmutableMap<String, DistanceScoreFunctionParser> functionParsers;
+    protected ImmutableMap<String, ScoreFunctionParser> functionParsers;
 
     @Inject
-    public DistanceScoreQueryParser(Set<DistanceScoreFunctionParser> parsers) {
+    public FunctionScoreQueryParser(Set<ScoreFunctionParser> parsers) {
 
-        MapBuilder<String, DistanceScoreFunctionParser> builder = MapBuilder.newMapBuilder();
-        for (DistanceScoreFunctionParser scoreFunctionParser : parsers) {
+        MapBuilder<String, ScoreFunctionParser> builder = MapBuilder.newMapBuilder();
+        for (ScoreFunctionParser scoreFunctionParser : parsers) {
             builder.put(scoreFunctionParser.getName(), scoreFunctionParser);
         }
         this.functionParsers = builder.immutableMap();
@@ -74,7 +74,7 @@ public class DistanceScoreQueryParser implements QueryParser {
                 if ("query".equals(currentFieldName)) {
                     query = parseContext.parseInnerQuery();
                 } else {
-                    DistanceScoreFunctionParser scoreFunctionParser = functionParsers.get(currentFieldName);
+                    ScoreFunctionParser scoreFunctionParser = functionParsers.get(currentFieldName);
                     if (scoreFunctionParser == null) {
                         throw new QueryParsingException(parseContext.index(), "[distance_score] query does not support ["
                                 + currentFieldName + "]");
