@@ -19,14 +19,9 @@
 
 package org.elasticsearch.index.query.functionscoring.customscriptscoring;
 
-import org.elasticsearch.index.query.FilterBuilder;
-
-import org.elasticsearch.index.query.functionscoring.ScoreFunctionBuilder;
-
-import org.elasticsearch.index.query.*;
-
 import com.google.common.collect.Maps;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionBuilder;
 
 import java.io.IOException;
 import java.util.Map;

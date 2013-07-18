@@ -19,6 +19,8 @@
 
 package org.elasticsearch.index.query.functionscoring.customscriptscoring;
 
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
+
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParser;
 import org.elasticsearch.index.query.QueryParsingException;
@@ -42,28 +44,22 @@ import java.util.Map;
 /**
  *
  */
-public class CustomScoreQueryParser implements QueryParser {
+public class CustomScoreQueryParser implements ScoreFunctionParser {
 
     public static String[] NAMES = {"script_score", "scriptScore"};
-    public static final String NAME = "custom_score";
 
     @Inject
     public CustomScoreQueryParser() {
     }
 
     @Override
-    public String[] names() {
-        return new String[]{NAME, Strings.toCamelCase(NAME)};
+    public String[] getNames() {
+        return NAMES;
     }
 
     @Override
-    public Query parse(QueryParseContext parseContext) throws IOException, QueryParsingException {
-        XContentParser parser = parseContext.parser();
+    public ScoreFunction parse(QueryParseContext parseContext, XContentParser parser) throws IOException, QueryParsingException {
 
-        Query query = null;
-        Filter filter = null;
-        boolean queryOrFilterFound = false;
-        float boost = 1.0f;
         String script = null;
         String scriptLang = null;
         Map<String, Object> vars = null;
@@ -74,50 +70,34 @@ public class CustomScoreQueryParser implements QueryParser {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
             } else if (token == XContentParser.Token.START_OBJECT) {
-                if ("query".equals(currentFieldName)) {
-                    query = parseContext.parseInnerQuery();
-                    queryOrFilterFound = true;
-                } else if ("filter".equals(currentFieldName)) {
-                    filter = parseContext.parseInnerFilter();
-                    queryOrFilterFound = true;
-                } else if ("params".equals(currentFieldName)) {
+               if ("params".equals(currentFieldName)) {
                     vars = parser.map();
                 } else {
-                    throw new QueryParsingException(parseContext.index(), "[custom_score] query does not support [" + currentFieldName + "]");
+                    throw new QueryParsingException(parseContext.index(), NAMES[0]+ "query does not support [" + currentFieldName + "]");
                 }
             } else if (token.isValue()) {
                 if ("script".equals(currentFieldName)) {
                     script = parser.text();
                 } else if ("lang".equals(currentFieldName)) {
                     scriptLang = parser.text();
-                } else if ("boost".equals(currentFieldName)) {
-                    boost = parser.floatValue();
                 } else {
-                    throw new QueryParsingException(parseContext.index(), "[custom_score] query does not support [" + currentFieldName + "]");
+                    throw new QueryParsingException(parseContext.index(), NAMES[0]+ "query does not support [" + currentFieldName + "]");
                 }
             }
         }
-        if (!queryOrFilterFound) {
-            throw new QueryParsingException(parseContext.index(), "[custom_score] requires 'query' or 'filter' field");
-        }
+      
         if (script == null) {
-            throw new QueryParsingException(parseContext.index(), "[custom_score] requires 'script' field");
-        }
-        if (query == null && filter == null) {
-            return null;
-        } else if (filter != null) {
-            query = new XConstantScoreQuery(filter);
+            throw new QueryParsingException(parseContext.index(), NAMES[0]+ "requires 'script' field");
         }
 
         SearchScript searchScript;
         try {
             searchScript = parseContext.scriptService().search(parseContext.lookup(), scriptLang, script, vars);
         } catch (Exception e) {
-            throw new QueryParsingException(parseContext.index(), "[custom_score] the script could not be loaded", e);
+            throw new QueryParsingException(parseContext.index(), NAMES[0]+ "the script could not be loaded", e);
         }
-        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery(query, new ScriptScoreFunction(script, vars, searchScript));
-        functionScoreQuery.setBoost(boost);
-        return functionScoreQuery;
+        return new ScriptScoreFunction(script, vars, searchScript);
+      
     }
 
     public static class ScriptScoreFunction implements ScoreFunction {
@@ -179,4 +159,5 @@ public class CustomScoreQueryParser implements QueryParser {
             return "script[" + sScript + "], params [" + params + "]";
         }
     }
+
 }
