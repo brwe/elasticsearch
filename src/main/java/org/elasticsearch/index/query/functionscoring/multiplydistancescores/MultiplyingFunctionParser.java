@@ -19,13 +19,10 @@
 
 package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
-import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
-
-import org.elasticsearch.ElasticSearchIllegalArgumentException;
-
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.ComplexExplanation;
 import org.apache.lucene.search.Explanation;
+import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.ElasticSearchParseException;
 import org.elasticsearch.common.geo.GeoDistance;
 import org.elasticsearch.common.geo.GeoPoint;
@@ -44,6 +41,7 @@ import org.elasticsearch.index.mapper.core.NumberFieldMapper;
 import org.elasticsearch.index.mapper.geo.GeoPointFieldMapper.GeoStringFieldMapper;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParsingException;
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;

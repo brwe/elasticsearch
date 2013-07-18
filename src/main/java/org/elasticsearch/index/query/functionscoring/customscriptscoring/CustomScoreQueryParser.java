@@ -19,22 +19,14 @@
 
 package org.elasticsearch.index.query.functionscoring.customscriptscoring;
 
-import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
-
-import org.elasticsearch.index.query.QueryParseContext;
-import org.elasticsearch.index.query.QueryParser;
-import org.elasticsearch.index.query.QueryParsingException;
-
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Explanation;
-import org.apache.lucene.search.Filter;
-import org.apache.lucene.search.Query;
-import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.lucene.search.XConstantScoreQuery;
-import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
 import org.elasticsearch.common.lucene.search.function.ScoreFunction;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.query.QueryParseContext;
+import org.elasticsearch.index.query.QueryParsingException;
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
 import org.elasticsearch.script.ExplainableSearchScript;
 import org.elasticsearch.script.SearchScript;
 
@@ -46,7 +38,7 @@ import java.util.Map;
  */
 public class CustomScoreQueryParser implements ScoreFunctionParser {
 
-    public static String[] NAMES = {"script_score", "scriptScore"};
+    public static String[] NAMES = { "script_score", "scriptScore" };
 
     @Inject
     public CustomScoreQueryParser() {
@@ -70,10 +62,10 @@ public class CustomScoreQueryParser implements ScoreFunctionParser {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
             } else if (token == XContentParser.Token.START_OBJECT) {
-               if ("params".equals(currentFieldName)) {
+                if ("params".equals(currentFieldName)) {
                     vars = parser.map();
                 } else {
-                    throw new QueryParsingException(parseContext.index(), NAMES[0]+ "query does not support [" + currentFieldName + "]");
+                    throw new QueryParsingException(parseContext.index(), NAMES[0] + "query does not support [" + currentFieldName + "]");
                 }
             } else if (token.isValue()) {
                 if ("script".equals(currentFieldName)) {
@@ -81,23 +73,23 @@ public class CustomScoreQueryParser implements ScoreFunctionParser {
                 } else if ("lang".equals(currentFieldName)) {
                     scriptLang = parser.text();
                 } else {
-                    throw new QueryParsingException(parseContext.index(), NAMES[0]+ "query does not support [" + currentFieldName + "]");
+                    throw new QueryParsingException(parseContext.index(), NAMES[0] + "query does not support [" + currentFieldName + "]");
                 }
             }
         }
-      
+
         if (script == null) {
-            throw new QueryParsingException(parseContext.index(), NAMES[0]+ "requires 'script' field");
+            throw new QueryParsingException(parseContext.index(), NAMES[0] + "requires 'script' field");
         }
 
         SearchScript searchScript;
         try {
             searchScript = parseContext.scriptService().search(parseContext.lookup(), scriptLang, script, vars);
         } catch (Exception e) {
-            throw new QueryParsingException(parseContext.index(), NAMES[0]+ "the script could not be loaded", e);
+            throw new QueryParsingException(parseContext.index(), NAMES[0] + "the script could not be loaded", e);
         }
         return new ScriptScoreFunction(script, vars, searchScript);
-      
+
     }
 
     public static class ScriptScoreFunction implements ScoreFunction {
@@ -116,7 +108,8 @@ public class CustomScoreQueryParser implements ScoreFunctionParser {
 
         @Override
         public void setNextReader(AtomicReaderContext ctx) {
-            //LUCENE 4 UPGRADE should this pass on a ARC or just and atomic reader? 
+            // LUCENE 4 UPGRADE should this pass on a ARC or just and atomic
+            // reader?
             script.setNextReader(ctx);
         }
 

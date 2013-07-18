@@ -24,7 +24,7 @@ import org.apache.lucene.search.Explanation;
 
 public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
 
-    public static String[] NAMES = {"lin"};
+    public static String[] NAMES = { "lin" };
 
     @Override
     public String[] getNames() {

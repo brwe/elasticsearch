@@ -19,11 +19,9 @@
 
 package org.elasticsearch.index.query.functionscoring;
 
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryBuilder;
-
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BaseQueryBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 
 import java.io.IOException;
@@ -60,8 +58,8 @@ public class FunctionScoreQueryBuilder extends BaseQueryBuilder {
     @Override
     protected void doXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject(FunctionScoreQueryParser.NAME);
-        
-        if(queryBuilder!=null) {
+
+        if (queryBuilder != null) {
             builder.field("query");
             queryBuilder.toXContent(builder, params);
         } else {

@@ -21,8 +21,6 @@ package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
 public class GaussDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
-   
-
     @Override
     public String getName() {
         return GaussDecayFunctionParser.NAMES[0];

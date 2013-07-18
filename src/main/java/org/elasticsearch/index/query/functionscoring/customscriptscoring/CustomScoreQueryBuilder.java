@@ -27,10 +27,10 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * A query that uses a script to compute or influence the score of documents that match with the inner query or filter.
+ * A query that uses a script to compute or influence the score of documents
+ * that match with the inner query or filter.
  */
 public class CustomScoreQueryBuilder implements ScoreFunctionBuilder {
-
 
     private String script;
 
@@ -39,15 +39,17 @@ public class CustomScoreQueryBuilder implements ScoreFunctionBuilder {
     private Map<String, Object> params = null;
 
     /**
-     * Constructs a query that defines how the scores are computed or influenced for documents that match with the
-     * specified query by a custom defined script.
-     *
-     * @param queryBuilder The query that defines what documents are custom scored by this query
+     * Constructs a query that defines how the scores are computed or influenced
+     * for documents that match with the specified query by a custom defined
+     * script.
+     * 
+     * @param queryBuilder
+     *            The query that defines what documents are custom scored by
+     *            this query
      */
     public CustomScoreQueryBuilder() {
 
     }
-
 
     /**
      * Sets the boost factor for this query.

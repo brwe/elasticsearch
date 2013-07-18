@@ -24,7 +24,7 @@ import org.apache.lucene.search.Explanation;
 
 public class ExponentialDecayFunctionParser extends MultiplyingFunctionParser {
 
-    public static String[] NAMES = {"exp"};
+    public static String[] NAMES = { "exp" };
 
     @Override
     public String[] getNames() {

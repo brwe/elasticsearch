@@ -115,42 +115,49 @@ public class FunctionScoreQueryParser implements QueryParser {
         return fQuery;
 
     }
-/**
- * This function is needed to assure backwards compatibility. The old format of the script scoring was:
- *  <pre>
- * {@code}
- * {
- *  "custom_score" : {
-    "query/filter" : {
-        ....
-    },
-    "params" : {
-       ...
-    },
-    "lang": "script_lang",
-    "boost" : some boost factor,
-    "script" : "some script"
-}
- * </pre>
- * In the new format, all parameters are supposed to be wrapped in an object like this:
- * <pre>
- * {@code}
- * "custom_score" : {
-        "query" : {
-            ....
-        },
-       "script": {
-            "params" : {
-              ...
-            },
-            "lang": "script_lang",
-            "boost" : "some ",
-            "script" : "some script"
-       }
-}
- * </pre>
- * This is parsed by the {@link CustomScoreQueryParser}
- * */
+
+    /**
+     * This function is needed to assure backwards compatibility. The old format
+     * of the script scoring was:
+     * 
+     * <pre>
+     * {@code}
+     * {
+     *  "custom_score" : {
+     *     "query/filter" : {
+     *         ....
+     *     },
+     *     "params" : {
+     *        ...
+     *     },
+     *     "lang": "script_lang",
+     *     "boost" : some boost factor,
+     *     "script" : "some script"
+     * }
+     * </pre>
+     * 
+     * In the new format, all parameters are supposed to be wrapped in an object
+     * like this:
+     * 
+     * <pre>
+     * {@code}
+     * "custom_score" : {
+     *         "query" : {
+     *             ....
+     *         },
+     *        "script": {
+     *             "params" : {
+     *               ...
+     *             },
+     *             "lang": "script_lang",
+     *             "boost" : "some ",
+     *             "script" : "some script"
+     *        }
+     * }
+     * </pre>
+     * 
+     * This is parsed by the {@link CustomScoreQueryParser}
+     * */
     private Query tryParsingOldScriptScoreFunction(Query query, Filter filter, float boost, XContentParser parser,
             QueryParseContext parseContext) throws QueryParsingException, IOException {
 
@@ -205,7 +212,8 @@ public class FunctionScoreQueryParser implements QueryParser {
         } catch (Exception e) {
             throw new QueryParsingException(parseContext.index(), "[custom_score] the script could not be loaded", e);
         }
-        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery(query, new CustomScoreQueryParser.ScriptScoreFunction(script, vars, searchScript));
+        FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery(query, new CustomScoreQueryParser.ScriptScoreFunction(script, vars,
+                searchScript));
         functionScoreQuery.setBoost(boost);
         return functionScoreQuery;
 

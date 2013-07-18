@@ -19,9 +19,8 @@
 
 package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
 
-import org.elasticsearch.index.query.functionscoring.ScoreFunctionBuilder;
-
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;

@@ -19,20 +19,13 @@
 
 package org.elasticsearch.index.query.functionscoring.customboostscoring;
 
-import org.elasticsearch.common.lucene.search.function.ScoreFunction;
-
-import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
-
-import org.elasticsearch.index.query.QueryParseContext;
-import org.elasticsearch.index.query.QueryParser;
-import org.elasticsearch.index.query.QueryParsingException;
-
-import org.apache.lucene.search.Query;
-import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.search.function.BoostScoreFunction;
-import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
+import org.elasticsearch.common.lucene.search.function.ScoreFunction;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.index.query.QueryParseContext;
+import org.elasticsearch.index.query.QueryParsingException;
+import org.elasticsearch.index.query.functionscoring.ScoreFunctionParser;
 
 import java.io.IOException;
 
@@ -41,15 +34,15 @@ import java.io.IOException;
  */
 public class CustomBoostFactorQueryParser implements ScoreFunctionParser {
 
-    public static String[] NAMES = {"boost_factor", "boostFactor"};
-    
+    public static String[] NAMES = { "boost_factor", "boostFactor" };
+
     @Inject
     public CustomBoostFactorQueryParser() {
     }
 
     @Override
     public ScoreFunction parse(QueryParseContext parseContext, XContentParser parser) throws IOException, QueryParsingException {
-        float boostFactor =  parser.floatValue();
+        float boostFactor = parser.floatValue();
         return new BoostScoreFunction(boostFactor);
     }
 

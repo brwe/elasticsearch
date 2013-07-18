@@ -25,7 +25,7 @@ import org.apache.lucene.search.Explanation;
 public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
 
     static CustomDecayFunction distanceFunction = new GaussScoreFunction();
-    public static String[] NAMES = {"gauss"};
+    public static String[] NAMES = { "gauss" };
 
     @Override
     public CustomDecayFunction getDecayFunction() {
