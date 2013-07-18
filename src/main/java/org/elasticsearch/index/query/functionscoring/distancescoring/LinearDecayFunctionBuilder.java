@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.distancescoring;
 
-public class ExponentialDecayFunctionBuilder extends MultiplyingFunctionBuilder {
+public class LinearDecayFunctionBuilder extends MultiplyingFunctionBuilder {
 
     @Override
     public String getName() {
-        return ExponentialDecayFunctionParser.NAMES[0];
+        return LinearDecayFunctionParser.NAMES[0];
     }
 
 }

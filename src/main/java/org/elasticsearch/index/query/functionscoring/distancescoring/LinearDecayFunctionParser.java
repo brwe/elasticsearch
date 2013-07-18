@@ -17,48 +17,46 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.distancescoring;
 
 import org.apache.lucene.search.ComplexExplanation;
 import org.apache.lucene.search.Explanation;
 
-public class GaussDecayFunctionParser extends MultiplyingFunctionParser {
+public class LinearDecayFunctionParser extends MultiplyingFunctionParser {
 
-    static CustomDecayFunction distanceFunction = new GaussScoreFunction();
-    public static String[] NAMES = { "gauss" };
-
-    @Override
-    public CustomDecayFunction getDecayFunction() {
-        return distanceFunction;
-    }
-
-    final static class GaussScoreFunction implements CustomDecayFunction {
-
-        @Override
-        public double evaluate(double value, double scale) {
-            // note that we already computed scale^2 in processScale() so we do
-            // not need to square it here.
-            return (float) Math.exp(-0.5 * Math.pow(value, 2.0) / scale);
-        }
-
-        @Override
-        public Explanation explainFunction(String distance, double distanceVal, double scale) {
-            ComplexExplanation ce = new ComplexExplanation();
-            ce.setValue((float) evaluate(distanceVal, scale));
-            ce.setDescription("exp(-0.5*pow(" + distance + ",2.0)/" + scale + ")");
-            return ce;
-
-        }
-
-        @Override
-        public double processScale(double userGivenScale, double userGivenValue) {
-            return -0.5 * Math.pow(userGivenScale, 2.0) / Math.log(userGivenValue);
-        }
-    }
+    public static String[] NAMES = { "lin" };
 
     @Override
     public String[] getNames() {
         return NAMES;
     }
 
+    static CustomDecayFunction distanceFunction = new LinearDecayScoreFunction();
+
+    @Override
+    public CustomDecayFunction getDecayFunction() {
+        return distanceFunction;
+    }
+
+    final static class LinearDecayScoreFunction implements CustomDecayFunction {
+
+        @Override
+        public double evaluate(double value, double scale) {
+            return Math.max(0.0, (scale - Math.abs(value)) / scale);
+        }
+
+        @Override
+        public Explanation explainFunction(String distance, double distanceVal, double scale) {
+            ComplexExplanation ce = new ComplexExplanation();
+            ce.setValue((float) evaluate(distanceVal, scale));
+            ce.setDescription("max(0.0, ((" + scale + " - abs(" + distance + "))/" + scale + ")");
+            return ce;
+        }
+
+        @Override
+        public double processScale(double userGivenScale, double userGivenValue) {
+            return userGivenScale / (1.0 - userGivenValue);
+        }
+
+    }
 }

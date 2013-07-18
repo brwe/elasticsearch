@@ -19,10 +19,10 @@
 
 package org.elasticsearch.test.integration.search.distancescore;
 
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.ExponentialDecayFunctionBuilder;
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.GaussDecayFunctionBuilder;
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.LinearDecayFunctionBuilder;
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.MultiplyingFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.distancescoring.ExponentialDecayFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.distancescoring.GaussDecayFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.distancescoring.LinearDecayFunctionBuilder;
+import org.elasticsearch.index.query.functionscoring.distancescoring.MultiplyingFunctionBuilder;
 
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.search.SearchPhaseExecutionException;

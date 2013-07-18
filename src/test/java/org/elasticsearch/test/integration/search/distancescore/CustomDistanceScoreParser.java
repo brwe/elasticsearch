@@ -1,8 +1,8 @@
 package org.elasticsearch.test.integration.search.distancescore;
 
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.MultiplyingFunctionParser;
+import org.elasticsearch.index.query.functionscoring.distancescoring.CustomDecayFunction;
+import org.elasticsearch.index.query.functionscoring.distancescoring.MultiplyingFunctionParser;
 
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.CustomDecayFunction;
 
 import org.apache.lucene.search.ComplexExplanation;
 import org.apache.lucene.search.Explanation;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.elasticsearch.index.query.functionscoring.multiplydistancescores;
+package org.elasticsearch.index.query.functionscoring.distancescoring;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.ComplexExplanation;

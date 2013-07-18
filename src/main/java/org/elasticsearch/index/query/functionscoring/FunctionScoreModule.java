@@ -18,14 +18,15 @@
  */
 package org.elasticsearch.index.query.functionscoring;
 
+import org.elasticsearch.index.query.functionscoring.distancescoring.ExponentialDecayFunctionParser;
+import org.elasticsearch.index.query.functionscoring.distancescoring.GaussDecayFunctionParser;
+import org.elasticsearch.index.query.functionscoring.distancescoring.LinearDecayFunctionParser;
+
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
 import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorQueryParser;
 import org.elasticsearch.index.query.functionscoring.customscriptscoring.CustomScoreQueryParser;
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.ExponentialDecayFunctionParser;
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.GaussDecayFunctionParser;
-import org.elasticsearch.index.query.functionscoring.multiplydistancescores.LinearDecayFunctionParser;
 
 import java.util.List;
 
