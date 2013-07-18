@@ -1,5 +1,5 @@
 {
-    "distance_score":{
+    "custom_score":{
         "query":{
             "term":{
                 "name.last":"banon"
