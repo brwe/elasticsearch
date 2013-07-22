@@ -46,18 +46,11 @@ public class FunctionScoreQueryParser implements QueryParser {
 
     public static final String NAME = "custom_score";
 
-    protected ImmutableMap<String, ScoreFunctionParser> functionParsers;
-
+    ScoreFunctionParserMapper scoreFunctionParserMapper;
     @Inject
-    public FunctionScoreQueryParser(Set<ScoreFunctionParser> parsers) {
+    public FunctionScoreQueryParser(ScoreFunctionParserMapper scoreFunctionParserMapper) {
 
-        MapBuilder<String, ScoreFunctionParser> builder = MapBuilder.newMapBuilder();
-        for (ScoreFunctionParser scoreFunctionParser : parsers) {
-            for (String name : scoreFunctionParser.getNames()) {
-                builder.put(name, scoreFunctionParser);
-            }
-        }
-        this.functionParsers = builder.immutableMap();
+        this.scoreFunctionParserMapper = scoreFunctionParserMapper;
 
     }
 
@@ -90,7 +83,7 @@ public class FunctionScoreQueryParser implements QueryParser {
                     boost = parser.floatValue();
                 } else {
 
-                    ScoreFunctionParser scoreFunctionParser = functionParsers.get(currentFieldName);
+                    ScoreFunctionParser scoreFunctionParser = scoreFunctionParserMapper.get(currentFieldName);
                     if (scoreFunctionParser == null) {
                         return tryParsingOldScriptScoreFunction(query, filter, boost, parser, parseContext);
                     } else {

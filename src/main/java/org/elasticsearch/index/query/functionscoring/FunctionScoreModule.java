@@ -55,5 +55,6 @@ public class FunctionScoreModule extends AbstractModule {
         for (Class<? extends ScoreFunctionParser> clazz : parsers) {
             parserMapBinder.addBinding().to(clazz);
         }
+        bind(ScoreFunctionParserMapper.class);
     }
 }
