@@ -21,6 +21,7 @@ package org.elasticsearch.common.lucene.search.function;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Explanation;
+import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.script.ExplainableSearchScript;
 import org.elasticsearch.script.SearchScript;
 
@@ -34,10 +35,18 @@ public class ScriptScoreFunction implements ScoreFunction {
 
     private final SearchScript script;
 
+    private final boolean needsSubQueryScore;
+
     public ScriptScoreFunction(String sScript, Map<String, Object> params, SearchScript script) {
+        needsSubQueryScore = scriptUsesScore(sScript);
         this.sScript = sScript;
         this.params = params;
         this.script = script;
+    }
+
+    private boolean scriptUsesScore(String scriptString) {
+        //TODO: We probably need a regular expression here
+        return scriptString.contains("_score");
     }
 
     @Override
@@ -57,6 +66,9 @@ public class ScriptScoreFunction implements ScoreFunction {
     @Override
     public float factor(int docId) {
         // just the factor, so don't provide _score
+        if (needsSubQueryScore) {
+            throw new ElasticSearchIllegalStateException("You cannot call factor() for a script that ");
+        }
         script.setNextDocId(docId);
         return script.runAsFloat();
     }
