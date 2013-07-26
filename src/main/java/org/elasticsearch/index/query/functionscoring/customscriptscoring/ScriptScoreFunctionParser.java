@@ -19,7 +19,7 @@
 
 package org.elasticsearch.index.query.functionscoring.customscriptscoring;
 
-import org.elasticsearch.index.query.CustomScoreQueryParser.ScriptScoreFunction;
+import org.elasticsearch.common.lucene.search.function.ScriptScoreFunction;
 
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.search.function.ScoreFunction;

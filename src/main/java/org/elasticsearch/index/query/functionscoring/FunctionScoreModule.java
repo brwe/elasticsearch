@@ -23,6 +23,9 @@ import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
 import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorParser;
 import org.elasticsearch.index.query.functionscoring.customscriptscoring.ScriptScoreFunctionParser;
+import org.elasticsearch.index.query.functionscoring.distancescoring.ExponentialDecayFunctionParser;
+import org.elasticsearch.index.query.functionscoring.distancescoring.GaussDecayFunctionParser;
+import org.elasticsearch.index.query.functionscoring.distancescoring.LinearDecayFunctionParser;
 
 import java.util.List;
 
@@ -36,6 +39,9 @@ public class FunctionScoreModule extends AbstractModule {
     public FunctionScoreModule() {
         registerParser(CustomBoostFactorParser.class);
         registerParser(ScriptScoreFunctionParser.class);
+        registerParser(GaussDecayFunctionParser.class);
+        registerParser(LinearDecayFunctionParser.class);
+        registerParser(ExponentialDecayFunctionParser.class);
     }
 
     public void registerParser(Class<? extends ScoreFunctionParser> parser) {
