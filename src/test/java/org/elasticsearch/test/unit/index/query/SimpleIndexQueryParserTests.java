@@ -19,6 +19,10 @@
 
 package org.elasticsearch.test.unit.index.query;
 
+
+
+import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorBuilder;
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.ScriptScoreFunctionBuilder;
 import com.google.common.collect.Lists;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.BoostingQuery;
@@ -1456,6 +1460,19 @@ public class SimpleIndexQueryParserTests {
     public void testCustomBoostFactorQueryBuilder() throws IOException {
         IndexQueryParserService queryParser = queryParser();
         Query parsedQuery = queryParser.parse(customBoostFactorQuery(termQuery("name.last", "banon")).boostFactor(1.3f)).query();
+        assertThat(parsedQuery, instanceOf(FunctionScoreQuery.class));
+        FunctionScoreQuery functionScoreQuery = (FunctionScoreQuery) parsedQuery;
+        assertThat(((TermQuery) functionScoreQuery.getSubQuery()).getTerm(), equalTo(new Term("name.last", "banon")));
+        assertThat((double) ((BoostScoreFunction) functionScoreQuery.getFunction()).getBoost(), closeTo(1.3, 0.001));
+    }
+
+
+    
+
+    @Test
+    public void testCustomBoostFactorQueryBuilder_withFunctionScore() throws IOException {
+        IndexQueryParserService queryParser = queryParser();
+        Query parsedQuery = queryParser.parse(functionScoreQuery(termQuery("name.last", "banon")).add(new CustomBoostFactorBuilder().boostFactor(1.3f))).query();
         assertThat(parsedQuery, instanceOf(FunctionScoreQuery.class));
         FunctionScoreQuery functionScoreQuery = (FunctionScoreQuery) parsedQuery;
         assertThat(((TermQuery) functionScoreQuery.getSubQuery()).getTerm(), equalTo(new Term("name.last", "banon")));

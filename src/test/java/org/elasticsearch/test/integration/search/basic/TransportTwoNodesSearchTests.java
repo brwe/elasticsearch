@@ -19,6 +19,10 @@
 
 package org.elasticsearch.test.integration.search.basic;
 
+
+
+import org.elasticsearch.index.query.functionscoring.customboostscoring.CustomBoostFactorBuilder;
+import org.elasticsearch.index.query.functionscoring.customscriptscoring.ScriptScoreFunctionBuilder;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Sets;
 import org.elasticsearch.ElasticSearchException;
@@ -396,6 +400,31 @@ public class TransportTwoNodesSearchTests extends AbstractSharedClusterTest {
         MultiSearchResponse response = client().prepareMultiSearch()
                 // Add custom score query with missing script
                 .add(client().prepareSearch("test").setQuery(QueryBuilders.customScoreQuery(QueryBuilders.termQuery("nid", 1))))
+                .add(client().prepareSearch("test").setQuery(QueryBuilders.termQuery("nid", 2)))
+                .add(client().prepareSearch("test").setQuery(QueryBuilders.matchAllQuery()))
+                .execute().actionGet();
+        assertThat(response.getResponses().length, equalTo(3));
+        assertThat(response.getResponses()[0].getFailureMessage(), notNullValue());
+
+        assertThat(response.getResponses()[1].getFailureMessage(), nullValue());
+        assertThat(response.getResponses()[1].getResponse().getHits().hits().length, equalTo(1));
+
+        assertThat(response.getResponses()[2].getFailureMessage(), nullValue());
+        assertThat(response.getResponses()[2].getResponse().getHits().hits().length, equalTo(10));
+
+        logger.info("Done Testing failed search");
+    }
+
+
+    @Test
+    public void testFailedMultiSearchWithWrongQuery_withFunctionScore() throws Exception {
+        prepareData();
+
+        logger.info("Start Testing failed multi search with a wrong query");
+
+        MultiSearchResponse response = client().prepareMultiSearch()
+                // Add custom score query with missing script
+                .add(client().prepareSearch("test").setQuery(QueryBuilders.functionScoreQuery(QueryBuilders.termQuery("nid", 1)).add(new ScriptScoreFunctionBuilder())))
                 .add(client().prepareSearch("test").setQuery(QueryBuilders.termQuery("nid", 2)))
                 .add(client().prepareSearch("test").setQuery(QueryBuilders.matchAllQuery()))
                 .execute().actionGet();
