@@ -33,7 +33,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- *
+ * @deprecated use {@link FunctionScoreQueryParser} instead.
  */
 public class CustomScoreQueryParser implements QueryParser {
 
@@ -45,7 +45,7 @@ public class CustomScoreQueryParser implements QueryParser {
 
     @Override
     public String[] names() {
-        return new String[]{NAME, Strings.toCamelCase(NAME)};
+        return new String[] { NAME, Strings.toCamelCase(NAME) };
     }
 
     @Override
@@ -75,7 +75,8 @@ public class CustomScoreQueryParser implements QueryParser {
                 } else if ("params".equals(currentFieldName)) {
                     vars = parser.map();
                 } else {
-                    throw new QueryParsingException(parseContext.index(), "[custom_score] query does not support [" + currentFieldName + "]");
+                    throw new QueryParsingException(parseContext.index(), "[custom_score] query does not support [" + currentFieldName
+                            + "]");
                 }
             } else if (token.isValue()) {
                 if ("script".equals(currentFieldName)) {
@@ -85,7 +86,8 @@ public class CustomScoreQueryParser implements QueryParser {
                 } else if ("boost".equals(currentFieldName)) {
                     boost = parser.floatValue();
                 } else {
-                    throw new QueryParsingException(parseContext.index(), "[custom_score] query does not support [" + currentFieldName + "]");
+                    throw new QueryParsingException(parseContext.index(), "[custom_score] query does not support [" + currentFieldName
+                            + "]");
                 }
             }
         }
