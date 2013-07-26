@@ -19,17 +19,14 @@
 
 package org.elasticsearch.index.query;
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.search.XConstantScoreQuery;
 import org.elasticsearch.common.lucene.search.function.FunctionScoreQuery;
-import org.elasticsearch.common.lucene.search.function.ScoreFunction;
+import org.elasticsearch.common.lucene.search.function.ScriptScoreFunction;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.script.ExplainableSearchScript;
 import org.elasticsearch.script.SearchScript;
 
 import java.io.IOException;
@@ -113,65 +110,5 @@ public class CustomScoreQueryParser implements QueryParser {
         FunctionScoreQuery functionScoreQuery = new FunctionScoreQuery(query, new ScriptScoreFunction(script, vars, searchScript));
         functionScoreQuery.setBoost(boost);
         return functionScoreQuery;
-    }
-
-    public static class ScriptScoreFunction implements ScoreFunction {
-
-        private final String sScript;
-
-        private final Map<String, Object> params;
-
-        private final SearchScript script;
-
-        public ScriptScoreFunction(String sScript, Map<String, Object> params, SearchScript script) {
-            this.sScript = sScript;
-            this.params = params;
-            this.script = script;
-        }
-
-        @Override
-        public void setNextReader(AtomicReaderContext ctx) {
-            //LUCENE 4 UPGRADE should this pass on a ARC or just and atomic reader? 
-            script.setNextReader(ctx);
-        }
-
-        @Override
-        public float score(int docId, float subQueryScore) {
-            script.setNextDocId(docId);
-            script.setNextScore(subQueryScore);
-            return script.runAsFloat();
-        }
-
-        @Override
-        public float factor(int docId) {
-            // just the factor, so don't provide _score
-            script.setNextDocId(docId);
-            return script.runAsFloat();
-        }
-
-        @Override
-        public Explanation explainScore(int docId, Explanation subQueryExpl) {
-            Explanation exp;
-            if (script instanceof ExplainableSearchScript) {
-                script.setNextDocId(docId);
-                script.setNextScore(subQueryExpl.getValue());
-                exp = ((ExplainableSearchScript) script).explain(subQueryExpl);
-            } else {
-                float score = score(docId, subQueryExpl.getValue());
-                exp = new Explanation(score, "script score function: composed of:");
-                exp.addDetail(subQueryExpl);
-            }
-            return exp;
-        }
-
-        @Override
-        public Explanation explainFactor(int docId) {
-            return new Explanation(factor(docId), "scriptFactor");
-        }
-
-        @Override
-        public String toString() {
-            return "script[" + sScript + "], params [" + params + "]";
-        }
     }
 }

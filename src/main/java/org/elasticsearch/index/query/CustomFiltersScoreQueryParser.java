@@ -19,6 +19,8 @@
 
 package org.elasticsearch.index.query;
 
+import org.elasticsearch.common.lucene.search.function.ScriptScoreFunction;
+
 import gnu.trove.list.array.TFloatArrayList;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.Query;
@@ -169,7 +171,7 @@ public class CustomFiltersScoreQueryParser implements QueryParser {
             String script = scripts.get(i);
             if (script != null) {
                 SearchScript searchScript = parseContext.scriptService().search(parseContext.lookup(), scriptLang, script, vars);
-                scoreFunction = new CustomScoreQueryParser.ScriptScoreFunction(script, vars, searchScript);
+                scoreFunction = new ScriptScoreFunction(script, vars, searchScript);
             } else {
                 scoreFunction = new BoostScoreFunction(boosts.get(i));
             }
