@@ -19,6 +19,8 @@
 
 package org.elasticsearch.search;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import com.google.common.collect.ImmutableList;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.Module;
@@ -45,7 +47,7 @@ public class SearchModule extends AbstractModule implements SpawnModules {
 
     @Override
     public Iterable<? extends Module> spawnModules() {
-        return ImmutableList.of(new TransportSearchModule(), new FacetModule(), new HighlightModule(), new SuggestModule());
+        return ImmutableList.of(new TransportSearchModule(), new FacetModule(), new HighlightModule(), new SuggestModule(), new FunctionScoreModule());
     }
 
     @Override

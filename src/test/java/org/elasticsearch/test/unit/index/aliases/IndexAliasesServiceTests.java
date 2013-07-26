@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.unit.index.aliases;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import org.elasticsearch.cache.recycler.CacheRecyclerModule;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.compress.CompressedString;
@@ -77,6 +79,7 @@ public class IndexAliasesServiceTests {
                 new SettingsModule(ImmutableSettings.Builder.EMPTY_SETTINGS),
                 new IndexEngineModule(ImmutableSettings.Builder.EMPTY_SETTINGS),
                 new IndexCacheModule(ImmutableSettings.Builder.EMPTY_SETTINGS),
+                new FunctionScoreModule(),
                 new AbstractModule() {
                     @Override
                     protected void configure() {

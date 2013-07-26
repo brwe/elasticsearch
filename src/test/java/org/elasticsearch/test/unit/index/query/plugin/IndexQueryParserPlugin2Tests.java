@@ -19,6 +19,8 @@
 
 package org.elasticsearch.test.unit.index.query.plugin;
 
+import org.elasticsearch.index.query.functionscoring.FunctionScoreModule;
+
 import org.elasticsearch.cache.recycler.CacheRecyclerModule;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.common.inject.AbstractModule;
@@ -75,6 +77,7 @@ public class IndexQueryParserPlugin2Tests {
                 new SimilarityModule(settings),
                 queryParserModule,
                 new IndexNameModule(index),
+                new FunctionScoreModule(),
                 new AbstractModule() {
                     @Override
                     protected void configure() {
