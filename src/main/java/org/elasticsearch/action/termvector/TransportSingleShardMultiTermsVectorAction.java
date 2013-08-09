@@ -29,6 +29,8 @@ import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.routing.ShardIterator;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.index.service.IndexService;
+import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
@@ -95,7 +97,9 @@ public class TransportSingleShardMultiTermsVectorAction extends TransportShardSi
             TermVectorRequest termVectorRequest = request.requests.get(i);
 
             try {
-                TermVectorResponse termVectorResponse = TransportSingleShardTermVectorAction.getTermVectorResponse(termVectorRequest, shardId, indicesService);
+                IndexService indexService = indicesService.indexServiceSafe(request.index());
+                IndexShard indexShard = indexService.shardSafe(shardId);
+                TermVectorResponse termVectorResponse = indexShard.termVectorService().getTermVector(termVectorRequest);
                 response.add(request.locations.get(i), termVectorResponse);
             } catch (Exception e) {
                 logger.debug("[{}][{}] failed to execute multi term vectors for [{}]/[{}]", e, request.index(), shardId, termVectorRequest.type(), termVectorRequest.id());

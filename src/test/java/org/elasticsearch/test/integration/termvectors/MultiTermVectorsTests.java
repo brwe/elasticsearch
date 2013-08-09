@@ -50,6 +50,8 @@ public class MultiTermVectorsTests extends AbstractTermVectorTests {
                 if (test.expectedException != null) {
                     assertTrue(item.isFailed());
                     continue;
+                } else if (item.isFailed()) {
+                    fail(item.getFailure().getMessage());
                 }
                 Fields luceneTermVectors = getTermVectorsFromLucene(directoryReader, test.doc);
                 validateResponse(item.getResponse(), luceneTermVectors, test);
