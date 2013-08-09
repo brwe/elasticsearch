@@ -73,6 +73,19 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
             if (docIdAndVersion != null) {
                 termVectorResponse.setExists(true);
                 Fields termVectorsByField = docIdAndVersion.context.reader().getTermVectors(docIdAndVersion.docId);
+
+                boolean fallbackToSource = termVectorsByField == null;
+                if (!fallbackToSource && request.selectedFields() != null) {
+                    // TODO: what to do when all fields are requested - only fall back to source if termVectorsByField == null
+                    for (String field : request.selectedFields()) {
+                        if (termVectorsByField.terms(field) == null) {
+                            logger.debug("Falling back to _source parsing - field '{}' is requested but doesn't have term vectors", field);
+                            fallbackToSource = true;
+                            break;
+                        }
+                    }
+                }
+
                 termVectorResponse.setFields(termVectorsByField, request.selectedFields(), request.getFlags(), topLevelFields);
                 termVectorResponse.setDocVersion(docIdAndVersion.version);
             } else {
