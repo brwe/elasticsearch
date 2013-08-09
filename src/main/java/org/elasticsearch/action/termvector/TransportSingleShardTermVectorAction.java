@@ -90,9 +90,8 @@ public class TransportSingleShardTermVectorAction extends TransportShardSingleOp
         request.index(state.metaData().concreteIndex(request.index()));
     }
 
-    @Override
-    protected TermVectorResponse shardOperation(TermVectorRequest request, int shardId) throws ElasticSearchException {
-        IndexService indexService = indicesService.indexServiceSafe(request.index());
+    protected static TermVectorResponse getTermVectorResponse(TermVectorRequest request, int shardId, IndicesService givenIndicesService) throws ElasticSearchException {
+        IndexService indexService = givenIndicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(shardId);
 
         final Engine.Searcher searcher = indexShard.searcher();
@@ -119,6 +118,11 @@ public class TransportSingleShardTermVectorAction extends TransportShardSingleOp
             searcher.release();
         }
         return termVectorResponse;
+    }
+    @Override
+    protected TermVectorResponse shardOperation(TermVectorRequest request, int shardId) throws ElasticSearchException {
+
+        return getTermVectorResponse(request, shardId, indicesService);
     }
 
     @Override

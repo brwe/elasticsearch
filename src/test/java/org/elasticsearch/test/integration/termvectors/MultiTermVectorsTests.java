@@ -23,9 +23,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Fields;
 import org.elasticsearch.action.termvector.MultiTermVectorsItemResponse;
 import org.elasticsearch.action.termvector.MultiTermVectorsRequestBuilder;
-import org.testng.annotations.Test;
-
-import static org.testng.Assert.assertTrue;
+import org.junit.Test;
 
 public class MultiTermVectorsTests extends AbstractTermVectorTests {
 
