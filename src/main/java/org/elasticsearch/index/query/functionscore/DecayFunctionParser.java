@@ -375,7 +375,7 @@ public abstract class DecayFunctionParser implements ScoreFunctionParser {
         @Override
         public Explanation explainScore(int docId, Explanation subQueryExpl) {
             ComplexExplanation ce = new ComplexExplanation();
-            ce.setValue((float)score(docId, subQueryExpl.getValue()));
+            ce.setValue((float) score(docId, subQueryExpl.getValue()));
             ce.setMatch(true);
             ce.setDescription("subQueryScore * Function for field " + getFieldName() + ":");
             ce.addDetail(func.explainFunction(getDistanceString(docId), distance(docId), scale));
@@ -385,7 +385,7 @@ public abstract class DecayFunctionParser implements ScoreFunctionParser {
         @Override
         public Explanation explainFactor(int docId) {
             ComplexExplanation ce = new ComplexExplanation();
-            ce.setValue((float)factor(docId));
+            ce.setValue((float) factor(docId));
             ce.setMatch(true);
             ce.setDescription("subQueryScore * Function for field " + getFieldName() + ":");
             ce.addDetail(func.explainFunction(getDistanceString(docId), distance(docId), scale));

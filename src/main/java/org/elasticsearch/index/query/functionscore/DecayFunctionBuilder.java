@@ -31,11 +31,11 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
     protected static final String SCALE_WEIGHT = "scale_weight";
 
     private String fieldName;
-    private String reference;
-    private String scale;
-    private String scaleWeight;
+    private Object reference;
+    private Object scale;
+    private double scaleWeight = -1;
 
-    public void setParameters(String fieldName, String reference, String scale, String scaleWeight) {
+    public void setParameters(String fieldName, Object reference, Object scale, double scaleWeight) {
         if (this.fieldName != null) {
             throw new ElasticSearchIllegalStateException("Can not set parameters of decay function more than once.");
         }
@@ -45,8 +45,8 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
         this.scaleWeight = scaleWeight;
     }
 
-    public void setParameters(String fieldName, String reference, String scale) {
-        setParameters(fieldName, reference, scale, null);
+    public void setParameters(String fieldName, Object reference, Object scale) {
+        setParameters(fieldName, reference, scale, -1);
     }
 
     @Override
@@ -55,7 +55,7 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
         builder.startObject(fieldName);
         builder.field(REFERNECE, reference);
         builder.field(SCALE, scale);
-        if (scaleWeight != null) {
+        if (scaleWeight > 0) {
             builder.field(SCALE_WEIGHT, scaleWeight);
         }
         builder.endObject();
@@ -63,12 +63,4 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
         return builder;
     }
 
-    public void addGeoParams(String fieldName, double lat, double lon, String scale) {
-        addGeoParams(fieldName, lat, lon, scale, null);
-    }
-
-    public void addGeoParams(String fieldName, double lat, double lon, String scale, String scaleWeight) {
-        String geoLoc = Double.toString(lat) + ", " + Double.toString(lon);
-        setParameters(fieldName, geoLoc, scale, scaleWeight);
-    }
 }
