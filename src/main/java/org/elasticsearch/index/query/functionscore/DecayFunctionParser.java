@@ -84,7 +84,7 @@ import java.io.IOException;
  * See {@link GaussDecayFunctionBuilder} and {@link GaussDecayFunctionParser}
  * for an example. The parser furthermore needs to be registered in the
  * {@link org.elasticsearch.index.query.functionscore.FunctionScoreModule
- * FunctionScoreModule}. 
+ * FunctionScoreModule}.
  * 
  * **/
 

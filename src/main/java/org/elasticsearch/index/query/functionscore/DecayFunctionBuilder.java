@@ -35,20 +35,19 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
     private Object scale;
     private double scaleWeight = -1;
 
-    public void setParameters(String fieldName, Object reference, Object scale, double scaleWeight) {
-        if (this.fieldName != null) {
-            throw new ElasticSearchIllegalStateException("Can not set parameters of decay function more than once.");
-        }
+    public DecayFunctionBuilder(String fieldName, Object reference, Object scale) {
         this.fieldName = fieldName;
         this.reference = reference;
         this.scale = scale;
+    }
+    public DecayFunctionBuilder setScaleWeight(double scaleWeight) {
+        if(scaleWeight <=0 || scaleWeight >= 1.0) {
+            throw new ElasticSearchIllegalStateException("scale weight parameter must be in range 0..1!");
+        }
         this.scaleWeight = scaleWeight;
+        return this;
     }
-
-    public void setParameters(String fieldName, Object reference, Object scale) {
-        setParameters(fieldName, reference, scale, -1);
-    }
-
+   
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject(getName());
