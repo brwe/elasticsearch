@@ -19,7 +19,6 @@
 
 package org.elasticsearch.index.query.functionscore;
 
-
 import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
@@ -30,15 +29,14 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
     protected static final String REFERNECE = "reference";
     protected static final String SCALE = "scale";
     protected static final String SCALE_WEIGHT = "scale_weight";
-    protected static final String SCALE_DEFAULT = "0.5";
-    
+
     private String fieldName;
     private String reference;
     private String scale;
     private String scaleWeight;
 
     public void setParameters(String fieldName, String reference, String scale, String scaleWeight) {
-        if(this.fieldName != null ) {
+        if (this.fieldName != null) {
             throw new ElasticSearchIllegalStateException("Can not set parameters of decay function more than once.");
         }
         this.fieldName = fieldName;
@@ -48,23 +46,25 @@ public abstract class DecayFunctionBuilder implements ScoreFunctionBuilder {
     }
 
     public void setParameters(String fieldName, String reference, String scale) {
-        setParameters(fieldName, reference, scale, SCALE_DEFAULT);
+        setParameters(fieldName, reference, scale, null);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject(getName());
-            builder.startObject(fieldName);
-            builder.field(REFERNECE, reference);
-            builder.field(SCALE, scale);
+        builder.startObject(fieldName);
+        builder.field(REFERNECE, reference);
+        builder.field(SCALE, scale);
+        if (scaleWeight != null) {
             builder.field(SCALE_WEIGHT, scaleWeight);
-            builder.endObject();
+        }
+        builder.endObject();
         builder.endObject();
         return builder;
     }
 
     public void addGeoParams(String fieldName, double lat, double lon, String scale) {
-        addGeoParams(fieldName, lat, lon, scale, SCALE_DEFAULT);
+        addGeoParams(fieldName, lat, lon, scale, null);
     }
 
     public void addGeoParams(String fieldName, double lat, double lon, String scale, String scaleWeight) {
