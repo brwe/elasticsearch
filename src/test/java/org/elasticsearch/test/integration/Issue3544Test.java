@@ -20,11 +20,7 @@
 package org.elasticsearch.test.integration;
 
 import org.elasticsearch.action.WriteConsistencyLevel;
-import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
-import org.elasticsearch.action.admin.indices.stats.CommonStatsFlags;
-import org.elasticsearch.action.admin.indices.stats.CommonStatsFlags.Flag;
 import org.elasticsearch.client.IndicesAdminClient;
-import org.elasticsearch.client.Requests;
 import org.elasticsearch.index.query.MatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHits;
@@ -67,7 +63,6 @@ public class Issue3544Test extends AbstractSharedClusterTest {
                     indexDocument();
                 }
                 refresh();
-                waitForDocs();
                 SearchHits sh = retrieveDocuments();
                 TermsFacet facet = client().prepareSearch(INDEX_NAME).setQuery(QueryBuilders.matchAllQuery())
                         .addFacet(FacetBuilders.termsFacet("facet").fields(fieldNames)).execute().actionGet().getFacets().facet("facet");
@@ -105,22 +100,11 @@ public class Issue3544Test extends AbstractSharedClusterTest {
         String status;
         status = USER_STATUS;
         source.put(FIELD_PREFIX + status, TEST_USER);
-        client().prepareIndex(INDEX_NAME, MAPPING_TYPE).setSource(source).setConsistencyLevel(WriteConsistencyLevel.QUORUM).execute();
+        client().prepareIndex(INDEX_NAME, MAPPING_TYPE).setSource(source).setConsistencyLevel(WriteConsistencyLevel.QUORUM).execute().actionGet();
         refresh();
     }
 
-    private static void waitForDocs() throws InterruptedException {
-        // Force refresh of index
-        client().admin().indices().refresh(Requests.refreshRequest(INDEX_NAME)).actionGet();
-        long currentCount;
 
-        do {
-            NodesStatsResponse response = client().admin().cluster().prepareNodesStats()
-                    .setIndices(new CommonStatsFlags().set(Flag.Docs, true)).execute().actionGet();
-
-            currentCount = response.getNodes()[0].getIndices().getDocs().getCount();
-        } while (currentCount != NUM_DOCUMENTS);
-    }
 
     private static SearchHits retrieveDocuments() {
 
