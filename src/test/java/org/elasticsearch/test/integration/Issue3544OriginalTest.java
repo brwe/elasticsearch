@@ -183,7 +183,7 @@ import java.util.*;
             client.prepareIndex(INDEX_NAME, MAPPING_TYPE)
                     .setSource(source)
                     .setConsistencyLevel(WriteConsistencyLevel.QUORUM)
-                    .execute();
+                    .execute().actionGet();
         }
      
         private static List<String> randomParticipants(String status) {
