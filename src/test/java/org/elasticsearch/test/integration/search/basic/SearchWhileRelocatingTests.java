@@ -51,18 +51,23 @@ public class SearchWhileRelocatingTests extends AbstractSharedClusterTest {
     protected int numberOfNodes() {
         return 3;
     }
+    
+    static void startAllThreads(Thread[] t){
+        for (int j = 0; j < t.length; j++) {
+            t[j].start();
+        }
+    }
+    static void joinAllThreads(Thread[] t) throws InterruptedException{
+        for (int j = 0; j < t.length; j++) {
+            t[j].join();
+        }
+    }
 
     @Test
     public void testSearchAndRelocateConcurrently() throws Exception {
         final int numShards = between(10, 20);
-        String mapping = XContentFactory.jsonBuilder().
-                startObject().
-                    startObject("type").
-                        startObject("properties").
-                            startObject("loc").field("type", "geo_point").endObject().
-                            startObject("test").field("type", "string").endObject().
-                        endObject().
-                    endObject()
+        String mapping = XContentFactory.jsonBuilder().startObject().startObject("type").startObject("properties").startObject("loc")
+                .field("type", "geo_point").endObject().startObject("test").field("type", "string").endObject().endObject().endObject()
                 .endObject().string();
         client().admin().indices().prepareCreate("test")
                 .setSettings(settingsBuilder().put("index.number_of_shards", numShards).put("index.number_of_replicas", 0))
@@ -82,39 +87,45 @@ public class SearchWhileRelocatingTests extends AbstractSharedClusterTest {
         indexRandom("test", true, indexBuilders.toArray(new IndexRequestBuilder[indexBuilders.size()]));
         final int numIters = atLeast(3);
         for (int i = 0; i < numIters; i++) {
-            allowNodes("test", between(1,3));
+            allowNodes("test", between(1, 3));
             client().admin().cluster().prepareReroute().get();
             final AtomicBoolean stop = new AtomicBoolean(false);
             final List<Throwable> thrownExceptions = new CopyOnWriteArrayList<Throwable>();
-            final Thread t = new Thread() {
-                public void run() {
-                    final List<Float> lonlat = new ArrayList<Float>();
-                    lonlat.add(new Float(20));
-                    lonlat.add(new Float(11));
-                    try {
-                        while (!stop.get()) {
-                            SearchResponse sr = client().search(
-                                    searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
-                                            searchSource().size(numDocs).query(
-                                                    functionScoreQuery(termQuery("test", "value"),
-                                                            gaussDecayFunction("loc", lonlat, "1000km")).boostMode(
-                                                            CombineFunction.MULT.getName())))).get();
-                            assertHitCount(sr, (long) (numDocs));
-                            final SearchHits sh = sr.getHits();
-                            assertThat("Expected hits to be the same size the actual hits array", sh.getTotalHits(),
-                                    equalTo((long) (sh.getHits().length)));
+            final Thread[] t = new Thread[10];
+            for (int j = 0; j < 10; j++) {
+                t[j] = new Thread() {
+                    public void run() {
+                        final List<Float> lonlat = new ArrayList<Float>();
+                        lonlat.add(new Float(20));
+                        lonlat.add(new Float(11));
+                        try {
+                            while (!stop.get()) {
+                                SearchResponse sr = client().search(
+                                        searchRequest().searchType(SearchType.QUERY_THEN_FETCH).source(
+                                                searchSource().size(numDocs).query(
+                                                        functionScoreQuery(termQuery("test", "value"),
+                                                                gaussDecayFunction("loc", lonlat, "1000km")).boostMode(
+                                                                CombineFunction.MULT.getName())))).get();
+                                assertHitCount(sr, (long) (numDocs));
+                                final SearchHits sh = sr.getHits();
+                                assertThat("Expected hits to be the same size the actual hits array", sh.getTotalHits(),
+                                        equalTo((long) (sh.getHits().length)));
+                            }
+                        } catch (Throwable t) {
+                            thrownExceptions.add(t);
                         }
-                    } catch (Throwable t) {
-                        thrownExceptions.add(t);
                     }
-                }
-            };
-            t.start();
+                };
+            }
+            startAllThreads(t);
             ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).execute().actionGet();
             stop.set(true);
-            t.join();
+            joinAllThreads(t);
+
             assertThat(resp.isTimedOut(), equalTo(false));
-            assertThat("failed in iteration "+i, thrownExceptions, Matchers.emptyIterable());
+            assertThat("failed in iteration " + i, thrownExceptions, Matchers.emptyIterable());
         }
+        
+        
     }
 }
