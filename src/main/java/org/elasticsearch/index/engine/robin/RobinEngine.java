@@ -1096,6 +1096,7 @@ public class RobinEngine extends AbstractIndexShardComponent implements Engine {
         try {
             phase3Snapshot = translog.snapshot(phase2Snapshot);
             recoveryHandler.phase3(phase3Snapshot);
+            
         } catch (Throwable e) {
             throw new RecoveryEngineException(shardId, 3, "Execution failed", e);
         } finally {
@@ -1107,6 +1108,7 @@ public class RobinEngine extends AbstractIndexShardComponent implements Engine {
                 phase3Snapshot.release();
             }
         }
+        logger.debug("recovered indeed!");
     }
 
     @Override

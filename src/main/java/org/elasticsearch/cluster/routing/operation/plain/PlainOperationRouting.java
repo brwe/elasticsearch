@@ -140,11 +140,13 @@ public class PlainOperationRouting extends AbstractComponent implements Operatio
         // we use set here and not list since we might get duplicates
         for (String index : concreteIndices) {
             final IndexRoutingTable indexRouting = indexRoutingTable(clusterState, index);
+            logger.debug("routing table used: {}", indexRouting.prettyPrint());
             final Set<String> effectiveRouting = routing.get(index);
             if (effectiveRouting != null) {
                 for (String r : effectiveRouting) {
                     int shardId = shardId(clusterState, index, null, null, r);
                     IndexShardRoutingTable indexShard = indexRouting.shard(shardId);
+                    
                     if (indexShard == null) {
                         throw new IndexShardMissingException(new ShardId(index, shardId));
                     }

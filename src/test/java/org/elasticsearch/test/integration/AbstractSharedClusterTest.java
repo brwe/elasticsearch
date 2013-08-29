@@ -232,7 +232,7 @@ public abstract class AbstractSharedClusterTest extends ElasticsearchTestCase {
         return builder;
     }
 
-    private ImmutableSettings.Builder getExcludeSettings(String index, int num, ImmutableSettings.Builder builder) {
+    public ImmutableSettings.Builder getExcludeSettings(String index, int num, ImmutableSettings.Builder builder) {
         String exclude = Joiner.on(',').join(cluster().allButN(num));
         builder.put("index.routing.allocation.exclude._name", exclude);
         return builder;
