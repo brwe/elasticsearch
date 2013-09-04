@@ -35,7 +35,7 @@ public class KeyedLock<T> {
     public void acquire(T key) {
         while (true) {
             if (threadLocal.get() != null) {
-                throw new ElasticSearchIllegalStateException("Lock already accquired");
+                throw new ElasticSearchIllegalStateException("Lock already accquired in Thread" + Thread.currentThread().getId() + " for key "+key);
             }
             KeyLock perNodeLock = map.get(key);
             if (perNodeLock == null) {
