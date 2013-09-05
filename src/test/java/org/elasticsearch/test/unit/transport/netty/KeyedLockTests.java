@@ -71,6 +71,14 @@ public class KeyedLockTests extends ElasticsearchTestCase {
     }
 
     @Test(expected = ElasticSearchIllegalStateException.class)
+    public void checkCannotAcquireTwoLocks() throws InterruptedException {
+        connectionLock = new KeyedLock<String>();
+        String name = randomRealisticUnicodeOfLength(atLeast(10));
+        connectionLock.acquire(name);
+        connectionLock.acquire(name);
+    }
+
+    @Test(expected = ElasticSearchIllegalStateException.class)
     public void checkCannotReleaseUnacquiredLock() throws InterruptedException {
         connectionLock = new KeyedLock<String>();
         String name = randomRealisticUnicodeOfLength(atLeast(10));
