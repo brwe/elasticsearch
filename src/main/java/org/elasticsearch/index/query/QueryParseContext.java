@@ -88,6 +88,7 @@ public class QueryParseContext {
     public QueryParseContext(Index index, IndexQueryParserService indexQueryParser) {
         this.index = index;
         this.indexQueryParser = indexQueryParser;
+        this.withPayloadScore = false;
     }
 
     public void reset(XContentParser jp) {
@@ -311,6 +312,8 @@ public class QueryParseContext {
 
     private SearchLookup lookup = null;
 
+    private boolean withPayloadScore;
+
     public SearchLookup lookup() {
         SearchContext current = SearchContext.current();
         if (current != null) {
@@ -328,5 +331,13 @@ public class QueryParseContext {
             return current.nowInMillis();
         }
         return System.currentTimeMillis();
+    }
+
+    public boolean getScoreWithPayloads() {
+        return withPayloadScore;
+    }
+    
+    public void setScoreWithPayloads(boolean withPayloadScore) {
+        this.withPayloadScore = withPayloadScore;
     }
 }

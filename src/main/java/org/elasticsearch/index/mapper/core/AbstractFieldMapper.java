@@ -42,6 +42,7 @@ import org.elasticsearch.index.codec.postingsformat.PostingFormats;
 import org.elasticsearch.index.codec.postingsformat.PostingsFormatProvider;
 import org.elasticsearch.index.fielddata.FieldDataType;
 import org.elasticsearch.index.mapper.*;
+import org.elasticsearch.index.query.PayloadBoostedTermQuery;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.similarity.SimilarityProvider;
 
@@ -438,7 +439,11 @@ public abstract class AbstractFieldMapper<T> implements FieldMapper<T>, Mapper {
 
     @Override
     public Query termQuery(Object value, @Nullable QueryParseContext context) {
-        return new TermQuery(names().createIndexNameTerm(indexedValueForSearch(value)));
+        if (!context.getScoreWithPayloads()) {
+            return new TermQuery(names().createIndexNameTerm(indexedValueForSearch(value)));
+        } else {
+            return new PayloadBoostedTermQuery(names().createIndexNameTerm(indexedValueForSearch(value)));
+        }
     }
 
     @Override

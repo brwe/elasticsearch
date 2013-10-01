@@ -440,6 +440,7 @@ public class AnalysisModule extends AbstractModule {
             tokenFiltersBindings.processTokenFilter("trim", TrimTokenFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("limit", LimitTokenCountFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("common_grams", CommonGramsTokenFilterFactory.class);
+            tokenFiltersBindings.processTokenFilter("delimited_payload_filter", DelimitedPayloadTokenFilterFactory.class);
         }
 
         @Override
@@ -481,6 +482,7 @@ public class AnalysisModule extends AbstractModule {
             tokenFiltersBindings.processTokenFilter("snowball", SnowballTokenFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("stemmer", StemmerTokenFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("word_delimiter", WordDelimiterTokenFilterFactory.class);
+            tokenFiltersBindings.processTokenFilter("delimited_payload_filter", DelimitedPayloadTokenFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("synonym", SynonymTokenFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("elision", ElisionTokenFilterFactory.class);
             tokenFiltersBindings.processTokenFilter("keep", KeepWordFilterFactory.class);

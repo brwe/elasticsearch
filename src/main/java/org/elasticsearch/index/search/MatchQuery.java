@@ -230,7 +230,7 @@ public class MatchQuery {
             if (numTokens == 1) {
                 boolean hasNext = buffer.incrementToken();
                 assert hasNext == true;
-                final Query q = newTermQuery(mapper, new Term(field, termToByteRef(termAtt)));
+                final Query q = newTermQuery(mapper, new Term(field, termToByteRef(termAtt)), parseContext);
                 return wrapSmartNameQuery(q, smartNameFieldMappers, parseContext);
             }
             if (commonTermsCutoff != null) {
@@ -246,7 +246,7 @@ public class MatchQuery {
                 for (int i = 0; i < numTokens; i++) {
                     boolean hasNext = buffer.incrementToken();
                     assert hasNext == true;
-                    final Query currentQuery = newTermQuery(mapper, new Term(field, termToByteRef(termAtt)));
+                    final Query currentQuery = newTermQuery(mapper, new Term(field, termToByteRef(termAtt)), parseContext);
                     q.add(currentQuery, occur);
                 }
                 return wrapSmartNameQuery(q, smartNameFieldMappers, parseContext);
@@ -335,7 +335,7 @@ public class MatchQuery {
         throw new ElasticSearchIllegalStateException("No type found for [" + type + "]");
     }
 
-    private Query newTermQuery(@Nullable FieldMapper mapper, Term term) {
+    private Query newTermQuery(@Nullable FieldMapper mapper, Term term, QueryParseContext context) {
         if (fuzziness != null) {
             if (mapper != null) {
                 Query query = mapper.fuzzyQuery(term.text(), fuzziness, fuzzyPrefixLength, maxExpansions, transpositions);
@@ -352,7 +352,8 @@ public class MatchQuery {
             return query;
         }
         if (mapper != null) {
-            Query termQuery = mapper.queryStringTermQuery(term);
+            //why is this called anyway?
+            Query termQuery = mapper.termQuery(term.bytes(), context);
             if (termQuery != null) {
                 return termQuery;
             }
