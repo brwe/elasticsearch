@@ -255,6 +255,8 @@ public final class TermVectorFields extends Fields {
                                     input.readBytes(payloads[i].bytes, 0, payloadLength);
                                     payloads[i].length = payloadLength;
                                     payloads[i].offset = 0;
+                                } else {
+                                    payloads[i] = null;
                                 }
                             }
                         }
