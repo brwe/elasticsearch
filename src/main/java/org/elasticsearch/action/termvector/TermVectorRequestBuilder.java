@@ -74,6 +74,10 @@ public class TermVectorRequestBuilder extends ActionRequestBuilder<TermVectorReq
         return this;
     }
 
+    public TermVectorRequestBuilder setSelectedTerms(String... terms) {
+        request.selectedTerms(terms);
+        return this;
+    }
     @Override
     protected void doExecute(ActionListener<TermVectorResponse> listener) {
         ((Client) client).termVector(request, listener);

@@ -111,6 +111,10 @@ public class RestTermVectorAction extends BaseRestHandler {
     static public void readURIParameters(TermVectorRequest termVectorRequest, RestRequest request) {
         String fields = request.param("fields");
         addFieldStringsFromParameter(termVectorRequest, fields);
+
+        String terms = request.param("terms");
+        addTermStringsFromParameter(termVectorRequest, terms);
+
         termVectorRequest.offsets(request.paramAsBoolean("offsets", termVectorRequest.offsets()));
         termVectorRequest.positions(request.paramAsBoolean("positions", termVectorRequest.positions()));
         termVectorRequest.payloads(request.paramAsBoolean("payloads", termVectorRequest.payloads()));
@@ -136,6 +140,25 @@ public class RestTermVectorAction extends BaseRestHandler {
         }
         if (selectedFields != null) {
             termVectorRequest.selectedFields(selectedFields.toArray(new String[selectedFields.size()]));
+        }
+    }
+
+    static public void addTermStringsFromParameter(TermVectorRequest termVectorRequest, String terms) {
+        Set<String> selectedTerms = termVectorRequest.selectedTerms();
+        if (terms != null) {
+            String[] paramTermStrings = Strings.commaDelimitedListToStringArray(terms);
+            for (String term : paramTermStrings) {
+                if (selectedTerms == null) {
+                    selectedTerms = new HashSet<String>();
+                }
+                if (!selectedTerms.contains(term)) {
+                    term = term.replaceAll("\\s", "");
+                    selectedTerms.add(term);
+                }
+            }
+        }
+        if (selectedTerms != null) {
+            termVectorRequest.selectedTerms(selectedTerms.toArray(new String[selectedTerms.size()]));
         }
     }
 

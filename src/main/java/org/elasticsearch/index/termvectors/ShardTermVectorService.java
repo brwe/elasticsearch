@@ -68,7 +68,7 @@ public class ShardTermVectorService extends AbstractIndexShardComponent {
             if (docIdAndVersion != null) {
 
                 Fields termVectorsByField = docIdAndVersion.context.reader().getTermVectors(docIdAndVersion.docId);
-                termVectorResponse.setFields(termVectorsByField, request.selectedFields(), request.getFlags(), topLevelFields);
+                termVectorResponse.setFields(termVectorsByField, request.selectedFields(), request.selectedTerms(), request.getFlags(), topLevelFields);
                 termVectorResponse.setExists(true);
                 termVectorResponse.setDocVersion(docIdAndVersion.version);
             } else {

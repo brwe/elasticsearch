@@ -45,7 +45,7 @@ final class TermVectorWriter {
         response = termVectorResponse;
     }
 
-    void setFields(Fields termVectorsByField, Set<String> selectedFields, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
+    void setFields(Fields termVectorsByField, Set<String> selectedFields, Set<String> selectedTerms, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
 
         int numFieldsWritten = 0;
         TermsEnum iterator = null;
@@ -64,29 +64,37 @@ final class TermVectorWriter {
             boolean positions = flags.contains(Flag.Positions) && fieldTermVector.hasPositions();
             boolean offsets = flags.contains(Flag.Offsets) && fieldTermVector.hasOffsets();
             boolean payloads = flags.contains(Flag.Payloads) && fieldTermVector.hasPayloads();
-            startField(field, fieldTermVector.size(), positions, offsets, payloads);
+            if (selectedTerms == null){
+                startField(field, fieldTermVector.size(), positions, offsets, payloads);
+            }else{
+                startField(field, selectedTerms.size(), positions, offsets, payloads);
+            }
             if (flags.contains(Flag.FieldStatistics)) {
                 writeFieldStatistics(topLevelTerms);
             }
             iterator = fieldTermVector.iterator(iterator);
             final boolean useDocsAndPos = positions || offsets || payloads;
-            while (iterator.next() != null) { // iterate all terms of the
+            while (iterator.next() != null) {
+                // iterate all terms of the
                 // current field
                 // get the doc frequency
                 BytesRef term = iterator.term();
-                boolean foundTerm = topLevelIterator.seekExact(term);
-                assert (foundTerm);
-                startTerm(term);
-                if (flags.contains(Flag.TermStatistics)) {
-                    writeTermStatistics(topLevelIterator);
-                }
-                if (useDocsAndPos) {
-                    // given we have pos or offsets
-                    docsAndPosEnum = writeTermWithDocsAndPos(iterator, docsAndPosEnum, positions, offsets, payloads);
-                } else {
-                    // if we do not have the positions stored, we need to
-                    // get the frequency from a DocsEnum.
-                    docsEnum = writeTermWithDocsOnly(iterator, docsEnum);
+                    boolean foundTerm = topLevelIterator.seekExact(term);
+                    assert (foundTerm);
+                // Pre-select Terms
+                if ((selectedTerms == null) || (selectedTerms.contains(term.utf8ToString()))) {
+                    startTerm(term);
+                    if (flags.contains(Flag.TermStatistics)) {
+                        writeTermStatistics(topLevelIterator);
+                    }
+                    if (useDocsAndPos) {
+                        // given we have pos or offsets
+                        docsAndPosEnum = writeTermWithDocsAndPos(iterator, docsAndPosEnum, positions, offsets, payloads);
+                    } else {
+                        // if we do not have the positions stored, we need to
+                        // get the frequency from a DocsEnum.
+                        docsEnum = writeTermWithDocsOnly(iterator, docsEnum);
+                    }
                 }
             }
             numFieldsWritten++;
@@ -123,7 +131,7 @@ final class TermVectorWriter {
     }
 
     private DocsAndPositionsEnum writeTermWithDocsAndPos(TermsEnum iterator, DocsAndPositionsEnum docsAndPosEnum, boolean positions,
-                                                         boolean offsets, boolean payloads) throws IOException {
+            boolean offsets, boolean payloads) throws IOException {
         docsAndPosEnum = iterator.docsAndPositions(null, docsAndPosEnum);
         // for each term (iterator next) in this field (field)
         // iterate over the docs (should only be one)
@@ -179,7 +187,7 @@ final class TermVectorWriter {
     }
 
     private void startField(String fieldName, long termsSize, boolean writePositions, boolean writeOffsets, boolean writePayloads)
-            throws IOException {
+        throws IOException {
         fields.add(fieldName);
         fieldOffset.add(output.position());
         output.writeVLong(termsSize);

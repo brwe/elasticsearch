@@ -50,6 +50,7 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
 
     // TODO: change to String[]
     private Set<String> selectedFields;
+    private Set<String> selectedTerms;
 
     private EnumSet<Flag> flagsEnum = EnumSet.of(Flag.Positions, Flag.Offsets, Flag.Payloads,
             Flag.FieldStatistics);
@@ -206,6 +207,23 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
     }
 
     /**
+     * Return only term vectors for special selected terms. Returns for term
+     * vectors for all terms if selectedTerms == null
+     */
+    public Set<String> selectedTerms() {
+        return selectedTerms;
+    }
+
+    /**
+     * Return only term vectors for special selected terms. Returns the term
+     * vectors for all terms if selectedTerms == null
+     */
+    public TermVectorRequest selectedTerms(String[] terms) {
+        selectedTerms = terms != null && terms.length != 0 ? Sets.newHashSet(terms) : null;
+        return this;
+    }
+
+    /**
      * Return only term vectors for special selected fields. Returns for term
      * vectors for all fields if selectedFields == null
      */
@@ -276,6 +294,15 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
                 selectedFields.add(in.readString());
             }
         }
+
+
+        int numSelectedTerms = in.readVInt();
+        if (numSelectedTerms > 0) {
+            selectedTerms = new HashSet<String>();
+            for (int i = 0; i < numSelectedTerms; i++) {
+                selectedTerms.add(in.readString());
+            }
+        }
     }
 
     @Override
@@ -300,6 +327,15 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
             out.writeVInt(0);
         }
 
+        if (selectedTerms != null) {
+            out.writeVInt(selectedTerms.size());
+            for (String selectedTerm : selectedTerms) {
+                out.writeString(selectedTerm);
+            }
+        } else {
+            out.writeVInt(0);
+        }
+
     }
 
     public static enum Flag {
@@ -319,6 +355,7 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
         XContentParser.Token token;
         String currentFieldName = null;
         List<String> fields = new ArrayList<String>();
+        List<String> terms = new ArrayList<String>();
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
@@ -332,6 +369,16 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
                     } else {
                         throw new ElasticSearchParseException(
                                 "The parameter fields must be given as an array! Use syntax : \"fields\" : [\"field1\", \"field2\",...]");
+                    }
+                } else if (currentFieldName.equals("terms")) {
+
+                    if (token == XContentParser.Token.START_ARRAY) {
+                        while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                            terms.add(parser.text());
+                        }
+                    } else {
+                        throw new ElasticSearchParseException(
+                                "The parameter terms must be given as an array! Use syntax : \"fields\" : [\"field1\", \"field2\",...]");
                     }
                 } else if (currentFieldName.equals("offsets")) {
                     termVectorRequest.offsets(parser.booleanValue());
@@ -361,6 +408,10 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
         if (fields.size() > 0) {
             String[] fieldsAsArray = new String[fields.size()];
             termVectorRequest.selectedFields(fields.toArray(fieldsAsArray));
+        }
+        if (terms.size() > 0) {
+            String[] termsAsArray = new String[terms.size()];
+            termVectorRequest.selectedTerms(terms.toArray(termsAsArray));
         }
     }
 }

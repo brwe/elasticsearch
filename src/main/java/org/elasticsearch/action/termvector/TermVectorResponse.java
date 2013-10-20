@@ -324,11 +324,11 @@ public class TermVectorResponse extends ActionResponse implements ToXContent {
          this.exists = exists;
     }
 
-    public void setFields(Fields termVectorsByField, Set<String> selectedFields, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
+    public void setFields(Fields termVectorsByField, Set<String> selectedFields, Set<String> selectedTerms, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
         TermVectorWriter tvw = new TermVectorWriter(this);
 
         if (termVectorsByField != null) {
-            tvw.setFields(termVectorsByField, selectedFields, flags, topLevelFields);
+            tvw.setFields(termVectorsByField, selectedFields, selectedTerms, flags, topLevelFields);
         }
 
     }

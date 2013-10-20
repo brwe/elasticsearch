@@ -119,7 +119,7 @@ public class TermVectorUnitTests extends ElasticsearchLuceneTestCase {
         int doc = scoreDocs[0].doc;
         Fields fields = dr.getTermVectors(doc);
         EnumSet<Flag> flags = EnumSet.of(Flag.Positions, Flag.Offsets);
-        outResponse.setFields(fields, null, flags, fields);
+        outResponse.setFields(fields, null, null, flags, fields);
         outResponse.setExists(true);
         dr.close();
         dir.close();
@@ -154,7 +154,7 @@ public class TermVectorUnitTests extends ElasticsearchLuceneTestCase {
         int doc = scoreDocs[0].doc;
         Fields termVectors = dr.getTermVectors(doc);
         EnumSet<Flag> flags = EnumSet.of(Flag.Positions, Flag.Offsets);
-        outResponse.setFields(termVectors, null, flags, termVectors);
+        outResponse.setFields(termVectors, null, null, flags, termVectors);
         dr.close();
         dir.close();
 
