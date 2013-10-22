@@ -277,23 +277,30 @@ public class GetTermVectorTests extends AbstractTermVectorTests {
         boolean isOffsetRequested = randomBoolean();
         boolean isPositionsRequested = randomBoolean();
         String infoString = createInfoString(isPositionsRequested, isOffsetRequested, isPayloadRequested, optionString);
+        //TODO randomize?
+        String[] selectedTerms = { "brown", "dog", "fox", "notindoc" };
+        List<String> selecterdTermsAsList = new ArrayList<String>();
+        for (String selectedTerm : selectedTerms) {
+            selecterdTermsAsList.add(selectedTerm);
+        }
         for (int i = 0; i < 10; i++) {
             TermVectorRequestBuilder resp = client().prepareTermVector("test", "type1", Integer.toString(i))
-                    .setPayloads(isPayloadRequested).setOffsets(isOffsetRequested).setPositions(isPositionsRequested).setSelectedFields();
+                    .setPayloads(isPayloadRequested).setOffsets(isOffsetRequested).setPositions(isPositionsRequested).setSelectedFields().setSelectedTerms(selectedTerms);
             TermVectorResponse response = resp.execute().actionGet();
             assertThat(infoString + "doc id: " + i + " doesn't exists but should", response.isExists(), equalTo(true));
             Fields fields = response.getFields();
             assertThat(fields.size(), equalTo(ft.storeTermVectors() ? 1 : 0));
             if (ft.storeTermVectors()) {
                 Terms terms = fields.terms("field");
-                assertThat(terms.size(), equalTo(8l));
+                assertThat(terms.size(), equalTo((long) selecterdTermsAsList.size()));
                 TermsEnum iterator = terms.iterator(null);
-                for (int j = 0; j < values.length; j++) {
-                    String string = values[j];
+                for (int j = 0; j < selectedTerms.length; j++) {
                     BytesRef next = iterator.next();
+                    if (!selecterdTermsAsList.contains(next.utf8ToString()))
+                        continue;
+                    String string = values[j];
                     assertThat(infoString, next, Matchers.notNullValue());
-                    assertThat(infoString + "expected " + string, string, equalTo(next.utf8ToString()));
-                    assertThat(infoString, next, Matchers.notNullValue());
+
                     // do not test ttf or doc frequency, because here we have
                     // many shards and do not know how documents are distributed
                     DocsAndPositionsEnum docsAndPositions = iterator.docsAndPositions(null, null);
@@ -301,7 +308,11 @@ public class GetTermVectorTests extends AbstractTermVectorTests {
                     // payloads or offsets are stored / requestd Otherwise use
                     // DocsEnum?
                     assertThat(infoString, docsAndPositions.nextDoc(), equalTo(0));
+                    if (docsAndPositions.freq() == 0) {
+                        continue;
+                    }
                     assertThat(infoString, freq[j], equalTo(docsAndPositions.freq()));
+                    assertThat(infoString + "expected " + string, string, equalTo(next.utf8ToString()));
                     int[] termPos = pos[j];
                     int[] termStartOffset = startOffset[j];
                     int[] termEndOffset = endOffset[j];

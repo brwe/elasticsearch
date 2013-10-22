@@ -67,6 +67,8 @@ final class TermVectorWriter {
             if (selectedTerms == null){
                 startField(field, fieldTermVector.size(), positions, offsets, payloads);
             }else{
+                
+                //TODO We could check here if the requested terms are all in the document and instead of selectedTerms.size() pass the true number of terms that we will return.
                 startField(field, selectedTerms.size(), positions, offsets, payloads);
             }
             if (flags.contains(Flag.FieldStatistics)) {
@@ -95,6 +97,22 @@ final class TermVectorWriter {
                         // get the frequency from a DocsEnum.
                         docsEnum = writeTermWithDocsOnly(iterator, docsEnum);
                     }
+                    if (selectedTerms != null) {
+                        // remove the term here. if some are still in this list
+                        // after all terms for this doc is processed, then we
+                        // add freq 0.
+                        selectedTerms.remove(term.utf8ToString());
+                    }
+                }
+
+            }
+            if (selectedTerms != null && selectedTerms.size() != 0) {
+                //if we get here, then some of the requested terms are not in the document.
+                // we simply write freq 0 for these.
+                //TODO: Discuss if we instead first should check, how many of the requested terms are actually in the document, before writing the header with startField()
+                for (String selectedTerm : selectedTerms) {
+                    startTerm(new BytesRef(selectedTerm));
+                    writeFreq(0);
                 }
             }
             numFieldsWritten++;
@@ -102,6 +120,7 @@ final class TermVectorWriter {
         response.setTermVectorField(output);
         response.setHeader(writeHeader(numFieldsWritten, flags.contains(Flag.TermStatistics), flags.contains(Flag.FieldStatistics)));
     }
+
 
     private BytesReference writeHeader(int numFieldsWritten, boolean getTermStatistics, boolean getFieldStatistics) throws IOException {
         // now, write the information about offset of the terms in the
@@ -129,6 +148,7 @@ final class TermVectorWriter {
         assert nextDoc == DocsEnum.NO_MORE_DOCS;
         return docsEnum;
     }
+
 
     private DocsAndPositionsEnum writeTermWithDocsAndPos(TermsEnum iterator, DocsAndPositionsEnum docsAndPosEnum, boolean positions,
             boolean offsets, boolean payloads) throws IOException {
