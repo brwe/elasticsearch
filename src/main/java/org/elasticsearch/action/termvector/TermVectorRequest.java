@@ -19,7 +19,9 @@
 
 package org.elasticsearch.action.termvector;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.lucene.util.CollectionUtil;
 import org.elasticsearch.ElasticSearchParseException;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.ValidateActions;
@@ -29,7 +31,10 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentParser;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Request returning the term vector (doc frequency, positions, offsets) for a
@@ -48,14 +53,15 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
 
     protected String preference;
 
-    // TODO: change to String[]
-    private Set<String> selectedFields;
-    private Set<String> selectedTerms;
+    private String[] selectedFields;
+    
+    //selectedTerms is assumed to be sorted lexicographically and only contain unique terms.
+    private String[] selectedTerms;
 
     private EnumSet<Flag> flagsEnum = EnumSet.of(Flag.Positions, Flag.Offsets, Flag.Payloads,
             Flag.FieldStatistics);
 
-    TermVectorRequest() {
+    public TermVectorRequest() {
     }
 
     /**
@@ -68,7 +74,7 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
         this.id = id;
         this.type = type;
     }
-
+    
     public EnumSet<Flag> getFlags() {
         return flagsEnum;
     }
@@ -79,12 +85,26 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
     public String type() {
         return type;
     }
+    
+    /**
+     * Sets the type of document to get the term vector for.
+     */
+    public void type(String type) {
+        this.type = type;
+    }
 
     /**
      * Returns the id of document the term vector is requested for.
      */
     public String id() {
         return id;
+    }
+    
+    /**
+     * Set the id of document the term vector is requested for.
+     */
+    public void id(String id) {
+        this.id = id;
     }
 
     /**
@@ -207,19 +227,37 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
     }
 
     /**
-     * Return only term vectors for special selected terms. Returns for term
-     * vectors for all terms if selectedTerms == null
+     * Return selected terms. If selectedTerms is null or empty, all terms in
+     * the specified fields of the document will be returned.
      */
-    public Set<String> selectedTerms() {
+    public String[] selectedTerms() {
         return selectedTerms;
     }
 
     /**
+     * Set selected terms. If selectedTerms is null or empty, all terms in
+     * the specified fields of the document will be returned.
+     */
+    public TermVectorRequest selectedTerms(String[] terms) {
+        return selectedTerms(terms, true);
+    }
+    
+    /**
      * Return only term vectors for special selected terms. Returns the term
      * vectors for all terms if selectedTerms == null
      */
-    public TermVectorRequest selectedTerms(String[] terms) {
-        selectedTerms = terms != null && terms.length != 0 ? Sets.newHashSet(terms) : null;
+    public TermVectorRequest selectedTerms(String[] terms, boolean sortAndRemoveDuplicates) {
+        if (!sortAndRemoveDuplicates || terms == null) {
+            selectedTerms = terms;
+        } else {
+            // we must make sure that terms are sorted and unique
+            // this is because when retrieving them in TermVectorWriter.setFields(..), we process terms in order
+            // and if the terms list is in order as well, we can intersect efficiently 
+            Set<String> termsSet = Sets.newHashSet(terms);
+            ArrayList<String> sortedTerms = Lists.newArrayList(termsSet);
+            CollectionUtil.introSort(sortedTerms);
+            selectedTerms = sortedTerms.toArray(new String[sortedTerms.size()]);
+        }
         return this;
     }
 
@@ -227,7 +265,7 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
      * Return only term vectors for special selected fields. Returns for term
      * vectors for all fields if selectedFields == null
      */
-    public Set<String> selectedFields() {
+    public String[] selectedFields() {
         return selectedFields;
     }
 
@@ -236,7 +274,7 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
      * vectors for all fields if selectedFields == null
      */
     public TermVectorRequest selectedFields(String[] fields) {
-        selectedFields = fields != null && fields.length != 0 ? Sets.newHashSet(fields) : null;
+        selectedFields = fields;
         return this;
     }
 
@@ -289,18 +327,17 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
         }
         int numSelectedFields = in.readVInt();
         if (numSelectedFields > 0) {
-            selectedFields = new HashSet<String>();
+            selectedFields = new String[numSelectedFields];
             for (int i = 0; i < numSelectedFields; i++) {
-                selectedFields.add(in.readString());
+                selectedFields[i] = in.readString();
             }
         }
 
-
         int numSelectedTerms = in.readVInt();
         if (numSelectedTerms > 0) {
-            selectedTerms = new HashSet<String>();
+            selectedTerms = new String[numSelectedTerms];
             for (int i = 0; i < numSelectedTerms; i++) {
-                selectedTerms.add(in.readString());
+                selectedTerms[i] = in.readString();
             }
         }
     }
@@ -318,8 +355,8 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
             longFlags |= (1 << flag.ordinal());
         }
         out.writeVLong(longFlags);
-        if (selectedFields != null) {
-            out.writeVInt(selectedFields.size());
+        if (selectedFields != null && selectedFields.length > 0) {
+            out.writeVInt(selectedFields.length);
             for (String selectedField : selectedFields) {
                 out.writeString(selectedField);
             }
@@ -327,8 +364,8 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
             out.writeVInt(0);
         }
 
-        if (selectedTerms != null) {
-            out.writeVInt(selectedTerms.size());
+        if (selectedTerms != null && selectedTerms.length > 0) {
+            out.writeVInt(selectedTerms.length);
             for (String selectedTerm : selectedTerms) {
                 out.writeString(selectedTerm);
             }
@@ -371,14 +408,13 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
                                 "The parameter fields must be given as an array! Use syntax : \"fields\" : [\"field1\", \"field2\",...]");
                     }
                 } else if (currentFieldName.equals("terms")) {
-
                     if (token == XContentParser.Token.START_ARRAY) {
                         while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
                             terms.add(parser.text());
                         }
                     } else {
                         throw new ElasticSearchParseException(
-                                "The parameter terms must be given as an array! Use syntax : \"fields\" : [\"field1\", \"field2\",...]");
+                                "The parameter terms must be given as an array! Use syntax : \"terms\" : [\"term1\", \"term2\",...]");
                     }
                 } else if (currentFieldName.equals("offsets")) {
                     termVectorRequest.offsets(parser.booleanValue());
@@ -410,8 +446,9 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
             termVectorRequest.selectedFields(fields.toArray(fieldsAsArray));
         }
         if (terms.size() > 0) {
-            String[] termsAsArray = new String[terms.size()];
-            termVectorRequest.selectedTerms(terms.toArray(termsAsArray));
+            termVectorRequest.selectedTerms(terms.toArray(new String[terms.size()]));
         }
     }
+
+    
 }

@@ -18,6 +18,7 @@
  */
 package org.elasticsearch.action.termvector;
 
+import com.google.common.collect.Sets;
 import org.apache.lucene.index.*;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.termvector.TermVectorRequest.Flag;
@@ -45,15 +46,31 @@ final class TermVectorWriter {
         response = termVectorResponse;
     }
 
-    void setFields(Fields termVectorsByField, Set<String> selectedFields, Set<String> selectedTerms, EnumSet<Flag> flags, Fields topLevelFields) throws IOException {
+    /**
+     * This method will write each term in the selectedTerms array if it
+     * contains any elements. If the term does not appear in a field, it is
+     * added with freq 0. If <code>selectedTerms</code> does not contain
+     * elements or is null, we simple write all terms as they appear in the
+     * fields. <code>selectedTerms</code> is assumed to be a sorted array of
+     * Strings with unique elements.
+     * */
+    void setFields(Fields termVectorsByField, String[] selectedFields, String[] selectedTerms, EnumSet<Flag> flags, Fields topLevelFields)
+            throws IOException {
 
         int numFieldsWritten = 0;
         TermsEnum iterator = null;
         DocsAndPositionsEnum docsAndPosEnum = null;
         DocsEnum docsEnum = null;
         TermsEnum topLevelIterator = null;
+        Set<String> selectedFieldsSet = null;
+        if (!containsElements(selectedFields)) {
+            selectedFieldsSet = Sets.newHashSet();
+        } else {
+            selectedFieldsSet = Sets.newHashSet(selectedFields);
+        }
+
         for (String field : termVectorsByField) {
-            if ((selectedFields != null) && (!selectedFields.contains(field))) {
+            if (!shouldRetrieveField(selectedFieldsSet, field)) {
                 continue;
             }
 
@@ -64,25 +81,32 @@ final class TermVectorWriter {
             boolean positions = flags.contains(Flag.Positions) && fieldTermVector.hasPositions();
             boolean offsets = flags.contains(Flag.Offsets) && fieldTermVector.hasOffsets();
             boolean payloads = flags.contains(Flag.Payloads) && fieldTermVector.hasPayloads();
-            if (selectedTerms == null){
+            if (containsElements(selectedTerms)) {
+                startField(field, selectedTerms.length, positions, offsets, payloads);
+            } else {
                 startField(field, fieldTermVector.size(), positions, offsets, payloads);
-            }else{
-                startField(field, selectedTerms.size(), positions, offsets, payloads);
             }
             if (flags.contains(Flag.FieldStatistics)) {
                 writeFieldStatistics(topLevelTerms);
             }
             iterator = fieldTermVector.iterator(iterator);
             final boolean useDocsAndPos = positions || offsets || payloads;
-            while (iterator.next() != null) {
-                // iterate all terms of the
-                // current field
-                // get the doc frequency
+            int selectedTermsCounter = 0;
+
+            // we assume that selectedTerms is a sorted list and also that the
+            // terms are in order.
+            // we intersect these two lists now.
+            while ((iterator.next() != null) && hasMoreSelectedTerms(selectedTerms, selectedTermsCounter)) {
                 BytesRef term = iterator.term();
-                    boolean foundTerm = topLevelIterator.seekExact(term);
-                    assert (foundTerm);
-                // Pre-select Terms
-                if ((selectedTerms == null) || (selectedTerms.contains(term.utf8ToString()))) {
+                String termAsString = term.utf8ToString();
+                boolean foundTerm = topLevelIterator.seekExact(term);
+                assert (foundTerm);
+                
+                // write freq 0 for all terms in the selected list that are lexicographically less than the current term
+                selectedTermsCounter = writeSelectedTermsSmallerThanCurrent(selectedTerms, selectedTermsCounter, termAsString, flags);
+                
+                if (shouldWriteTerm(selectedTerms, selectedTermsCounter, termAsString)) {
+                    selectedTermsCounter++;
                     startTerm(term);
                     if (flags.contains(Flag.TermStatistics)) {
                         writeTermStatistics(topLevelIterator);
@@ -96,11 +120,88 @@ final class TermVectorWriter {
                         docsEnum = writeTermWithDocsOnly(iterator, docsEnum);
                     }
                 }
+
+            }
+            //if some selected terms are not in this field, we add them with frequency 0
+            if (selectedTerms != null) {
+                while (selectedTermsCounter < selectedTerms.length) {
+                    // write the empty term
+                    writeEmptyTerm(selectedTerms[selectedTermsCounter], flags);
+                    selectedTermsCounter++;
+                }
             }
             numFieldsWritten++;
         }
         response.setTermVectorField(output);
         response.setHeader(writeHeader(numFieldsWritten, flags.contains(Flag.TermStatistics), flags.contains(Flag.FieldStatistics)));
+    }
+
+    private void writeEmptyTerm(String term, EnumSet<Flag> flags) throws IOException {
+
+        startTerm(new BytesRef(term));
+        if (flags.contains(Flag.TermStatistics)) {
+            writePotentiallyNegativeVInt(0);
+            writePotentiallyNegativeVLong(0);
+        }
+        writeFreq(0);
+    }
+
+    private boolean containsElements(String[] elementArray) {
+        if (elementArray == null) {
+            return false;
+        }
+        if (elementArray.length == 0) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean shouldWriteTerm(String[] selectedTerms, int selectedTermsCounter, String termAsString) {
+        boolean writeTerm = false;
+        if (containsElements(selectedTerms)) {
+            if ((selectedTerms.length > selectedTermsCounter)) {//are we at the end of the selected terms list already?
+                if (selectedTerms[selectedTermsCounter].compareTo(termAsString) == 0) {
+                    //the current term is in the selectedTerms so we should write it
+                    writeTerm = true;
+                }
+            }
+
+        } else {
+            //if no selected terms are given we should write the term
+            writeTerm = true;
+        }
+        return writeTerm;
+    }
+
+    private int writeSelectedTermsSmallerThanCurrent(String[] selectedTerms, int selectedTermsCounter, String termAsString,
+            EnumSet<Flag> flags) throws IOException {
+        if (containsElements(selectedTerms)) {
+            while ((selectedTermsCounter < selectedTerms.length) && (selectedTerms[selectedTermsCounter].compareTo(termAsString) < 0)) {
+                // the current term lexicographically greater than the next term in the selected terms list
+                // -> write the empty term
+                writeEmptyTerm(selectedTerms[selectedTermsCounter], flags);
+                selectedTermsCounter++;
+            }
+        }
+        return selectedTermsCounter;
+    }
+
+    private boolean shouldRetrieveField(Set<String> selectedFieldsSet, String field) {
+        if (selectedFieldsSet.size() == 0) {
+            return true;
+        } else {
+            return (selectedFieldsSet.contains(field));
+        }
+    }
+
+    private boolean hasMoreSelectedTerms(String[] selectedTerms, int selectedTermsCounter) {
+        // selected terms can be null or just have length 0. In both cases we
+        // want to return all terms and therefore return true.
+        if (!containsElements(selectedTerms)) {
+            return true;
+        } else {
+            return (selectedTermsCounter < selectedTerms.length);
+        }
     }
 
     private BytesReference writeHeader(int numFieldsWritten, boolean getTermStatistics, boolean getFieldStatistics) throws IOException {
@@ -187,7 +288,7 @@ final class TermVectorWriter {
     }
 
     private void startField(String fieldName, long termsSize, boolean writePositions, boolean writeOffsets, boolean writePayloads)
-        throws IOException {
+            throws IOException {
         fields.add(fieldName);
         fieldOffset.add(output.position());
         output.writeVLong(termsSize);

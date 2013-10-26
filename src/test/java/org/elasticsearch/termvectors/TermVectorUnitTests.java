@@ -19,6 +19,7 @@
 
 package org.elasticsearch.termvectors;
 
+import com.google.common.collect.Sets;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
@@ -177,32 +178,64 @@ public class TermVectorUnitTests extends ElasticsearchLuceneTestCase {
         XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(inputBytes);
         TermVectorRequest.parseRequest(tvr, parser);
 
-        Set<String> fields = tvr.selectedFields();
+        Set<String> fields = Sets.newHashSet(tvr.selectedFields());
         assertThat(fields.contains("a"), equalTo(true));
         assertThat(fields.contains("b"), equalTo(true));
         assertThat(fields.contains("c"), equalTo(true));
         assertThat(tvr.offsets(), equalTo(false));
         assertThat(tvr.positions(), equalTo(false));
         assertThat(tvr.payloads(), equalTo(true));
-        String additionalFields = "b,c  ,d, e  ";
-        RestTermVectorAction.addFieldStringsFromParameter(tvr, additionalFields);
-        assertThat(tvr.selectedFields().size(), equalTo(5));
+        String newFields = "b,c  ,d, e  ";
+        RestTermVectorAction.addFieldStringsFromParameter(tvr, newFields);
+        assertThat(tvr.selectedFields().length, equalTo(4));
+        fields = Sets.newHashSet(tvr.selectedFields());
+        assertThat(fields.contains("b"), equalTo(true));
+        assertThat(fields.contains("c"), equalTo(true));
         assertThat(fields.contains("d"), equalTo(true));
         assertThat(fields.contains("e"), equalTo(true));
-
-        additionalFields = "";
-        RestTermVectorAction.addFieldStringsFromParameter(tvr, additionalFields);
 
         inputBytes = new BytesArray(" {\"offsets\":false, \"positions\":false, \"payloads\":true}");
         tvr = new TermVectorRequest(null, null, null);
         parser = XContentFactory.xContent(XContentType.JSON).createParser(inputBytes);
         TermVectorRequest.parseRequest(tvr, parser);
-        additionalFields = "";
-        RestTermVectorAction.addFieldStringsFromParameter(tvr, additionalFields);
-        assertThat(tvr.selectedFields(), equalTo(null));
-        additionalFields = "b,c  ,d, e  ";
-        RestTermVectorAction.addFieldStringsFromParameter(tvr, additionalFields);
-        assertThat(tvr.selectedFields().size(), equalTo(4));
+        newFields = "";
+        RestTermVectorAction.addFieldStringsFromParameter(tvr, newFields);
+        assertThat(tvr.selectedFields().length, equalTo(0));
+
+    }
+    
+    @Test
+    public void testRestRequestTermsParsing() throws Exception {
+        BytesReference inputBytes = new BytesArray(
+                " {\"terms\" : [\"a\",  \"b\",\"c\"], \"offsets\":false, \"positions\":false, \"payloads\":true}");
+
+        TermVectorRequest tvr = new TermVectorRequest(null, null, null);
+        XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(inputBytes);
+        TermVectorRequest.parseRequest(tvr, parser);
+
+        Set<String> terms = Sets.newHashSet(tvr.selectedTerms());
+        assertThat(terms.contains("a"), equalTo(true));
+        assertThat(terms.contains("b"), equalTo(true));
+        assertThat(terms.contains("c"), equalTo(true));
+        assertThat(tvr.offsets(), equalTo(false));
+        assertThat(tvr.positions(), equalTo(false));
+        assertThat(tvr.payloads(), equalTo(true));
+        String newTerms = "b,c  ,d, e  ";
+        RestTermVectorAction.addTermStringsFromParameter(tvr, newTerms);
+        assertThat(tvr.selectedTerms().length, equalTo(4));
+        terms = Sets.newHashSet(tvr.selectedTerms());
+        assertThat(terms.contains("b"), equalTo(true));
+        assertThat(terms.contains("c"), equalTo(true));
+        assertThat(terms.contains("d"), equalTo(true));
+        assertThat(terms.contains("e"), equalTo(true));
+
+        inputBytes = new BytesArray(" {\"offsets\":false, \"positions\":false, \"payloads\":true}");
+        tvr = new TermVectorRequest(null, null, null);
+        parser = XContentFactory.xContent(XContentType.JSON).createParser(inputBytes);
+        TermVectorRequest.parseRequest(tvr, parser);
+        newTerms = "";
+        RestTermVectorAction.addTermStringsFromParameter(tvr, newTerms);
+        assertThat(tvr.selectedTerms().length, equalTo(0));
 
     }
 
@@ -288,5 +321,5 @@ public class TermVectorUnitTests extends ElasticsearchLuceneTestCase {
         String ftOpts = AbstractFieldMapper.termVectorOptionsToString(ft);
         assertThat(ftOpts, equalTo("with_offsets"));
     }
-    
+
 }

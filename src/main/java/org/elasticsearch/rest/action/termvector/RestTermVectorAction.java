@@ -33,8 +33,6 @@ import org.elasticsearch.rest.*;
 import org.elasticsearch.rest.action.support.RestXContentBuilder;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
@@ -58,10 +56,8 @@ public class RestTermVectorAction extends BaseRestHandler {
     @Override
     public void handleRequest(final RestRequest request, final RestChannel channel) {
 
-        TermVectorRequest termVectorRequest = new TermVectorRequest(request.param("index"), request.param("type"), request.param("id"));
-        termVectorRequest.routing(request.param("routing"));
-        termVectorRequest.parent(request.param("parent"));
-        termVectorRequest.preference(request.param("preference"));
+        TermVectorRequest termVectorRequest = new TermVectorRequest();
+        readURIParameters(termVectorRequest, request);
         XContentParser parser = null;
         if (request.hasContent()) {
             try {
@@ -82,7 +78,6 @@ public class RestTermVectorAction extends BaseRestHandler {
                 }
             }
         }
-        readURIParameters(termVectorRequest, request);
 
         client.termVector(termVectorRequest, new ActionListener<TermVectorResponse>() {
             @Override
@@ -114,6 +109,14 @@ public class RestTermVectorAction extends BaseRestHandler {
 
         String terms = request.param("terms");
         addTermStringsFromParameter(termVectorRequest, terms);
+        
+        termVectorRequest.routing(request.param("routing"));
+        termVectorRequest.parent(request.param("parent"));
+        termVectorRequest.preference(request.param("preference"));
+        
+        termVectorRequest.index(request.param("index"));
+        termVectorRequest.id(request.param("id"));
+        termVectorRequest.type(request.param("type"));
 
         termVectorRequest.offsets(request.paramAsBoolean("offsets", termVectorRequest.offsets()));
         termVectorRequest.positions(request.paramAsBoolean("positions", termVectorRequest.positions()));
@@ -125,41 +128,30 @@ public class RestTermVectorAction extends BaseRestHandler {
     }
 
     static public void addFieldStringsFromParameter(TermVectorRequest termVectorRequest, String fields) {
-        Set<String> selectedFields = termVectorRequest.selectedFields();
-        if (fields != null) {
-            String[] paramFieldStrings = Strings.commaDelimitedListToStringArray(fields);
-            for (String field : paramFieldStrings) {
-                if (selectedFields == null) {
-                    selectedFields = new HashSet<String>();
-                }
-                if (!selectedFields.contains(field)) {
-                    field = field.replaceAll("\\s", "");
-                    selectedFields.add(field);
-                }
-            }
-        }
-        if (selectedFields != null) {
-            termVectorRequest.selectedFields(selectedFields.toArray(new String[selectedFields.size()]));
+        if (fields == null) {
+            termVectorRequest.selectedFields(null);
+        } else {
+            termVectorRequest.selectedFields(getStrings(fields));
         }
     }
 
     static public void addTermStringsFromParameter(TermVectorRequest termVectorRequest, String terms) {
-        Set<String> selectedTerms = termVectorRequest.selectedTerms();
-        if (terms != null) {
-            String[] paramTermStrings = Strings.commaDelimitedListToStringArray(terms);
-            for (String term : paramTermStrings) {
-                if (selectedTerms == null) {
-                    selectedTerms = new HashSet<String>();
-                }
-                if (!selectedTerms.contains(term)) {
-                    term = term.replaceAll("\\s", "");
-                    selectedTerms.add(term);
-                }
+        if (terms == null) {
+            termVectorRequest.selectedTerms(null);
+        } else {
+            termVectorRequest.selectedTerms(getStrings(terms));
+        }
+    }
+
+    private static String[] getStrings(String commaDelimitedStrings) {
+        String[] strings = null;
+        if (commaDelimitedStrings != null) {
+            strings = Strings.commaDelimitedListToStringArray(commaDelimitedStrings);
+            for (int i = 0; i< strings.length; i++) {
+                strings[i] = strings[i].replaceAll("\\s", "");
             }
         }
-        if (selectedTerms != null) {
-            termVectorRequest.selectedTerms(selectedTerms.toArray(new String[selectedTerms.size()]));
-        }
+        return strings;
     }
 
 }

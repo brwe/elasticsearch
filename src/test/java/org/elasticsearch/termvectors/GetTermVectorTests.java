@@ -20,6 +20,8 @@
 package org.elasticsearch.termvectors;
 
 import com.carrotsearch.hppc.ObjectIntOpenHashMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.lucene.analysis.payloads.PayloadHelper;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.*;
@@ -38,10 +40,7 @@ import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertThrows;
 import static org.hamcrest.Matchers.equalTo;
@@ -198,9 +197,157 @@ public class GetTermVectorTests extends AbstractTermVectorTests {
             assertThat(iterator.next(), Matchers.nullValue());
         }
     }
+    
+    public class TermInfo {
+        int[] positions;
+        int[] startOffsets;
+        int[] endOffsets;
+        int freq;
+        public TermInfo(int freq,  int[] positions, int[] startOffsets, int[] endOffsets) {
+            this.freq = freq;
+            this.positions = positions;
+            this.startOffsets = startOffsets;
+            this.endOffsets = endOffsets;
+        }
+    }
 
     @Test
     public void testRandomSingleTermVectors() throws ElasticSearchException, IOException {
+        FieldType ft = createFieldType(randomInt(6));
+        
+
+        String optionString = AbstractFieldMapper.termVectorOptionsToString(ft);
+        XContentBuilder mapping = XContentFactory.jsonBuilder().startObject().startObject("type1")
+                .startObject("properties")
+                        .startObject("field")
+                            .field("type", "string")
+                            .field("term_vector", optionString)
+                            .field("analyzer", "tv_test")
+                        .endObject()
+                .endObject()
+                .endObject().endObject();
+        ElasticsearchAssertions.assertAcked(prepareCreate("test").addMapping("type1", mapping)
+                .setSettings(ImmutableSettings.settingsBuilder()
+                        .put("index.analysis.analyzer.tv_test.tokenizer", "whitespace")
+                        .putArray("index.analysis.analyzer.tv_test.filter", "type_as_payload", "lowercase")));
+        ensureYellow();
+        for (int i = 0; i < 10; i++) {
+            client().prepareIndex("test", "type1", Integer.toString(i))
+                    .setSource(XContentFactory.jsonBuilder().startObject().field("field", "the quick brown fox jumps over the lazy dog")
+                            // 0the3 4quick9 10brown15 16fox19 20jumps25 26over30
+                            // 31the34 35lazy39 40dog43
+                            .endObject()).execute().actionGet();
+            refresh();
+        }
+        String[] values = {"brown", "dog", "fox", "jumps", "lazy", "over", "quick", "the"};
+        int[] freqencies = {1, 1, 1, 1, 1, 1, 1, 2};
+        int[][] pos = {{2}, {8}, {3}, {4}, {7}, {5}, {1}, {0, 6}};
+        int[][] startOffset = {{10}, {40}, {16}, {20}, {35}, {26}, {4}, {0, 31}};
+        int[][] endOffset = {{15}, {43}, {19}, {25}, {39}, {30}, {9}, {3, 34}};
+        String[] missingTerms = {"anotindoc1", "notindoc2", "znotindoc3"};
+        Map<String, TermInfo> termInfos = new HashMap<String, TermInfo>();
+        for (int i = 0; i < values.length; i++) {
+            termInfos.put(values[i], new TermInfo(freqencies[i], pos[i], startOffset[i], endOffset[i]));
+        }
+        for (int i = 0; i < missingTerms.length; i++) {
+            termInfos.put(missingTerms[i], new TermInfo(0, null, null, null));
+        }
+        boolean isPayloadRequested = randomBoolean();
+        boolean isOffsetRequested = randomBoolean();
+        boolean isPositionsRequested = randomBoolean();
+        String infoString = createInfoString(isPositionsRequested, isOffsetRequested, isPayloadRequested, optionString);
+        boolean getOnlySelectedTerms = randomBoolean();
+       
+        //first, we create the list of selected terms randomly. they can contain duplicates and the list is unsorted
+        List<String> selectedTerms = null; 
+        if (getOnlySelectedTerms) {
+            selectedTerms = getRandomSelectedTerms(values, missingTerms);
+        }
+        //now we create the sorted list of terms without duplicates. this is the terms that we expect to be returned
+        String[] finalSortedTerms = getSortedExpectedTermsList(values, selectedTerms);
+        
+        for (int i = 0; i < 10; i++) {
+            TermVectorRequestBuilder requestBuilder = client().prepareTermVector("test", "type1", Integer.toString(i))
+                    .setPayloads(isPayloadRequested).setOffsets(isOffsetRequested).setPositions(isPositionsRequested);
+            if (getOnlySelectedTerms) {
+                requestBuilder.setSelectedTerms(selectedTerms.toArray(new String[selectedTerms.size()]));
+            }
+           
+            TermVectorResponse response = requestBuilder.execute().actionGet();
+            assertThat(infoString + "doc id: " + i + " doesn't exists but should", response.isExists(), equalTo(true));
+            Fields fields = response.getFields();
+            assertThat(fields.size(), equalTo(ft.storeTermVectors() ? 1 : 0));
+            if (ft.storeTermVectors()) {
+                Terms terms = fields.terms("field");
+                assertThat(terms.size(), equalTo((long) finalSortedTerms.length));
+                TermsEnum iterator = terms.iterator(null);
+                for (int j = 0; j < finalSortedTerms.length; j++) {
+                    BytesRef next = iterator.next();
+                    String currTerm = finalSortedTerms[j];
+                    assertThat(currTerm, equalTo(next.utf8ToString()));
+                    assertThat(infoString, next, Matchers.notNullValue());
+
+                    
+                    DocsAndPositionsEnum docsAndPositions = iterator.docsAndPositions(null, null);
+                    assertThat(infoString, docsAndPositions.nextDoc(), equalTo(0));
+                    int curFreq = termInfos.get(currTerm).freq;
+                    assertThat(infoString, curFreq, equalTo(docsAndPositions.freq()));
+                    assertThat(infoString + "expected " + currTerm, currTerm, equalTo(next.utf8ToString()));
+                    
+                    if (curFreq == 0) {
+                        //the term was a selected term that did not appear in the field, so there is nothing more to check 
+                        continue;
+                    }
+                    int[] termPos = termInfos.get(currTerm).positions;
+                    int[] termStartOffset = termInfos.get(currTerm).startOffsets;
+                    int[] termEndOffset = termInfos.get(currTerm).endOffsets;
+                    
+                    if (isPositionsRequested && ft.storeTermVectorPositions()) {
+                        assertThat(infoString, termPos.length, equalTo(curFreq));
+                    }
+                    if (isOffsetRequested && ft.storeTermVectorOffsets()) {
+                        assertThat(termStartOffset.length, equalTo(curFreq));
+                        assertThat(termEndOffset.length, equalTo(curFreq));
+                    }
+                    // do not test ttf or doc frequency, because here we have
+                    // many shards and do not know how documents are distributed
+                    
+                    //now, check if positions offsets and payloads are ok
+                    for (int k = 0; k < curFreq; k++) {
+                        int nextPosition = docsAndPositions.nextPosition();
+                        // only return something useful if requested and stored
+                        if (isPositionsRequested && ft.storeTermVectorPositions()) {
+                            assertThat(infoString + "positions for term: " + currTerm, nextPosition, equalTo(termPos[k]));
+                        } else {
+                            assertThat(infoString + "positions for term: ", nextPosition, equalTo(-1));
+                        }
+                        // only return something useful if requested and stored
+                        if (isPayloadRequested && ft.storeTermVectorPayloads()) {
+                            assertThat(infoString + "payloads for term: " + currTerm, docsAndPositions.getPayload(), equalTo(new BytesRef(
+                                    "word")));
+                        } else {
+                            assertThat(infoString + "payloads for term: " + currTerm, docsAndPositions.getPayload(), equalTo(null));
+                        }
+                        // only return something useful if requested and stored
+                        if (isOffsetRequested && ft.storeTermVectorOffsets()) {
+
+                            assertThat(infoString + "startOffsets term: " + currTerm, docsAndPositions.startOffset(),
+                                    equalTo(termStartOffset[k]));
+                            assertThat(infoString + "endOffsets term: " + currTerm, docsAndPositions.endOffset(), equalTo(termEndOffset[k]));
+                        } else {
+                            assertThat(infoString + "startOffsets term: " + currTerm, docsAndPositions.startOffset(), equalTo(-1));
+                            assertThat(infoString + "endOffsets term: " + currTerm, docsAndPositions.endOffset(), equalTo(-1));
+                        }
+
+                    }
+                }
+                assertThat(iterator.next(), Matchers.nullValue());
+            }
+
+        }
+    }
+
+    private FieldType createFieldType(int randomInt) {
         FieldType ft = new FieldType();
         int config = randomInt(6);
         boolean storePositions = false;
@@ -243,108 +390,42 @@ public class GetTermVectorTests extends AbstractTermVectorTests {
         ft.setStoreTermVectorOffsets(storeOffsets);
         ft.setStoreTermVectorPayloads(storePayloads);
         ft.setStoreTermVectorPositions(storePositions);
+        return ft;
+    }
 
-        String optionString = AbstractFieldMapper.termVectorOptionsToString(ft);
-        XContentBuilder mapping = XContentFactory.jsonBuilder().startObject().startObject("type1")
-                .startObject("properties")
-                        .startObject("field")
-                            .field("type", "string")
-                            .field("term_vector", optionString)
-                            .field("analyzer", "tv_test")
-                        .endObject()
-                .endObject()
-                .endObject().endObject();
-        ElasticsearchAssertions.assertAcked(prepareCreate("test").addMapping("type1", mapping)
-                .setSettings(ImmutableSettings.settingsBuilder()
-                        .put("index.analysis.analyzer.tv_test.tokenizer", "whitespace")
-                        .putArray("index.analysis.analyzer.tv_test.filter", "type_as_payload", "lowercase")));
-        ensureYellow();
-        for (int i = 0; i < 10; i++) {
-            client().prepareIndex("test", "type1", Integer.toString(i))
-                    .setSource(XContentFactory.jsonBuilder().startObject().field("field", "the quick brown fox jumps over the lazy dog")
-                            // 0the3 4quick9 10brown15 16fox19 20jumps25 26over30
-                            // 31the34 35lazy39 40dog43
-                            .endObject()).execute().actionGet();
-            refresh();
-        }
-        String[] values = {"brown", "dog", "fox", "jumps", "lazy", "over", "quick", "the"};
-        int[] freq = {1, 1, 1, 1, 1, 1, 1, 2};
-        int[][] pos = {{2}, {8}, {3}, {4}, {7}, {5}, {1}, {0, 6}};
-        int[][] startOffset = {{10}, {40}, {16}, {20}, {35}, {26}, {4}, {0, 31}};
-        int[][] endOffset = {{15}, {43}, {19}, {25}, {39}, {30}, {9}, {3, 34}};
-
-        boolean isPayloadRequested = randomBoolean();
-        boolean isOffsetRequested = randomBoolean();
-        boolean isPositionsRequested = randomBoolean();
-        String infoString = createInfoString(isPositionsRequested, isOffsetRequested, isPayloadRequested, optionString);
-        for (int i = 0; i < 10; i++) {
-            TermVectorRequestBuilder resp = client().prepareTermVector("test", "type1", Integer.toString(i))
-                    .setPayloads(isPayloadRequested).setOffsets(isOffsetRequested).setPositions(isPositionsRequested).setSelectedFields();
-            TermVectorResponse response = resp.execute().actionGet();
-            assertThat(infoString + "doc id: " + i + " doesn't exists but should", response.isExists(), equalTo(true));
-            Fields fields = response.getFields();
-            assertThat(fields.size(), equalTo(ft.storeTermVectors() ? 1 : 0));
-            if (ft.storeTermVectors()) {
-                Terms terms = fields.terms("field");
-                assertThat(terms.size(), equalTo(8l));
-                TermsEnum iterator = terms.iterator(null);
-                for (int j = 0; j < values.length; j++) {
-                    String string = values[j];
-                    BytesRef next = iterator.next();
-                    assertThat(infoString, next, Matchers.notNullValue());
-                    assertThat(infoString + "expected " + string, string, equalTo(next.utf8ToString()));
-                    assertThat(infoString, next, Matchers.notNullValue());
-                    // do not test ttf or doc frequency, because here we have
-                    // many shards and do not know how documents are distributed
-                    DocsAndPositionsEnum docsAndPositions = iterator.docsAndPositions(null, null);
-                    // docs and pos only returns something if positions or
-                    // payloads or offsets are stored / requestd Otherwise use
-                    // DocsEnum?
-                    assertThat(infoString, docsAndPositions.nextDoc(), equalTo(0));
-                    assertThat(infoString, freq[j], equalTo(docsAndPositions.freq()));
-                    int[] termPos = pos[j];
-                    int[] termStartOffset = startOffset[j];
-                    int[] termEndOffset = endOffset[j];
-                    if (isPositionsRequested && storePositions) {
-                        assertThat(infoString, termPos.length, equalTo(freq[j]));
-                    }
-                    if (isOffsetRequested && storeOffsets) {
-                        assertThat(termStartOffset.length, equalTo(freq[j]));
-                        assertThat(termEndOffset.length, equalTo(freq[j]));
-                    }
-                    for (int k = 0; k < freq[j]; k++) {
-                        int nextPosition = docsAndPositions.nextPosition();
-                        // only return something useful if requested and stored
-                        if (isPositionsRequested && storePositions) {
-                            assertThat(infoString + "positions for term: " + string, nextPosition, equalTo(termPos[k]));
-                        } else {
-                            assertThat(infoString + "positions for term: ", nextPosition, equalTo(-1));
-                        }
-
-                        // only return something useful if requested and stored
-                        if (isPayloadRequested && storePayloads) {
-                            assertThat(infoString + "payloads for term: " + string, docsAndPositions.getPayload(), equalTo(new BytesRef(
-                                    "word")));
-                        } else {
-                            assertThat(infoString + "payloads for term: " + string, docsAndPositions.getPayload(), equalTo(null));
-                        }
-                        // only return something useful if requested and stored
-                        if (isOffsetRequested && storeOffsets) {
-
-                            assertThat(infoString + "startOffsets term: " + string, docsAndPositions.startOffset(),
-                                    equalTo(termStartOffset[k]));
-                            assertThat(infoString + "endOffsets term: " + string, docsAndPositions.endOffset(), equalTo(termEndOffset[k]));
-                        } else {
-                            assertThat(infoString + "startOffsets term: " + string, docsAndPositions.startOffset(), equalTo(-1));
-                            assertThat(infoString + "endOffsets term: " + string, docsAndPositions.endOffset(), equalTo(-1));
-                        }
-
-                    }
-                }
-                assertThat(iterator.next(), Matchers.nullValue());
+    private String[] getSortedExpectedTermsList(String[] values, List<String> selectedTerms) {
+        Set<String> finalTerms = null;
+        if (selectedTerms != null) {
+            finalTerms = new HashSet<String>();
+            finalTerms.addAll(selectedTerms);
+            if (finalTerms.size() == 0) {
+                //we expect all terms to be returned if no selected terms are given, so we add all terms here to the expected list
+                finalTerms.addAll(Sets.newHashSet(values));
             }
-
+        } else {
+            finalTerms = Sets.newHashSet(values);
         }
+        String[] finalSortedTerms = new String[finalTerms.size()];
+        List<String> termsList = Lists.newArrayList(finalTerms.toArray(finalSortedTerms));
+        Collections.sort(termsList);
+        finalSortedTerms = termsList.toArray(finalSortedTerms);
+        return finalSortedTerms;
+    }
+
+    private List<String> getRandomSelectedTerms(String[] values, String[] missingTerms) {
+        
+        int numTerms = randomInt(values.length);
+        int numTermsMissing = randomInt(missingTerms.length);
+        List<String> allTerms = new ArrayList<String>();
+        for (int i = 0; i < numTerms; i++) {
+            int termPos = randomInt(values.length - 1);
+            allTerms.add(values[termPos]);
+        }
+        for (int i = 0; i < numTermsMissing; i++) {
+            int termPos = randomInt(missingTerms.length - 1);
+            allTerms.add(missingTerms[termPos]);
+        }
+        return allTerms;
     }
 
     private String createInfoString(boolean isPositionsRequested, boolean isOffsetRequested, boolean isPayloadRequested,
