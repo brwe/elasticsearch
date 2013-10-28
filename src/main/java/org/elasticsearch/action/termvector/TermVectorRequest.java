@@ -75,6 +75,26 @@ public class TermVectorRequest extends SingleShardOperationRequest<TermVectorReq
         this.type = type;
     }
     
+    /**
+     * Constructs a new term vector request for a document that will be fetch
+     * from the provided index. Use {@link #type(String)} and
+     * {@link #id(String)} to specify the document to load.
+     */
+    public TermVectorRequest(TermVectorRequest other) {
+        super(other.index());
+        this.id = other.id();
+        this.type = other.type();
+        this.flagsEnum = other.getFlags().clone();
+        this.preference = other.preference();
+        if (other.selectedFields != null) {
+            this.selectedFields = other.selectedFields.clone();
+        }
+        if (other.selectedTerms != null) {
+            this.selectedTerms = other.selectedTerms.clone();
+        }
+        this.routing = other.routing();
+    }
+
     public EnumSet<Flag> getFlags() {
         return flagsEnum;
     }
