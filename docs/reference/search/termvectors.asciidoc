@@ -6,6 +6,8 @@ added[1.00.Beta]
 Returns information and statistics on terms in the fields of a
 particular document as stored in the index.
 
+See also: <<docs-multi-termvectors,multi-termvectors API>>
+
 [source,js]
 --------------------------------------------------
 curl -XGET 'http://localhost:9200/twitter/tweet/1/_termvector?pretty=true'
@@ -16,11 +18,27 @@ retrieved either with a parameter in the url
 
 [source,js]
 --------------------------------------------------
-curl -XGET 'http://localhost:9200/twitter/tweet/1/_termvector?fields=text,...'
+curl -XGET 'http://localhost:9200/twitter/tweet/1/_termvector?fields=field1,…'
 --------------------------------------------------
 
 or adding by adding the requested fields in the request body (see
 example below). 
+
+In addition, you can restrict the terms returned either with a url parameter:
+
+[source,js]
+--------------------------------------------------
+curl -XGET 'http://localhost:9200/twitter/tweet/1/_termvector?terms=term1,…'
+--------------------------------------------------
+
+or in the body:
+ 
+[source,js]
+--------------------------------------------------
+"terms": ["term1", "term2", ...]
+--------------------------------------------------
+Terms that are requested but do not appear in a document will be returned with term frequecy 0.
+
 
 [float]
 === Return values
