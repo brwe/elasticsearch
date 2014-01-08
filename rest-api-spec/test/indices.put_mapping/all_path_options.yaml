@@ -1,0 +1,184 @@
+---
+"Test Create and update mapping with all options (PUT {index|_all|*|prefix*}/type/_mapping)":
+
+# create two indices
+  - do:
+      indices.create:
+        index: test_index1
+  - do:
+      indices.create:
+        index: test_index2
+
+# put mapping per index
+  - do:
+      indices.put_mapping:
+        index: test_index1
+        type: test_type
+        body:
+          test_type:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace     
+  - do:
+      indices.put_mapping:
+        index: test_index2
+        type: test_type
+        body:
+          test_type:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace
+                
+
+  - do:
+      indices.get_mapping:
+        index: test_index1
+  
+  - match: {test_index1.test_type.properties.text.type:     string}
+  - match: {test_index1.test_type.properties.text.analyzer: whitespace}
+  
+  - do:
+      indices.get_mapping:
+        index: test_index2
+  
+  - match: {test_index2.test_type.properties.text.type:     string}
+  - match: {test_index2.test_type.properties.text.analyzer: whitespace}
+
+
+  
+# put mapping in _all index
+  - do:
+      indices.put_mapping:
+        index: _all
+        type: test_type1
+        body:
+          test_type1:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace
+
+  - do:
+      indices.get_mapping:
+        index: test_index1
+  
+  - match: {test_index1.test_type1.properties.text.type:     string}
+  - match: {test_index1.test_type1.properties.text.analyzer: whitespace}
+  
+  - do:
+      indices.get_mapping:
+        index: test_index2
+  
+  - match: {test_index2.test_type1.properties.text.type:     string}
+  - match: {test_index2.test_type1.properties.text.analyzer: whitespace}
+  
+  
+# put mapping in * index
+  - do:
+      indices.put_mapping:
+        index: "*"
+        type: test_type2
+        body:
+          test_type2:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace
+
+  - do:
+      indices.get_mapping:
+        index: test_index1
+  
+  - match: {test_index1.test_type2.properties.text.type:     string}
+  - match: {test_index1.test_type2.properties.text.analyzer: whitespace}
+  
+  - do:
+      indices.get_mapping:
+        index: test_index2
+  
+  - match: {test_index2.test_type2.properties.text.type:     string}
+  - match: {test_index2.test_type2.properties.text.analyzer: whitespace}
+  
+# put mapping prefix* index
+  - do:
+      indices.put_mapping:
+        index: "test_index*"
+        type: test_type3
+        body:
+          test_type3:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace
+
+  - do:
+      indices.get_mapping:
+        index: test_index1
+  
+  - match: {test_index1.test_type3.properties.text.type:     string}
+  - match: {test_index1.test_type3.properties.text.analyzer: whitespace}
+  
+  - do:
+      indices.get_mapping:
+        index: test_index2
+  
+  - match: {test_index2.test_type3.properties.text.type:     string}
+  - match: {test_index2.test_type3.properties.text.analyzer: whitespace}
+
+
+
+# put mapping in list of indices
+  - do:
+      indices.put_mapping:
+        index: [test_index1, test_index2]
+        type: test_type4
+        body:
+          test_type4:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace
+                
+  - do:
+      indices.get_mapping:
+        index: test_index1
+  
+  - match: {test_index1.test_type4.properties.text.type:     string}
+  - match: {test_index1.test_type4.properties.text.analyzer: whitespace}
+  
+  - do:
+      indices.get_mapping:
+        index: test_index2
+  
+  - match: {test_index2.test_type4.properties.text.type:     string}
+  - match: {test_index2.test_type4.properties.text.analyzer: whitespace}
+  
+  
+# put mapping with blank index
+  - do:
+      indices.put_mapping:
+        type: test_type5
+        body:
+          test_type5:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace
+                
+  - do:
+      indices.get_mapping:
+        index: test_index1
+  
+  - match: {test_index1.test_type5.properties.text.type:     string}
+  - match: {test_index1.test_type5.properties.text.analyzer: whitespace}
+  
+  - do:
+      indices.get_mapping:
+        index: test_index2
+  
+  - match: {test_index2.test_type5.properties.text.type:     string}
+  - match: {test_index2.test_type5.properties.text.analyzer: whitespace}
+
+
