@@ -4,11 +4,11 @@
     "methods": ["PUT", "POST"],
     "url": {
       "path": "/{index}/{type}/_mapping",
-      "paths": ["/{index}/{type}/_mapping"],
+      "paths": ["/{index}/{type}/_mapping", "/{type}/_mapping"],
       "parts": {
         "index": {
           "type" : "list",
-          "required" : true,
+          "required" : false,
           "description" : "A comma-separated list of index names; use `_all` to perform the operation on all indices"
         },
         "type": {

@@ -40,10 +40,10 @@ public class RestPutMappingAction extends BaseRestHandler {
     @Inject
     public RestPutMappingAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(PUT, "/{index}/_mapping", this);
+        controller.registerHandler(PUT, "/{type}/_mapping/", this);
         controller.registerHandler(PUT, "/{index}/{type}/_mapping", this);
-
-        controller.registerHandler(POST, "/{index}/_mapping", this);
+        
+        controller.registerHandler(POST, "/{type}/_mapping/", this);
         controller.registerHandler(POST, "/{index}/{type}/_mapping", this);
     }
 
