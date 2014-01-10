@@ -1,0 +1,102 @@
+---
+"Test Create and update alias with all options (PUT {index|_all|*|prefix*}/_alias/name)":
+
+# create two indices
+
+  - do:
+      indices.create:
+        index: test_index1
+  - do:
+      indices.create:
+        index: test_index2
+
+# put alias per index
+
+  - do:
+      indices.put_alias:
+        index: test_index1
+        name: alias_0
+  - do:
+      indices.put_alias:
+        index: test_index2
+        name: alias_0
+        
+  - do:
+      indices.get_alias:
+        name: alias_0
+
+  - match: {test_index1.aliases.alias_0: {}}
+  
+  - match: {test_index2.aliases.alias_0: {}}
+
+  
+# put alias in _all index
+
+  - do:
+      indices.put_alias:
+        index: _all
+        name: alias_1
+        
+  - do:
+      indices.get_alias:
+        name: alias_1
+
+  - match: {test_index1.aliases.alias_1: {}}
+  - match: {test_index2.aliases.alias_1: {}}
+
+  
+# put alias in * index
+
+  - do:
+      indices.put_alias:
+        index: _all
+        name: alias_2
+        
+  - do:
+      indices.get_alias:
+        name: alias_2
+
+  - match: {test_index1.aliases.alias_2: {}}
+  - match: {test_index2.aliases.alias_2: {}}
+    
+# put alias prefix* index
+
+  - do:
+      indices.put_alias:
+        index: "*"
+        name: alias_3
+        
+  - do:
+      indices.get_alias:
+        name: alias_3
+
+  - match: {test_index1.aliases.alias_3: {}}
+  - match: {test_index2.aliases.alias_3: {}}
+
+# put alias in list of indices
+
+  - do:
+      indices.put_alias:
+        index: "test_index1,test_index2"
+        name: alias_4
+        
+  - do:
+      indices.get_alias:
+        name: alias_4
+
+  - match: {test_index1.aliases.alias_4: {}}
+  - match: {test_index2.aliases.alias_4: {}}
+   
+# put alias with blank index
+
+  - do:
+      indices.put_alias:
+        name: alias_5
+        
+  - do:
+      indices.get_alias:
+        name: alias_5
+
+  - match: {test_index1.aliases.alias_5: {}}
+  - match: {test_index2.aliases.alias_5: {}}
+ 

@@ -22,6 +22,7 @@ package org.elasticsearch.action.admin.indices.alias;
 import com.google.common.collect.Lists;
 import org.elasticsearch.ElasticsearchGenerationException;
 import org.elasticsearch.action.ActionRequestValidationException;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.master.AcknowledgedRequest;
 import org.elasticsearch.cluster.metadata.AliasAction;
 import org.elasticsearch.common.Strings;
@@ -47,6 +48,8 @@ import static org.elasticsearch.cluster.metadata.AliasAction.readAliasAction;
 public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesRequest> {
 
     private List<AliasAction> aliasActions = Lists.newArrayList();
+    
+    private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
 
     public IndicesAliasesRequest() {
 
@@ -150,11 +153,31 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
             return addValidationError("Must specify at least one alias action", validationException);
         }
         for (AliasAction aliasAction : aliasActions) {
-            if (!Strings.hasText(aliasAction.alias())) {
-                validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH) + "] requires an [alias] to be set", validationException);
-            }
-            if (!Strings.hasText(aliasAction.index())) {
-                validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH) + "] requires an [index] to be set", validationException);
+            if (aliasAction.actionType() == AliasAction.Type.ADD) {
+                if (!Strings.hasText(aliasAction.alias())) {
+                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                            + "] requires an [alias] to be set", validationException);
+                }
+                for (String index : aliasAction.index()) {
+                    if (!Strings.hasText(index)) {
+                        validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                                + "]: [index] may not be empty string", validationException);
+                    }
+                }
+            } else {
+                if (!Strings.hasText(aliasAction.alias())) {
+                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                            + "] requires an [alias] to be set", validationException);
+                }
+                if (aliasAction.index().length != 1) {
+                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                            + "] requires exactly one [index] to be set", validationException);
+                } else {
+                    if (!Strings.hasText(aliasAction.index()[0])) {
+                        validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                                + "]: [index] may not be empty string", validationException);
+                    }
+                }
             }
         }
         return validationException;
@@ -178,5 +201,9 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
             aliasAction.writeTo(out);
         }
         writeTimeout(out);
+    }
+
+    public IndicesOptions indicesOptions() {
+        return indicesOptions;
     }
 }
