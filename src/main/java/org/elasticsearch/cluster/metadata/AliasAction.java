@@ -66,7 +66,7 @@ public class AliasAction implements Streamable {
 
     private Type actionType;
 
-    private String index;
+    private String[] indices;
 
     private String alias;
 
@@ -82,16 +82,46 @@ public class AliasAction implements Streamable {
     private AliasAction() {
 
     }
+    
+    public AliasAction(AliasAction other) {
+        this.actionType = other.actionType;
+        this.indices = other.indices;
+        this.alias = other.alias;
+        this.filter = other.filter;
+        this.indexRouting = other.indexRouting;
+        this.searchRouting = other.searchRouting;
+    }
+    
+    public AliasAction(Type actionType, String[] indices, String alias) {
+        this.actionType = actionType;
+        this.indices = indices;
+        this.alias = alias;
+    }
+
+    public AliasAction(Type actionType, String[] indices, String alias, String filter) {
+        this.actionType = actionType;
+        this.indices = indices;
+        this.alias = alias;
+        this.filter = filter;
+    }
 
     public AliasAction(Type actionType, String index, String alias) {
         this.actionType = actionType;
-        this.index = index;
+        String[] newIndices = {index};
+        if (index == null) {
+            newIndices = new String[0];
+        } 
+        this.indices = newIndices;
         this.alias = alias;
     }
 
     public AliasAction(Type actionType, String index, String alias, String filter) {
         this.actionType = actionType;
-        this.index = index;
+        String[] newIndices = {index};
+        if (index == null) {
+            newIndices = new String[0];
+        } 
+        this.indices = newIndices;
         this.alias = alias;
         this.filter = filter;
     }
@@ -99,9 +129,14 @@ public class AliasAction implements Streamable {
     public Type actionType() {
         return actionType;
     }
+    
+    public AliasAction index(String... index) {
+        this.indices = index;
+        return this;
+    }
 
-    public String index() {
-        return index;
+    public String[] index() {
+        return indices;
     }
 
     public String alias() {
@@ -181,7 +216,7 @@ public class AliasAction implements Streamable {
     @Override
     public void readFrom(StreamInput in) throws IOException {
         actionType = Type.fromValue(in.readByte());
-        index = in.readString();
+        indices = in.readStringArray();
         alias = in.readString();
         if (in.readBoolean()) {
             filter = in.readString();
@@ -197,7 +232,7 @@ public class AliasAction implements Streamable {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeByte(actionType.value());
-        out.writeString(index);
+        out.writeStringArray(indices);
         out.writeString(alias);
         if (filter == null) {
             out.writeBoolean(false);

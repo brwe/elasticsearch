@@ -36,6 +36,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -77,7 +79,9 @@ public class TransportIndicesAliasesAction extends TransportMasterNodeOperationA
     protected ClusterBlockException checkBlock(IndicesAliasesRequest request, ClusterState state) {
         Set<String> indices = Sets.newHashSet();
         for (AliasAction aliasAction : request.aliasActions()) {
-            indices.add(aliasAction.index());
+            for (String index : aliasAction.index()) {
+                indices.add(index);
+            }
         }
         return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA, indices.toArray(new String[indices.size()]));
     }
@@ -85,6 +89,23 @@ public class TransportIndicesAliasesAction extends TransportMasterNodeOperationA
     @Override
     protected void masterOperation(final IndicesAliasesRequest request, final ClusterState state, final ActionListener<IndicesAliasesResponse> listener) throws ElasticsearchException {
 
+        //Expand the indices names
+        List<AliasAction> actions = request.aliasActions();
+        List<AliasAction> finalActions = new ArrayList<AliasAction>();
+        for (AliasAction action : actions) {
+            if (action.actionType() == AliasAction.Type.ADD) {
+                //expand indices
+                String[] concreteIndices = state.metaData().concreteIndices(action.index(), request.indicesOptions());
+                for (String index : concreteIndices) {
+                    finalActions.add(new AliasAction(action).index(index));
+                }
+            } else {
+                //TODO: for DELETE we do not yet expand the indices
+                finalActions.add(action);
+            }
+        }
+        request.aliasActions().clear();
+        request.aliasActions().addAll(finalActions);
         IndicesAliasesClusterStateUpdateRequest updateRequest = new IndicesAliasesClusterStateUpdateRequest()
                 .ackTimeout(request.timeout()).masterNodeTimeout(request.masterNodeTimeout())
                 .actions(request.aliasActions().toArray(new AliasAction[request.aliasActions().size()]));

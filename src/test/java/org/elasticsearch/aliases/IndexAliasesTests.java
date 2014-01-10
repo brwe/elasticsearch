@@ -35,6 +35,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.facet.FacetBuilders;
@@ -729,7 +730,7 @@ public class IndexAliasesTests extends ElasticsearchIntegrationTest {
         assertThat(existsResponse.exists(), equalTo(false));
     }
 
-    @Test(expected = ActionRequestValidationException.class)
+    @Test(expected = IndexMissingException.class)
     public void testAddAliasNullIndex() {
 
         admin().indices().prepareAliases().addAliasAction(AliasAction.newAddAliasAction(null, "alias1"))
@@ -765,7 +766,7 @@ public class IndexAliasesTests extends ElasticsearchIntegrationTest {
             assertTrue("Should throw " + ActionRequestValidationException.class.getSimpleName(), false);
         } catch (ActionRequestValidationException e) {
             assertThat(e.validationErrors(), notNullValue());
-            assertThat(e.validationErrors().size(), equalTo(2));
+            assertThat(e.validationErrors().size(), equalTo(1));
         }
     }
 
@@ -808,7 +809,7 @@ public class IndexAliasesTests extends ElasticsearchIntegrationTest {
     @Test
     public void testRemoveAliasNullAliasNullIndex() {
         try {
-            admin().indices().prepareAliases().addAliasAction(AliasAction.newAddAliasAction(null, null))
+            admin().indices().prepareAliases().addAliasAction(AliasAction.newRemoveAliasAction(null, null))
                     .execute().actionGet();
             assertTrue("Should throw " + ActionRequestValidationException.class.getSimpleName(), false);
         } catch (ActionRequestValidationException e) {
