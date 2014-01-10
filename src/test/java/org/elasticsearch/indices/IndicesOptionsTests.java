@@ -573,7 +573,37 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
         
     }
 
+    @Test
+    public void testPutAlias() throws Exception {
+        assertAcked(prepareCreate("foobar"));
+        ensureYellow();
+        verify(client().admin().indices().prepareAliases().addAlias("foobar", "foobar_alias"), false);
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foobar").get().exists(), equalTo(true));
 
+    }
+    
+    @Test
+    public void testPutAlias_wildcard() throws Exception {
+        
+        assertAcked(prepareCreate("foo"));
+        assertAcked(prepareCreate("foobar"));
+        assertAcked(prepareCreate("bar"));
+        assertAcked(prepareCreate("barbaz"));
+        ensureYellow();
+
+        verify(client().admin().indices().prepareAliases().addAlias("foo*", "foobar_alias"), false);
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foo").get().exists(), equalTo(true));
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foobar").get().exists(), equalTo(true));
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("bar").get().exists(), equalTo(false));
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("barbaz").get().exists(), equalTo(false));
+
+        verify(client().admin().indices().prepareAliases().addAlias(null, "foobar_alias"), false);
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foo").get().exists(), equalTo(true));
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foobar").get().exists(), equalTo(true));
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("bar").get().exists(), equalTo(true));
+        assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("barbaz").get().exists(), equalTo(true));
+        
+    }
     @Test
     public void testDeleteWarmer() throws Exception {
         IndexWarmersMetaData.Entry entry = new IndexWarmersMetaData.Entry(
