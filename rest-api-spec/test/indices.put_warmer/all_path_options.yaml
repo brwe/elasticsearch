@@ -1,0 +1,147 @@
+---
+"Test Create and update warmer with all options (PUT {index|_all|*|prefix*}/type/_warmer)":
+
+# create two indices
+  - do:
+      indices.create:
+        index: test_index1
+  - do:
+      indices.create:
+        index: test_index2
+
+# put warmer per index
+  - do:
+      indices.put_warmer:
+        index: test_index1
+        name: warmer_0
+        body:
+          query:
+            match_all: {} 
+  - do:
+      indices.put_warmer:
+        index: test_index2
+        name: warmer_0
+        body:
+          query:
+            match_all: {}                 
+
+  - do:
+      indices.get_warmer:
+        index: test_index1
+  
+  - match: {test_index1.warmers.warmer_0.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+  
+  - match: {test_index2.warmers.warmer_0.source.query.match_all: {}}
+
+
+  
+# put warmer in _all index
+  - do:
+      indices.put_warmer:
+        index: _all
+        name: warmer_1
+        body:
+          query:
+            match_all: {} 
+  - do:
+      indices.get_warmer:
+        index: test_index1
+  
+  - match: {test_index1.warmers.warmer_1.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+  
+  - match: {test_index2.warmers.warmer_1.source.query.match_all: {}}
+  
+  
+# put warmer in * index
+  - do:
+      indices.put_warmer:
+        index: "*"
+        name: warmer_2
+        body:
+          query:
+            match_all: {} 
+  - do:
+      indices.get_warmer:
+        index: test_index1
+  
+  - match: {test_index1.warmers.warmer_2.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+  
+  - match: {test_index2.warmers.warmer_2.source.query.match_all: {}}
+  
+# put warmer prefix* index
+  - do:
+      indices.put_warmer:
+        index: "test_index*"
+        name: warmer_3
+        body:
+          query:
+            match_all: {} 
+  - do:
+      indices.get_warmer:
+        index: test_index1
+  
+  - match: {test_index1.warmers.warmer_3.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+  
+  - match: {test_index2.warmers.warmer_3.source.query.match_all: {}}
+
+
+
+# put warmer in list of indices
+  - do:
+      indices.put_warmer:
+        index: [test_index1, test_index2]
+        name: warmer_4
+        body:
+          query:
+            match_all: {}                 
+  - do:
+      indices.get_warmer:
+        index: test_index1
+  
+  - match: {test_index1.warmers.warmer_4.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+  
+  - match: {test_index2.warmers.warmer_4.source.query.match_all: {}}
+  
+  
+# put warmer with blank index
+  - do:
+      indices.put_warmer:
+        name: warmer_5
+        body:
+          query:
+            match_all: {}                 
+  - do:
+      indices.get_warmer:
+        index: test_index1
+  
+  - match: {test_index1.warmers.warmer_5.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+  
+  - match: {test_index2.warmers.warmer_5.source.query.match_all: {}}
+  
+
+
+
