@@ -55,6 +55,7 @@ import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.suggest.SuggestBuilder;
 import org.elasticsearch.search.warmer.IndexWarmersMetaData;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -536,6 +537,42 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
         assertThat(client().admin().indices().prepareTypesExists("bar").setTypes("type1").get().isExists(), equalTo(false));
         assertThat(client().admin().indices().prepareTypesExists("barbaz").setTypes("type1").get().isExists(), equalTo(false));
     }
+
+
+    @Test
+    public void testPutWarmer() throws Exception {
+        assertAcked(prepareCreate("foobar"));
+        ensureYellow();
+        verify(client().admin().indices().preparePutWarmer("warmer1").setSearchRequest(client().prepareSearch().setIndices("foobar").setQuery(QueryBuilders.matchAllQuery())), false);
+        assertThat(client().admin().indices().prepareGetWarmers("foobar").setWarmers("warmer1").get().getWarmers().size(), equalTo(1));
+
+    }
+    
+    @Test
+    public void testPutWarmer_wildcard() throws Exception {
+        
+        assertAcked(prepareCreate("foo"));
+        assertAcked(prepareCreate("foobar"));
+        assertAcked(prepareCreate("bar"));
+        assertAcked(prepareCreate("barbaz"));
+        ensureYellow();
+
+        verify(client().admin().indices().preparePutWarmer("warmer1").setSearchRequest(client().prepareSearch().setIndices("foo*").setQuery(QueryBuilders.matchAllQuery())), false);
+        
+        assertThat(client().admin().indices().prepareGetWarmers("foo").setWarmers("warmer1").get().getWarmers().size(), equalTo(1));
+        assertThat(client().admin().indices().prepareGetWarmers("foobar").setWarmers("warmer1").get().getWarmers().size(), equalTo(1));
+        assertThat(client().admin().indices().prepareGetWarmers("bar").setWarmers("warmer1").get().getWarmers().size(), equalTo(0));
+        assertThat(client().admin().indices().prepareGetWarmers("barbaz").setWarmers("warmer1").get().getWarmers().size(), equalTo(0));
+
+        verify(client().admin().indices().preparePutWarmer("warmer2").setSearchRequest(client().prepareSearch().setIndices().setQuery(QueryBuilders.matchAllQuery())), false);
+        
+        assertThat(client().admin().indices().prepareGetWarmers("foo").setWarmers("warmer2").get().getWarmers().size(), equalTo(1));
+        assertThat(client().admin().indices().prepareGetWarmers("foobar").setWarmers("warmer2").get().getWarmers().size(), equalTo(1));
+        assertThat(client().admin().indices().prepareGetWarmers("bar").setWarmers("warmer2").get().getWarmers().size(), equalTo(1));
+        assertThat(client().admin().indices().prepareGetWarmers("barbaz").setWarmers("warmer2").get().getWarmers().size(), equalTo(1));
+        
+    }
+
 
     @Test
     public void testDeleteWarmer() throws Exception {

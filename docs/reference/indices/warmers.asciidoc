@@ -112,6 +112,31 @@ curl -XPUT localhost:9200/test/type1/_warmer/warmer_1 -d '{
 }'
 --------------------------------------------------
 
+All options:
+
+[source,js]
+--------------------------------------------------
+
+[PUT|POST] _warmer/{warmer_name}        
+
+[PUT|POST] /{index}/_warmer/{warmer_name}  
+    
+[PUT|POST] /{index}/{type}/_warmer/{warmer_name}        
+
+--------------------------------------------------
+    
+
+where
+
+[horizontal]
+`{index}`:: `* | _all | glob pattern | name1, name2, …`
+    
+`{type}`:: `* | _all | glob pattern | name1, name2, …`
+
+Instead of `_warmer` you can also use the plural `_warmers`.
+
+
+
 [float]
 [[removing]]
 === Delete Warmer
