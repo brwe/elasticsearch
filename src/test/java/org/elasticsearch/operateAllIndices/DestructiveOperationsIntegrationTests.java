@@ -149,31 +149,6 @@ public class DestructiveOperationsIntegrationTests extends ElasticsearchIntegrat
                 .put(DestructiveOperations.REQUIRES_NAME, true)
                 .build();
         assertAcked(client().admin().cluster().prepareUpdateSettings().setTransientSettings(settings));
-
-        assertAcked(client().admin().indices().prepareCreate("index1").addMapping("1", "field1", "type=string").get());
-        assertAcked(client().admin().indices().prepareCreate("1index").addMapping("1", "field1", "type=string").get());
-
-        // Should succeed, since no wildcards
-        client().admin().indices().prepareDeleteMapping("1index").setType("1").get();
-        try {
-            client().admin().indices().prepareDeleteMapping("_all").setType("1").get();
-            assert false;
-        } catch (ElasticsearchIllegalArgumentException e) {}
-
-        try {
-            client().admin().indices().prepareDeleteMapping().setType("1").get();
-            assert false;
-        } catch (ElasticsearchIllegalArgumentException e) {}
-
-        settings = ImmutableSettings.builder()
-                .put(DestructiveOperations.REQUIRES_NAME, false)
-                .build();
-        assertAcked(client().admin().cluster().prepareUpdateSettings().setTransientSettings(settings));
-
-        client().admin().indices().preparePutMapping("1index").setType("1").setSource("field1", "type=string").get();
-        client().admin().indices().prepareDeleteMapping().setType("1").get();
-        client().admin().indices().preparePutMapping("1index").setType("1").setSource("field1", "type=string").get();
-        client().admin().indices().prepareDeleteMapping("_all").setType("1").get();
     }
 
 }
