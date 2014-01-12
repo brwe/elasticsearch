@@ -23,6 +23,7 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.master.AcknowledgedRequest;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
@@ -37,7 +38,7 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
 
     private String[] indices;
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
-    private String type;
+    private String[] types;
 
     DeleteMappingRequest() {
     }
@@ -53,8 +54,29 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (type == null) {
+        if (types == null || types.length == 0) {
             validationException = addValidationError("mapping type is missing", validationException);
+        } else {
+            validationException = checkForEmptyString(validationException, types);
+        }
+        if (indices == null || indices.length == 0) {
+            validationException = addValidationError("index is missing", validationException);
+        } else {
+            validationException = checkForEmptyString(validationException, indices);
+        }
+
+        return validationException;
+    }
+
+    private ActionRequestValidationException checkForEmptyString(ActionRequestValidationException validationException, String[] strings) {
+        boolean containsEmptyString = false;
+        for (String string : strings) {
+            if (!Strings.hasText(string)) {
+                containsEmptyString = true;
+            }
+        }
+        if (containsEmptyString) {
+            validationException = addValidationError("types must not contain empty strings", validationException);
         }
         return validationException;
     }
@@ -84,17 +106,17 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
     }
 
     /**
-     * The mapping type.
+     * The mapping types.
      */
-    public String type() {
-        return type;
+    public String[] types() {
+        return types;
     }
 
     /**
      * The type of the mappings to remove.
      */
-    public DeleteMappingRequest type(String type) {
-        this.type = type;
+    public DeleteMappingRequest types(String... types) {
+        this.types = types;
         return this;
     }
 
@@ -107,7 +129,7 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
         }
         indicesOptions =  IndicesOptions.readIndicesOptions(in);
         if (in.readBoolean()) {
-            type = in.readString();
+            types = in.readStringArray();
         }
         readTimeout(in, Version.V_0_90_6);
     }
@@ -124,11 +146,11 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
             }
         }
         indicesOptions.writeIndicesOptions(out);
-        if (type == null) {
+        if (types == null) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            out.writeString(type);
+            out.writeStringArray(types);
         }
         writeTimeout(out, Version.V_0_90_6);
     }
