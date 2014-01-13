@@ -644,15 +644,15 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
         assertAcked(prepareCreate("foobar").addCustom(new IndexWarmersMetaData(entry)));
         ensureYellow();
 
-        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foo").setName("test1"), true);
+        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foo").setNames("test1"), true);
         assertThat(client().admin().indices().prepareGetWarmers("foobar").setWarmers("test1").get().getWarmers().size(), equalTo(1));
-        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foobar").setName("test1"), false);
+        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foobar").setNames("test1"), false);
         assertThat(client().admin().indices().prepareGetWarmers("foobar").setWarmers("test1").get().getWarmers().size(), equalTo(0));
     }
 
     @Test
     public void testDeleteWarmer_wildcard() throws Exception {
-        verify(client().admin().indices().prepareDeleteWarmer().setIndices("_all").setName("test1"), true);
+        verify(client().admin().indices().prepareDeleteWarmer().setIndices("_all").setNames("test1"), true);
 
         IndexWarmersMetaData.Entry entry = new IndexWarmersMetaData.Entry(
                 "test1", new String[]{"type1"}, new BytesArray("{\"query\" : { \"match_all\" : {}}}")
@@ -663,7 +663,7 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
         assertAcked(prepareCreate("barbaz").addCustom(new IndexWarmersMetaData(entry)));
         ensureYellow();
 
-        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foo*").setName("test1"), false);
+        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foo*").setNames("test1"), false);
         assertThat(client().admin().indices().prepareGetWarmers("foo").setWarmers("test1").get().getWarmers().size(), equalTo(0));
         assertThat(client().admin().indices().prepareGetWarmers("foobar").setWarmers("test1").get().getWarmers().size(), equalTo(0));
         assertThat(client().admin().indices().prepareGetWarmers("bar").setWarmers("test1").get().getWarmers().size(), equalTo(1));
@@ -671,9 +671,9 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
 
         assertAcked(client().admin().indices().prepareDelete("foo*"));
 
-        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foo*").setName("test1"), true);
+        verify(client().admin().indices().prepareDeleteWarmer().setIndices("foo*").setNames("test1"), true);
 
-        verify(client().admin().indices().prepareDeleteWarmer().setIndices("_all").setName("test1"), false);
+        verify(client().admin().indices().prepareDeleteWarmer().setIndices("_all").setNames("test1"), false);
         assertThat(client().admin().indices().prepareGetWarmers("bar").setWarmers("test1").get().getWarmers().size(), equalTo(0));
         assertThat(client().admin().indices().prepareGetWarmers("barbaz").setWarmers("test1").get().getWarmers().size(), equalTo(0));
     }
