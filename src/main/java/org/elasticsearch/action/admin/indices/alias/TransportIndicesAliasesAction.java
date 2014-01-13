@@ -22,6 +22,7 @@ package org.elasticsearch.action.admin.indices.alias;
 import com.google.common.collect.Sets;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest.AliasActions;
 import org.elasticsearch.action.support.master.TransportMasterNodeOperationAction;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
@@ -78,8 +79,8 @@ public class TransportIndicesAliasesAction extends TransportMasterNodeOperationA
     @Override
     protected ClusterBlockException checkBlock(IndicesAliasesRequest request, ClusterState state) {
         Set<String> indices = Sets.newHashSet();
-        for (AliasAction aliasAction : request.aliasActions()) {
-            for (String index : aliasAction.index()) {
+        for (AliasActions aliasAction : request.aliasActions()) {
+            for (String index : aliasAction.indices()) {
                 indices.add(index);
             }
         }
@@ -90,25 +91,24 @@ public class TransportIndicesAliasesAction extends TransportMasterNodeOperationA
     protected void masterOperation(final IndicesAliasesRequest request, final ClusterState state, final ActionListener<IndicesAliasesResponse> listener) throws ElasticsearchException {
 
         //Expand the indices names
-        List<AliasAction> actions = request.aliasActions();
+        List<AliasActions> actions = request.aliasActions();
         List<AliasAction> finalActions = new ArrayList<AliasAction>();
-        for (AliasAction action : actions) {
-            if (action.actionType() == AliasAction.Type.ADD) {
-                //expand indices
-                String[] concreteIndices = state.metaData().concreteIndices(action.index(), request.indicesOptions());
-                for (String index : concreteIndices) {
-                    finalActions.add(new AliasAction(action).index(index));
+        for (AliasActions action : actions) {
+            //expand indices
+            String[] concreteIndices = state.metaData().concreteIndices(action.indices(), request.indicesOptions());
+            for (String index : concreteIndices) {
+                for (String alias : action.concreteAliases(state.metaData(), index)) { 
+                    AliasAction finalAction = new AliasAction(action.aliasAction());
+                    finalAction.index(index);
+                    finalAction.alias(alias);
+                    finalActions.add(finalAction);
                 }
-            } else {
-                //TODO: for DELETE we do not yet expand the indices
-                finalActions.add(action);
             }
         }
         request.aliasActions().clear();
-        request.aliasActions().addAll(finalActions);
         IndicesAliasesClusterStateUpdateRequest updateRequest = new IndicesAliasesClusterStateUpdateRequest()
                 .ackTimeout(request.timeout()).masterNodeTimeout(request.masterNodeTimeout())
-                .actions(request.aliasActions().toArray(new AliasAction[request.aliasActions().size()]));
+                .actions(finalActions.toArray(new AliasAction[finalActions.size()]));
 
         indexAliasesService.indicesAliases(updateRequest, new ClusterStateUpdateListener() {
             @Override

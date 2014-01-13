@@ -196,16 +196,18 @@ curl -XPUT 'localhost:9200/users/_alias/user_12' -d '{
 
 [float]
 [[deleting]]
-=== Delete a single index alias
+=== Delete aliases
 
-Th API to delete a single index alias, has options: 
+
+The rest endpoint is: `/{index}/_alias/{name}`
+
+where
 
 [horizontal]
-`index`:: The index the alias is in, the needs to be deleted. This is
-          a required option. 
-`alias`:: The name of the alias to delete. This is a required option.
+`index`::  `* | _all | glob pattern | name1, name2, …` 
+`name`::  `* | _all | glob pattern | name1, name2, …` 
 
-The rest endpoint is: `/{index}/_alias/{alias}`. Example:
+Alternatively you can use the plural `_aliases`. Example:
 
 [source,js]
 --------------------------------------------------

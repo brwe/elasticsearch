@@ -103,19 +103,17 @@ public class MetaDataIndexAliasesService extends AbstractComponent {
             public ClusterState execute(final ClusterState currentState) {
                 List<String> indicesToClose = Lists.newArrayList();
                 Map<String, IndexService> indices = Maps.newHashMap();
+                /* ALl AliasAction s that have more than one index are supposed to be replaced by AliasActions having only one indexˇ  can have several indices as parameters but these should have been replces. However, the reqest is processed before coming here and the */
                 try {
                     for (AliasAction aliasAction : request.actions()) {
-                        if (aliasAction.index().length != 1) {
-                            throw new ElasticsearchIllegalArgumentException("Can only process single index per alias, got " + aliasAction.index().length);
-                        }
-                        if (!Strings.hasText(aliasAction.alias()) || !Strings.hasText(aliasAction.index()[0])) {
+                        if (!Strings.hasText(aliasAction.alias()) || !Strings.hasText(aliasAction.index())) {
                             throw new ElasticsearchIllegalArgumentException("Index name and alias name are required");
                         }
-                        if (!currentState.metaData().hasIndex(aliasAction.index()[0])) {
-                            throw new IndexMissingException(new Index(aliasAction.index()[0]));
+                        if (!currentState.metaData().hasIndex(aliasAction.index())) {
+                            throw new IndexMissingException(new Index(aliasAction.index()));
                         }
                         if (currentState.metaData().hasIndex(aliasAction.alias())) {
-                            throw new InvalidAliasNameException(new Index(aliasAction.index()[0]), aliasAction.alias(), "an index exists with the same name as the alias");
+                            throw new InvalidAliasNameException(new Index(aliasAction.index()), aliasAction.alias(), "an index exists with the same name as the alias");
                         }
                         if (aliasAction.indexRouting() != null && aliasAction.indexRouting().indexOf(',') != -1) {
                             throw new ElasticsearchIllegalArgumentException("alias [" + aliasAction.alias() + "] has several routing values associated with it");
@@ -125,9 +123,9 @@ public class MetaDataIndexAliasesService extends AbstractComponent {
                     boolean changed = false;
                     MetaData.Builder builder = MetaData.builder(currentState.metaData());
                     for (AliasAction aliasAction : request.actions()) {
-                        IndexMetaData indexMetaData = builder.get(aliasAction.index()[0]);
+                        IndexMetaData indexMetaData = builder.get(aliasAction.index());
                         if (indexMetaData == null) {
-                            throw new IndexMissingException(new Index(aliasAction.index()[0]));
+                            throw new IndexMissingException(new Index(aliasAction.index()));
                         }
                         // TODO: not copy (putAll)
                         IndexMetaData.Builder indexMetaDataBuilder = IndexMetaData.builder(indexMetaData);

@@ -598,7 +598,7 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
         assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("bar").get().exists(), equalTo(false));
         assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("barbaz").get().exists(), equalTo(false));
 
-        verify(client().admin().indices().prepareAliases().addAlias(null, "foobar_alias"), false);
+        verify(client().admin().indices().prepareAliases().addAlias("*", "foobar_alias"), false);
         assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foo").get().exists(), equalTo(true));
         assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("foobar").get().exists(), equalTo(true));
         assertThat(client().admin().indices().prepareAliasesExist("foobar_alias").setIndices("bar").get().exists(), equalTo(true));
