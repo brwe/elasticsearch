@@ -19,22 +19,24 @@
 
 package org.elasticsearch.action.admin.indices.alias;
 
+import com.carrotsearch.hppc.cursors.ObjectCursor;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.elasticsearch.ElasticsearchGenerationException;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.master.AcknowledgedRequest;
 import org.elasticsearch.cluster.metadata.AliasAction;
+import org.elasticsearch.cluster.metadata.AliasAction.Type;
+import org.elasticsearch.cluster.metadata.AliasMetaData;
+import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.xcontent.ToXContent;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.FilterBuilder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -47,7 +49,7 @@ import static org.elasticsearch.cluster.metadata.AliasAction.readAliasAction;
  */
 public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesRequest> {
 
-    private List<AliasAction> aliasActions = Lists.newArrayList();
+    private List<AliasActions> aliasActions = Lists.newArrayList();
     
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
 
@@ -55,94 +57,201 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
 
     }
 
+    /*
+     * Aliases can be added by passing multiple indices to the Request and
+     * deleted by passing multiple indices and aliases. They are expanded into
+     * distinct AliasAction instances when the request is processed. This class
+     * holds the AliasAction and in addition the arrays or alias names and
+     * indices that is later used to create the final AliasAction instances.
+     */
+    public class AliasActions {
+        private String[] indices = new String[0];
+        private String[] aliases = new String[0];
+        private AliasAction aliasAction;
+        
+        public AliasActions(AliasAction.Type type, String[] indices, String[] aliases) {
+            aliasAction = new AliasAction(type);
+            indices(indices);
+            aliases(aliases);
+        }
+        
+        public AliasActions(AliasAction.Type type, String index, String alias) {
+            aliasAction = new AliasAction(type);
+            indices(index);
+            aliases(alias);
+        }
+        
+        AliasActions(AliasAction.Type type, String[] index, String alias) {
+            aliasAction = new AliasAction(type);
+            indices(index);
+            aliases(alias);
+        }
+        
+        public AliasActions(AliasAction action) {
+            this.aliasAction = action;
+            indices(action.index());
+            aliases(action.alias());
+        }
+
+        public AliasActions(Type type, String index, String[] aliases) {
+            aliasAction = new AliasAction(type);
+            indices(index);
+            aliases(aliases);
+        }
+
+        public AliasActions filter(Map<String, Object> filter) {
+            aliasAction.filter(filter);
+            return this;
+        }
+        
+        public AliasActions filter(FilterBuilder filter) {
+            aliasAction.filter(filter);
+            return this;
+        }
+
+        public Type actionType() {
+            return aliasAction.actionType();
+        }
+
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeStringArray(indices);
+            out.writeStringArray(aliases);
+            this.aliasAction.writeTo(out);
+        }
+
+        public void routing(String routing) {
+            aliasAction.routing(routing);
+        }
+
+        public void searchRouting(String searchRouting) {
+            aliasAction.searchRouting(searchRouting);
+        }
+
+        public void indexRouting(String indexRouting) {
+            aliasAction.indexRouting(indexRouting);
+        }
+
+        public AliasActions filter(String filter) {
+            aliasAction.filter(filter);
+            return this;
+        }
+        
+        public void indices(String... indices) {
+            List<String> finalIndices = new ArrayList<String>();
+            for (String index : indices) {
+                if (index != null) {
+                    finalIndices.add(index);
+                }
+            }
+            this.indices = finalIndices.toArray(new String[finalIndices.size()]);
+        }
+        
+        public void aliases(String... aliases) {
+            this.aliases = aliases;
+        }
+        
+        public String[] aliases() {
+            return aliases;
+        }
+        
+        public String[] indices() {
+            return indices;
+        }
+
+        public AliasAction aliasAction() {
+            return aliasAction;
+        }
+
+        public String[] concreteAliases(MetaData metaData, String concreteIndex) {
+            if (aliasAction.actionType() == Type.REMOVE) {
+                //for DELETE we expand the aliases
+                String[] indexAsArray = {concreteIndex};
+                ImmutableOpenMap<String, ImmutableList<AliasMetaData>> aliasMetaData = metaData.findAliases(aliases, indexAsArray);
+                List<String> finalAliases = new ArrayList<String> ();
+                for (ObjectCursor<ImmutableList<AliasMetaData>> curAliases : aliasMetaData.values()) {
+                    for (AliasMetaData aliasMeta: curAliases.value) {
+                        finalAliases.add(aliasMeta.alias());
+                    }
+                }
+                return finalAliases.toArray(new String[finalAliases.size()]);
+            } else {
+                //for add we just return the current aliases
+                return aliases;
+            }
+        }
+    }
+
     /**
      * Adds an alias to the index.
-     *
-     * @param index The index
      * @param alias The alias
+     * @param indices The indices
      */
-    public IndicesAliasesRequest addAlias(String index, String alias) {
-        aliasActions.add(new AliasAction(AliasAction.Type.ADD, index, alias));
+    public IndicesAliasesRequest addAlias(String alias, String... indices) {
+        addAliasAction(new AliasActions(AliasAction.Type.ADD, indices, alias));
+        return this;
+    }
+
+
+    public void addAliasAction(AliasActions aliasAction) {
+        aliasActions.add(aliasAction);
+    }
+
+
+    public IndicesAliasesRequest addAliasAction(AliasAction action) {
+        addAliasAction(new AliasActions(action));
+        return this;
+    }
+    
+    /**
+     * Adds an alias to the index.
+     * @param alias  The alias
+     * @param filter The filter
+     * @param indices  The indices
+     */
+    public IndicesAliasesRequest addAlias(String alias, Map<String, Object> filter, String... indices) {
+        addAliasAction(new AliasActions(AliasAction.Type.ADD, indices, alias).filter(filter));
         return this;
     }
 
     /**
      * Adds an alias to the index.
-     *
-     * @param index  The index
-     * @param alias  The alias
-     * @param filter The filter
-     */
-    public IndicesAliasesRequest addAlias(String index, String alias, String filter) {
-        aliasActions.add(new AliasAction(AliasAction.Type.ADD, index, alias, filter));
-        return this;
-    }
-
-    /**
-     * Adds an alias to the index.
-     *
-     * @param index  The index
-     * @param alias  The alias
-     * @param filter The filter
-     */
-    public IndicesAliasesRequest addAlias(String index, String alias, Map<String, Object> filter) {
-        if (filter == null || filter.isEmpty()) {
-            aliasActions.add(new AliasAction(AliasAction.Type.ADD, index, alias));
-            return this;
-        }
-        try {
-            XContentBuilder builder = XContentFactory.contentBuilder(XContentType.JSON);
-            builder.map(filter);
-            aliasActions.add(new AliasAction(AliasAction.Type.ADD, index, alias, builder.string()));
-            return this;
-        } catch (IOException e) {
-            throw new ElasticsearchGenerationException("Failed to generate [" + filter + "]", e);
-        }
-    }
-
-    /**
-     * Adds an alias to the index.
-     *
-     * @param index         The index
      * @param alias         The alias
      * @param filterBuilder The filter
+     * @param indices         The indices
      */
-    public IndicesAliasesRequest addAlias(String index, String alias, FilterBuilder filterBuilder) {
-        if (filterBuilder == null) {
-            aliasActions.add(new AliasAction(AliasAction.Type.ADD, index, alias));
-            return this;
-        }
-        try {
-            XContentBuilder builder = XContentFactory.jsonBuilder();
-            filterBuilder.toXContent(builder, ToXContent.EMPTY_PARAMS);
-            builder.close();
-            return addAlias(index, alias, builder.string());
-        } catch (IOException e) {
-            throw new ElasticsearchGenerationException("Failed to build json for alias request", e);
-        }
+    public IndicesAliasesRequest addAlias(String alias, FilterBuilder filterBuilder, String... indices) {
+        addAliasAction(new AliasActions(AliasAction.Type.ADD, indices, alias).filter(filterBuilder));
+        return this;
     }
-
+    
+    
+    /**
+     * Removes an alias to the index.
+     *
+     * @param indices The indices
+     * @param aliases The aliases
+     */
+    public IndicesAliasesRequest removeAlias(String[] indices, String... aliases) {
+        addAliasAction(new AliasActions(AliasAction.Type.REMOVE, indices, aliases));
+        return this;
+    }
+    
     /**
      * Removes an alias to the index.
      *
      * @param index The index
-     * @param alias The alias
+     * @param aliases The aliases
      */
-    public IndicesAliasesRequest removeAlias(String index, String alias) {
-        aliasActions.add(new AliasAction(AliasAction.Type.REMOVE, index, alias));
+    public IndicesAliasesRequest removeAlias(String index, String... aliases) {
+        addAliasAction(new AliasActions(AliasAction.Type.REMOVE, index, aliases));
         return this;
     }
 
-    public IndicesAliasesRequest addAliasAction(AliasAction action) {
-        aliasActions.add(action);
-        return this;
-    }
-
-    List<AliasAction> aliasActions() {
+    List<AliasActions> aliasActions() {
         return this.aliasActions;
     }
 
-    public List<AliasAction> getAliasActions() {
+    public List<AliasActions> getAliasActions() {
         return aliasActions();
     }
 
@@ -152,31 +261,36 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
         if (aliasActions.isEmpty()) {
             return addValidationError("Must specify at least one alias action", validationException);
         }
-        for (AliasAction aliasAction : aliasActions) {
+        for (AliasActions aliasAction : aliasActions) {
             if (aliasAction.actionType() == AliasAction.Type.ADD) {
-                if (!Strings.hasText(aliasAction.alias())) {
+                if (aliasAction.aliases.length != 1) {
+                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                            + "] requires exactly one [alias] to be set", validationException);
+                }
+                if (!Strings.hasText(aliasAction.aliases[0])) {
                     validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
                             + "] requires an [alias] to be set", validationException);
-                }
-                for (String index : aliasAction.index()) {
-                    if (!Strings.hasText(index)) {
-                        validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
-                                + "]: [index] may not be empty string", validationException);
-                    }
                 }
             } else {
-                if (!Strings.hasText(aliasAction.alias())) {
+                if (aliasAction.aliases.length == 0) {
                     validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
-                            + "] requires an [alias] to be set", validationException);
+                            + "]: aliases may not be empty", validationException);
                 }
-                if (aliasAction.index().length != 1) {
-                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
-                            + "] requires exactly one [index] to be set", validationException);
-                } else {
-                    if (!Strings.hasText(aliasAction.index()[0])) {
+                for (String alias : aliasAction.aliases) {
+                    if (!Strings.hasText(alias)) {
                         validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
-                                + "]: [index] may not be empty string", validationException);
+                                + "]: [alias] may not be empty string", validationException);
                     }
+                }
+                if (aliasAction.indices.length == 0) {
+                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                            + "]: aliases may not be empty", validationException);
+                }
+            }
+            for (String index : aliasAction.indices) {
+                if (!Strings.hasText(index)) {
+                    validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
+                            + "]: [index] may not be empty string", validationException);
                 }
             }
         }
@@ -188,7 +302,7 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
         super.readFrom(in);
         int size = in.readVInt();
         for (int i = 0; i < size; i++) {
-            aliasActions.add(readAliasAction(in));
+            aliasActions.add(readAliasActions(in));
         }
         readTimeout(in);
     }
@@ -197,7 +311,7 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeVInt(aliasActions.size());
-        for (AliasAction aliasAction : aliasActions) {
+        for (AliasActions aliasAction : aliasActions) {
             aliasAction.writeTo(out);
         }
         writeTimeout(out);
@@ -206,4 +320,16 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
     public IndicesOptions indicesOptions() {
         return indicesOptions;
     }
+    
+    private AliasActions readAliasActions(StreamInput in) throws IOException {
+            String[] indices = in.readStringArray();
+            String[] aliases = in.readStringArray();
+            AliasAction aliasAction = readAliasAction(in);
+            AliasActions finalActions = new AliasActions(aliasAction);
+            finalActions.indices = indices;
+            finalActions.aliases = aliases;
+            return finalActions;
+        
+    }
+
 }
