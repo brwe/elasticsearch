@@ -91,7 +91,7 @@ public class IndexAliasesTests extends ElasticsearchIntegrationTest {
         ensureGreen();
 
         logger.info("--> remove [alias1], Aliasing index [test_x] with [alias1]");
-        admin().indices().aliases(indexAliasesRequest().removeAlias("test", "alias1").addAlias("test_x", "alias1")).actionGet();
+        admin().indices().aliases(indexAliasesRequest().removeAlias("test", "alias1").addAlias("alias1","test_x")).actionGet();
         Thread.sleep(300);
 
         logger.info("--> indexing against [alias1], should work against [test_x]");
@@ -413,6 +413,43 @@ public class IndexAliasesTests extends ElasticsearchIntegrationTest {
         assertHits(searchResponse.getHits(), "4");
     }
 
+    
+    
+    @Test
+    public void testDeleteAliases() throws Exception {
+
+        logger.info("--> creating index [test1]");
+        admin().indices().create(createIndexRequest("test1")).actionGet();
+
+        logger.info("--> creating index [test2]");
+        admin().indices().create(createIndexRequest("test2")).actionGet();
+
+        ensureGreen();
+
+        logger.info("--> adding filtering aliases to index [test1]");
+        admin().indices().prepareAliases().addAlias("test1", "aliasToTest1").execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test1", "aliasToTests").execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test1", "foos", termFilter("name", "foo")).execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test1", "bars", termFilter("name", "bar")).execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test1", "tests", termFilter("name", "test")).execute().actionGet();
+
+        logger.info("--> adding filtering aliases to index [test2]");
+        admin().indices().prepareAliases().addAlias("test2", "aliasToTest2").execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test2", "aliasToTests").execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test2", "foos", termFilter("name", "foo")).execute().actionGet();
+        admin().indices().prepareAliases().addAlias("test2", "tests", termFilter("name", "test")).execute().actionGet();
+        
+        String[] indices = {"test1", "test2"}; 
+        String[] aliases = {"aliasToTest1", "foos", "bars", "tests", "aliasToTest2", "aliasToTests"};
+        
+        admin().indices().prepareAliases().removeAlias(indices, aliases).execute().actionGet();
+        
+        AliasesExistResponse response = admin().indices().prepareAliasesExist(aliases).execute().actionGet();
+        assertThat(response.exists(), equalTo(false));
+
+    }
+
+    
     @Test
     public void testWaitForAliasCreationMultipleShards() throws Exception {
 
