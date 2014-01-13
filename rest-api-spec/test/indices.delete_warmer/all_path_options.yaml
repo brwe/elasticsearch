@@ -1,0 +1,315 @@
+setup:
+  - do:
+      indices.create:
+        index: test_index1
+
+  - do:
+      indices.create:
+        index: test_index2
+        
+  - do:
+      indices.put_warmer:
+        index: "test_index1,test_index2"
+        name: test_warmer1
+        body:
+          query:
+            match_all: {}
+
+  - do:
+      indices.put_warmer:
+        index: "test_index1,test_index2"
+        name: test_warmer2
+        body:
+          query:
+            match_all: {}
+
+---
+"Check setup":
+
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - match: {test_index1.warmers.test_warmer1.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+
+  - match: {test_index2.warmers.test_warmer1.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - match: {test_index1.warmers.test_warmer2.source.query.match_all: {}}
+  
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+  - match: {test_index2.warmers.test_warmer2.source.query.match_all: {}}
+
+---
+"Delete warmers with wildcard index":
+
+  - do:
+      indices.delete_warmer:
+        index: "test_index*"
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - match: {test_index1.warmers.test_warmer2.source.query.match_all: {}}
+
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+  - match: {test_index2.warmers.test_warmer2.source.query.match_all: {}}
+  
+---
+"Delete warmers with _all index":
+
+  - do:
+      indices.delete_warmer:
+        index: _all
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - match: {test_index1.warmers.test_warmer2.source.query.match_all: {}}
+
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+  - match: {test_index2.warmers.test_warmer2.source.query.match_all: {}}
+  
+---
+"Delete warmers with * index":
+
+  - do:
+      indices.delete_warmer:
+        index: "*"
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - match: {test_index1.warmers.test_warmer2.source.query.match_all: {}}
+
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+  - match: {test_index2.warmers.test_warmer2.source.query.match_all: {}}
+  
+  
+---
+"Delete warmers with index list":
+
+  - do:
+      indices.delete_warmer:
+        index: "test_index1,test_index2"
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - match: {test_index1.warmers.test_warmer2.source.query.match_all: {}}
+
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+  - match: {test_index2.warmers.test_warmer2.source.query.match_all: {}}
+  
+  
+---
+"Delete warmers with index list and aliases wildcard":
+
+  - do:
+      indices.delete_warmer:
+        index: "test_index1,test_index2"
+        name: "*1"
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - match: {test_index1.warmers.test_warmer2.source.query.match_all: {}}
+
+  - do:
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+  - match: {test_index2.warmers.test_warmer2.source.query.match_all: {}}
+  
+  
+---
+"Delete warmers with index list and warmers _all":
+
+  - do:
+      indices.delete_warmer:
+        index: "test_index1,test_index2"
+        name: "_all"
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+
+        
+  
+  
+---
+"Delete warmers with index list and aliases list":
+
+  - do:
+      indices.delete_warmer:
+        index: "test_index1,test_index2"
+        name: "test_warmer1,test_warmer2"
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer1
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer1
+        
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index1
+        name: test_warmer2
+
+  - do:
+      catch: missing
+      indices.get_warmer:
+        index: test_index2
+        name: test_warmer2
+        
+        
+---
+"Delete warmers that do no exist - 404":
+
+  - do:
+      catch: missing
+      indices.delete_warmer:
+        index: "test_index1,test_index2"
+        name: "test_warmer3,test_warmer4"
+
+
+---
+"Delete warmers with missing name fails":
+
+  - do:
+      catch: "/ActionRequestValidationException/"
+      indices.delete_warmer:
+        index: "test_index1,test_index2"
+ 
