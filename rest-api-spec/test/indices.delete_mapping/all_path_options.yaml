@@ -1,15 +1,13 @@
----
-"Test DELETE mapping with all options (DELETE {index|_all|*|prefix*}/{index|_all|*|prefix*}/_mapping and DELETE {index|_all|*|prefix*}/_mapping/{index|_all|*|prefix*})":
-
+setup:
 # create two indices
   - do:
       indices.create:
         index: test_index1
+        
   - do:
       indices.create:
         index: test_index2
-
-# put one type and delete with index wildcard
+        
   - do:
       indices.put_mapping:
         type: test_type
@@ -19,21 +17,33 @@
               text:
                 type:     string
                 analyzer: whitespace     
+   
+  - do:
+      indices.put_mapping:
+        index: test_index1
+        type: test_type1
+        body:
+          test_type1:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace     
  
   - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type
-
-  - is_true: ''
-  
-  - do:
-      indices.exists_type:
+      indices.put_mapping:
         index: test_index2
-        type: test_type
-
-  - is_true: ''
+        type: test_type2
+        body:
+          test_type2:
+            properties:
+              text:
+                type:     string
+                analyzer: whitespace     
   
+ 
+---
+"delete with index wildcard":
+
   - do:
       indices.delete_mapping:
         index: test_index*
@@ -53,32 +63,8 @@
 
   - is_false: ''
 
-
-# put one type and delete with _all index 
-  - do:
-      indices.put_mapping:
-        type: test_type
-        body:
-          test_type:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type
-
-  - is_true: ''
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type
-
-  - is_true: ''
-  
+---
+"put one type and delete with _all index":
   - do:
       indices.delete_mapping:
         index: _all
@@ -98,30 +84,8 @@
 
   - is_false: ''
 
- # put one type and delete with * index 
-  - do:
-      indices.put_mapping:
-        type: test_type
-        body:
-          test_type:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type
-
-  - is_true: ''
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type
-
-  - is_true: ''
+---
+"put one type and delete with * index":
   
   - do:
       indices.delete_mapping:
@@ -142,31 +106,8 @@
 
   - is_false: ''
 
- 
- # put one type and delete with index list
-  - do:
-      indices.put_mapping:
-        type: test_type
-        body:
-          test_type:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type
-
-  - is_true: ''
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type
-
-  - is_true: ''
+--- 
+"put one type and delete with index list":
   
   - do:
       indices.delete_mapping:
@@ -187,44 +128,8 @@
 
   - is_false: ''
 
- 
-# put two types type and delete with index list and type wildcard
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
+--- 
+"put two types type and delete with index list and type wildcard":
   - do:
       indices.delete_mapping:
         index: "test_index1,test_index2"
@@ -244,44 +149,9 @@
 
   - is_false: ''
 
- 
-# put two types type and delete with index wildcard and type wildcard
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
+---  
+"put two types type and delete with index wildcard and type wildcard":
+   
   - do:
       indices.delete_mapping:
         index: "*1"
@@ -301,44 +171,9 @@
 
   - is_true: ''
 
-
-# put two types type and delete with index and type _all
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
+---  
+"put two types type and delete with index and type _all":
+   
   - do:
       indices.delete_mapping:
         index: "*1"
@@ -359,44 +194,9 @@
   - is_true: ''
 
  
+--- 
+"put two types type and delete with index * and type *":
  
- # put two types type and delete with index * and type *
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
   - do:
       indices.delete_mapping:
         index: "*"
@@ -416,44 +216,8 @@
 
   - is_false: ''
 
- 
- # put two types type and delete with index list and type list
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
+---
+"put two types type and delete with index list and type list":
   - do:
       indices.delete_mapping:
         index: "test_index1,test_index2"
@@ -472,44 +236,9 @@
         type: test_type2
 
   - is_false: ''
-
-  # put two types type and delete with index and type list
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
+---
+"put two types type and delete with index and type list":
+   
   - do:
       indices.delete_mapping:
         index: "test_index2"
@@ -529,43 +258,9 @@
 
   - is_false: ''
 
-# 404 if nothing could be deleted
-  - do:
-      indices.put_mapping:
-        index: test_index1
-        type: test_type1
-        body:
-          test_type1:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
- 
-  - do:
-      indices.exists_type:
-        index: test_index1
-        type: test_type1
-
-  - is_true: ''
-  
-  - do:
-      indices.put_mapping:
-        index: test_index2
-        type: test_type2
-        body:
-          test_type2:
-            properties:
-              text:
-                type:     string
-                analyzer: whitespace     
-  
-  - do:
-      indices.exists_type:
-        index: test_index2
-        type: test_type2
-
-  - is_true: ''
-  
+---
+"404 if nothing could be deleted":
+   
   - do:
       catch: missing
       indices.delete_mapping:

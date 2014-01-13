@@ -428,11 +428,13 @@ public class MetaDataMappingService extends AbstractComponent {
                 String latestIndexWithout = null;
                 for (String indexName : request.indices()) {
                     IndexMetaData indexMetaData = currentState.metaData().index(indexName);
+                    IndexMetaData.Builder indexBuilder = indexMetaData.builder(indexMetaData);
+                    
                     if (indexMetaData != null) {
                         boolean isLatestIndexWithout = true;
                         for (String type : request.types()) {
                             if (indexMetaData.mappings().containsKey(type)) {
-                                builder.put(IndexMetaData.builder(indexMetaData).removeMapping(type));
+                                indexBuilder.removeMapping(type);
                                 changed = true;
                                 isLatestIndexWithout = false;
                             }
@@ -442,6 +444,7 @@ public class MetaDataMappingService extends AbstractComponent {
                         }
 
                     }
+                    builder.put(indexBuilder);
                 }
 
                 if (!changed) {
