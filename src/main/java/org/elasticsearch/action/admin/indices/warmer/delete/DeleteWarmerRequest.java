@@ -30,12 +30,14 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
 
+import static org.elasticsearch.action.ValidateActions.addValidationError;
+
 /**
  * A request to delete an index warmer.
  */
 public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest> {
 
-    private String name;
+    private String[] names;
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
     private String[] indices = Strings.EMPTY_ARRAY;
 
@@ -47,37 +49,70 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
      *
      * @param name: the name (or wildcard expression) of the warmer to match, null to delete all.
      */
-    public DeleteWarmerRequest(String name) {
-        this.name = name;
+    public DeleteWarmerRequest(String... names) {
+        names(names);
     }
 
     @Override
     public ActionRequestValidationException validate() {
-        return null;
+        ActionRequestValidationException validationException = null;
+        if (names == null || names.length == 0) {
+            validationException = addValidationError("mapping type is missing", validationException);
+        } else {
+            validationException = checkForEmptyString(validationException, names);
+        }
+        if (indices == null || indices.length == 0) {
+            validationException = addValidationError("index is missing", validationException);
+        } else {
+            validationException = checkForEmptyString(validationException, indices);
+        }
+
+        return validationException;
+    }
+    
+    private ActionRequestValidationException checkForEmptyString(ActionRequestValidationException validationException, String[] strings) {
+        boolean containsEmptyString = false;
+        for (String string : strings) {
+            if (!Strings.hasText(string)) {
+                containsEmptyString = true;
+            }
+        }
+        if (containsEmptyString) {
+            validationException = addValidationError("types must not contain empty strings", validationException);
+        }
+        return validationException;
     }
 
     /**
      * The name to delete.
      */
     @Nullable
-    String name() {
-        return name;
+    String[] names() {
+        return names;
     }
 
     /**
      * The name (or wildcard expression) of the index warmer to delete, or null
      * to delete all warmers.
      */
-    public DeleteWarmerRequest name(@Nullable String name) {
-        this.name = name;
+    public DeleteWarmerRequest names(@Nullable String... names) {
+        if (names == null) {
+            names = new String[0];
+        } else {
+            this.names = names;
+        }
         return this;
     }
 
     /**
      * Sets the indices this put mapping operation will execute on.
      */
-    public DeleteWarmerRequest indices(String[] indices) {
-        this.indices = indices;
+    public DeleteWarmerRequest indices(String... indices) {
+        if (indices == null) {
+            indices = new String[0];
+        } else {
+            this.indices = indices;
+        }
         return this;
     }
 
@@ -100,7 +135,7 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        name = in.readOptionalString();
+        names = in.readStringArray();
         indices = in.readStringArray();
         indicesOptions = IndicesOptions.readIndicesOptions(in);
         readTimeout(in, Version.V_0_90_6);
@@ -109,8 +144,8 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeOptionalString(name);
-        out.writeStringArrayNullable(indices);
+        out.writeStringArray(names);
+        out.writeStringArray(indices);
         indicesOptions.writeIndicesOptions(out);
         writeTimeout(out, Version.V_0_90_6);
     }
