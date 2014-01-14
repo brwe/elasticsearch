@@ -17,29 +17,29 @@ setup:
         name: warmer
         body:
           query:
-            match_all: {} 
+            match_all: {}
   - do:
       indices.put_warmer:
         index: test_index2
         name: warmer
         body:
           query:
-            match_all: {}                 
+            match_all: {}
 
   - do:
       indices.get_warmer:
         index: test_index1
-  
+
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-  
+
   - do:
       indices.get_warmer:
         index: test_index2
-  
+
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
 
 
---- 
+---
 "put warmer in _all index":
   - do:
       indices.put_warmer:
@@ -47,20 +47,20 @@ setup:
         name: warmer
         body:
           query:
-            match_all: {} 
+            match_all: {}
   - do:
       indices.get_warmer:
         index: test_index1
-  
+
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-  
+
   - do:
       indices.get_warmer:
         index: test_index2
-  
+
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
-  
----  
+
+---
 "put warmer in * index":
   - do:
       indices.put_warmer:
@@ -68,17 +68,17 @@ setup:
         name: warmer
         body:
           query:
-            match_all: {} 
+            match_all: {}
   - do:
       indices.get_warmer:
         index: test_index1
-  
+
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-  
+
   - do:
       indices.get_warmer:
         index: test_index2
-  
+
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
 
 ---
@@ -89,17 +89,17 @@ setup:
         name: warmer
         body:
           query:
-            match_all: {} 
+            match_all: {}
   - do:
       indices.get_warmer:
         index: test_index1
-  
+
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-  
+
   - do:
       indices.get_warmer:
         index: test_index2
-  
+
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
 
 
@@ -111,39 +111,39 @@ setup:
         name: warmer
         body:
           query:
-            match_all: {}                 
+            match_all: {}
   - do:
       indices.get_warmer:
         index: test_index1
-  
+
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-  
+
   - do:
       indices.get_warmer:
         index: test_index2
-  
+
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
-  
----  
+
+---
 "put warmer with blank index":
   - do:
       indices.put_warmer:
         name: warmer
         body:
           query:
-            match_all: {}                 
+            match_all: {}
   - do:
       indices.get_warmer:
         index: test_index1
-  
+
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-  
+
   - do:
       indices.get_warmer:
         index: test_index2
-  
+
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
-  
+
 
 
 
