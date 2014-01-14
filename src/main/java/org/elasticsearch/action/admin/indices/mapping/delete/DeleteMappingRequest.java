@@ -26,6 +26,7 @@ import org.elasticsearch.action.support.master.AcknowledgedRequest;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.util.CollectionUtils;
 
 import java.io.IOException;
 
@@ -54,12 +55,12 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (types == null || types.length == 0) {
+        if (CollectionUtils.hasEntries(types)) {
             validationException = addValidationError("mapping type is missing", validationException);
         } else {
             validationException = checkForEmptyString(validationException, types);
         }
-        if (indices == null || indices.length == 0) {
+        if (CollectionUtils.hasEntries(indices)) {
             validationException = addValidationError("index is missing", validationException);
         } else {
             validationException = checkForEmptyString(validationException, indices);
@@ -123,35 +124,18 @@ public class DeleteMappingRequest extends AcknowledgedRequest<DeleteMappingReque
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        indices = new String[in.readVInt()];
-        for (int i = 0; i < indices.length; i++) {
-            indices[i] = in.readString();
-        }
+        indices = in.readStringArray();
         indicesOptions =  IndicesOptions.readIndicesOptions(in);
-        if (in.readBoolean()) {
-            types = in.readStringArray();
-        }
+        types = in.readStringArray();
         readTimeout(in, Version.V_0_90_6);
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        if (indices == null) {
-            out.writeVInt(0);
-        } else {
-            out.writeVInt(indices.length);
-            for (String index : indices) {
-                out.writeString(index);
-            }
-        }
+        out.writeStringArrayNullable(indices);
         indicesOptions.writeIndicesOptions(out);
-        if (types == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            out.writeStringArray(types);
-        }
+        out.writeStringArrayNullable(types);
         writeTimeout(out, Version.V_0_90_6);
     }
 }

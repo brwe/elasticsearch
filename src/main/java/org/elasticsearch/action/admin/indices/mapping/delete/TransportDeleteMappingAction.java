@@ -50,8 +50,8 @@ import org.elasticsearch.node.settings.NodeSettingsService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Delete mapping action.
@@ -121,7 +121,7 @@ public class TransportDeleteMappingAction extends TransportMasterNodeOperationAc
                 );
                 // create OrFilter with type filters within to account for different types
                 OrFilterBuilder filterBuilder = new OrFilterBuilder();
-                List<String> types = new ArrayList<String>();
+                Set<String> types = new HashSet<String>();
                 for (ObjectObjectCursor<String, ImmutableOpenMap<String, MappingMetaData>> typesMeta : result) {
                     for (ObjectObjectCursor<String, MappingMetaData> type : typesMeta.value) {
                         filterBuilder.add(new TypeFilterBuilder(type.key));

@@ -187,5 +187,9 @@ public enum CollectionUtils {
         }
         return uniqueCount;
     }
+    
+    public static boolean hasEntries(Object[] array) {
+        return array == null || array.length == 0;
+    }
 
 }
