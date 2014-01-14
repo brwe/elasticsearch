@@ -38,6 +38,7 @@ import org.elasticsearch.cluster.ack.ClusterStateUpdateListener;
 import org.elasticsearch.cluster.ack.ClusterStateUpdateResponse;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.cluster.metadata.MetaDataMappingService;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
@@ -50,7 +51,9 @@ import org.elasticsearch.node.settings.NodeSettingsService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -110,25 +113,44 @@ public class TransportDeleteMappingAction extends TransportMasterNodeOperationAc
 
     @Override
     protected void masterOperation(final DeleteMappingRequest request, final ClusterState state, final ActionListener<DeleteMappingResponse> listener) throws ElasticsearchException {
-        request.indices(state.metaData().concreteIndices(request.indices(), request.indicesOptions()));
+        
+        //figure out which indices actually contain the type
+        
+        ///first get all the indices
+        String[] allIndices = state.metaData().concreteIndices(request.indices(), request.indicesOptions());
+        
+        // get all types that need to be deleted.
+        ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> result = state.metaData().findMappings(
+                allIndices, request.types()
+        );
+        Set<String> types = new HashSet<String>();
+        for (ObjectObjectCursor<String, ImmutableOpenMap<String, MappingMetaData>> typesMeta : result) {
+            for (ObjectObjectCursor<String, MappingMetaData> type : typesMeta.value) {
+                types.add(type.key);
+            }
+        }
+        //find all indices that actually contain the type
+        List<String> indicesToFlush = new ArrayList<String>();
+        for (String indexName : allIndices) {
+            IndexMetaData indexMetaData = state.metaData().index(indexName);
+            if (indexMetaData != null) {
+                for (String type : types) {
+                    if (indexMetaData.mappings().containsKey(type)) {
+                        indicesToFlush.add(indexName);
+                    }
+                }
+            }
+        }
+        request.indices(indicesToFlush.toArray(new String[indicesToFlush.size()]));
+        request.types(types.toArray(new String[types.size()]));
         flushAction.execute(Requests.flushRequest(request.indices()), new ActionListener<FlushResponse>() {
             @Override
             public void onResponse(FlushResponse flushResponse) {
-  
-                // get all types that need to be deleted.
-                ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> result = state.metaData().findMappings(
-                        request.indices(), request.types()
-                );
                 // create OrFilter with type filters within to account for different types
                 OrFilterBuilder filterBuilder = new OrFilterBuilder();
-                Set<String> types = new HashSet<String>();
-                for (ObjectObjectCursor<String, ImmutableOpenMap<String, MappingMetaData>> typesMeta : result) {
-                    for (ObjectObjectCursor<String, MappingMetaData> type : typesMeta.value) {
-                        filterBuilder.add(new TypeFilterBuilder(type.key));
-                        types.add(type.key);
-                    }
+                for (String type : request.types()) {
+                    filterBuilder.add(new TypeFilterBuilder(type));
                 }
-                request.types(types.toArray(new String[types.size()]));
                 QuerySourceBuilder querySourceBuilder = new QuerySourceBuilder()
                         .setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filterBuilder));
                 deleteByQueryAction.execute(Requests.deleteByQueryRequest(request.indices()).source(querySourceBuilder), new ActionListener<DeleteByQueryResponse>() {
