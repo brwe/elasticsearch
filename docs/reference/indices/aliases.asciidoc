@@ -157,7 +157,7 @@ curl -XGET 'http://localhost:9200/alias2/_search?q=user:kimchy&routing=2,3'
 
 An alias can also be added with the endpoint
 
-`[PUT|POST] /{index}/_alias/{name}`
+`PUT /{index}/_alias/{name}`
 
 
 where
