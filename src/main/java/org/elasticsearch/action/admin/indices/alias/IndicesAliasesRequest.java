@@ -49,7 +49,7 @@ import static org.elasticsearch.cluster.metadata.AliasAction.readAliasAction;
  */
 public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesRequest> {
 
-    private List<AliasActions> aliasActions = Lists.newArrayList();
+    private List<AliasActions> allAliasActions = Lists.newArrayList();
     
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
 
@@ -99,6 +99,9 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
             aliases(aliases);
         }
 
+        public AliasActions() {
+        }
+
         public AliasActions filter(Map<String, Object> filter) {
             aliasAction.filter(filter);
             return this;
@@ -111,12 +114,6 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
 
         public Type actionType() {
             return aliasAction.actionType();
-        }
-
-        public void writeTo(StreamOutput out) throws IOException {
-            out.writeStringArray(indices);
-            out.writeStringArray(aliases);
-            this.aliasAction.writeTo(out);
         }
 
         public void routing(String routing) {
@@ -179,6 +176,18 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
                 return aliases;
             }
         }
+        public AliasActions readFrom(StreamInput in) throws IOException {
+            indices = in.readStringArray();
+            aliases = in.readStringArray();
+            aliasAction = readAliasAction(in);
+            return this;
+        }
+        
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeStringArray(indices);
+            out.writeStringArray(aliases);
+            this.aliasAction.writeTo(out);
+        }
     }
 
     /**
@@ -193,7 +202,7 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
 
 
     public void addAliasAction(AliasActions aliasAction) {
-        aliasActions.add(aliasAction);
+        allAliasActions.add(aliasAction);
     }
 
 
@@ -248,7 +257,7 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
     }
 
     List<AliasActions> aliasActions() {
-        return this.aliasActions;
+        return this.allAliasActions;
     }
 
     public List<AliasActions> getAliasActions() {
@@ -258,10 +267,10 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (aliasActions.isEmpty()) {
+        if (allAliasActions.isEmpty()) {
             return addValidationError("Must specify at least one alias action", validationException);
         }
-        for (AliasActions aliasAction : aliasActions) {
+        for (AliasActions aliasAction : allAliasActions) {
             if (aliasAction.actionType() == AliasAction.Type.ADD) {
                 if (aliasAction.aliases.length != 1) {
                     validationException = addValidationError("Alias action [" + aliasAction.actionType().name().toLowerCase(Locale.ENGLISH)
@@ -302,7 +311,7 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
         super.readFrom(in);
         int size = in.readVInt();
         for (int i = 0; i < size; i++) {
-            aliasActions.add(readAliasActions(in));
+            allAliasActions.add(readAliasActions(in));
         }
         readTimeout(in);
     }
@@ -310,8 +319,8 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeVInt(aliasActions.size());
-        for (AliasActions aliasAction : aliasActions) {
+        out.writeVInt(allAliasActions.size());
+        for (AliasActions aliasAction : allAliasActions) {
             aliasAction.writeTo(out);
         }
         writeTimeout(out);
@@ -322,14 +331,8 @@ public class IndicesAliasesRequest extends AcknowledgedRequest<IndicesAliasesReq
     }
     
     private AliasActions readAliasActions(StreamInput in) throws IOException {
-            String[] indices = in.readStringArray();
-            String[] aliases = in.readStringArray();
-            AliasAction aliasAction = readAliasAction(in);
-            AliasActions finalActions = new AliasActions(aliasAction);
-            finalActions.indices = indices;
-            finalActions.aliases = aliases;
-            return finalActions;
-        
+        AliasActions actions = new AliasActions();
+        return actions.readFrom(in);
     }
 
 }

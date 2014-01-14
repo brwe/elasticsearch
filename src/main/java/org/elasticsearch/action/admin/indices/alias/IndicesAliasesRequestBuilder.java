@@ -135,7 +135,7 @@ public class IndicesAliasesRequestBuilder extends AcknowledgedRequestBuilder<Ind
     }
 
     /**
-     * Removes an alias to the index.
+     * Removes an alias from the index.
      *
      * @param index The index
      * @param alias The alias
@@ -146,10 +146,10 @@ public class IndicesAliasesRequestBuilder extends AcknowledgedRequestBuilder<Ind
     }
     
     /**
-     * Removes an alias to the index.
+     * Removes aliases from the index.
      *
-     * @param index The indices
-     * @param alias The aliases
+     * @param indices The indices
+     * @param aliases The aliases
      */
     public IndicesAliasesRequestBuilder removeAlias(String[] indices, String... aliases) {
         request.removeAlias(indices, aliases);
@@ -157,10 +157,10 @@ public class IndicesAliasesRequestBuilder extends AcknowledgedRequestBuilder<Ind
     }
     
     /**
-     * Removes an alias to the index.
+     * Removes aliases from the index.
      *
      * @param index The index
-     * @param alias The aliases
+     * @param aliases The aliases
      */
     public IndicesAliasesRequestBuilder removeAlias(String index, String[] aliases) {
         request.removeAlias(index, aliases);
@@ -175,7 +175,7 @@ public class IndicesAliasesRequestBuilder extends AcknowledgedRequestBuilder<Ind
     /**
      * Adds an alias action to the request.
      *
-     * @param aliasAction The alias Action
+     * @param aliasAction The alias action
      */
     public IndicesAliasesRequestBuilder addAliasAction(AliasAction aliasAction) {
         request.addAliasAction(aliasAction);

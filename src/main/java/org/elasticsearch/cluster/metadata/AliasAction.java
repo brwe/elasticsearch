@@ -207,13 +207,13 @@ public class AliasAction implements Streamable {
         index = in.readOptionalString();
         alias = in.readOptionalString();
         if (in.readBoolean()) {
-            filter = in.readString();
+            filter = in.readOptionalString();
         }
         if (in.readBoolean()) {
-            indexRouting = in.readString();
+            indexRouting = in.readOptionalString();
         }
         if (in.readBoolean()) {
-            searchRouting = in.readString();
+            searchRouting = in.readOptionalString();
         }
     }
 
@@ -226,19 +226,19 @@ public class AliasAction implements Streamable {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            out.writeString(filter);
+            out.writeOptionalString(filter);
         }
         if (indexRouting == null) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            out.writeString(indexRouting);
+            out.writeOptionalString(indexRouting);
         }
         if (searchRouting == null) {
             out.writeBoolean(false);
         } else {
             out.writeBoolean(true);
-            out.writeString(searchRouting);
+            out.writeOptionalString(searchRouting);
         }
     }
 
