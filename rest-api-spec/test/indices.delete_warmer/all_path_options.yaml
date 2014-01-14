@@ -309,6 +309,7 @@ setup:
 "Delete warmers with missing name fails":
 
   - do:
-      catch: "/ActionRequestValidationException/"
+      catch:  param
       indices.delete_warmer:
         index: "test_index1,test_index2"
+
