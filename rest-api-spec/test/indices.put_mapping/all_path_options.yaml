@@ -168,3 +168,11 @@ setup:
   - match: {foo.test_type.properties.text.type:     string}
   - match: {foo.test_type.properties.text.analyzer: whitespace}
 
+---
+"put mapping with mising type":
+
+
+  - do:
+      catch: param
+      indices.put_mapping: {}
+

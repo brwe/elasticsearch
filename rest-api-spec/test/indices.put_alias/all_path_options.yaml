@@ -117,3 +117,11 @@ setup:
   - match: {test_index2.aliases.alias: {}}
   - match: {foo.aliases.alias: {}}
 
+---
+"put alias with mising name":
+
+
+  - do:
+      catch: param
+      indices.put_alias: {}
+

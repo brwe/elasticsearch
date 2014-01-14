@@ -115,6 +115,14 @@ setup:
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
   - match: {foo.warmers.warmer.source.query.match_all: {}}
 
+---
+"put warmer with mising name":
+
+
+  - do:
+      catch: param
+      indices.put_warmer: {}
+
 
 
 
