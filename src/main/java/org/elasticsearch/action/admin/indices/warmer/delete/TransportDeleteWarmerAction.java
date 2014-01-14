@@ -143,6 +143,7 @@ public class TransportDeleteWarmerAction extends TransportMasterNodeOperationAct
                                     globalFoundAtLeastOne = true;
                                     keepWarmer =  false;
                                     // don't add it...
+                                    break;
                                 } 
                             }
                             if (keepWarmer) {

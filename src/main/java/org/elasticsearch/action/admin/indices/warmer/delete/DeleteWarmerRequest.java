@@ -26,6 +26,7 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.util.CollectionUtils;
 
 import java.io.IOException;
 
@@ -36,7 +37,7 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
  */
 public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest> {
 
-    private String[] names;
+    private String[] names = Strings.EMPTY_ARRAY;
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
     private String[] indices = Strings.EMPTY_ARRAY;
 
@@ -55,20 +56,19 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (names == null || names.length == 0) {
-            validationException = addValidationError("mapping type is missing", validationException);
+        if (CollectionUtils.hasEntries(names)) {
+            validationException = addValidationError("warmer names are missing", validationException);
         } else {
             validationException = checkForEmptyString(validationException, names);
         }
-        if (indices == null || indices.length == 0) {
-            validationException = addValidationError("index is missing", validationException);
+        if (CollectionUtils.hasEntries(indices)) {
+            validationException = addValidationError("indices are missing", validationException);
         } else {
             validationException = checkForEmptyString(validationException, indices);
         }
-
         return validationException;
     }
-    
+
     private ActionRequestValidationException checkForEmptyString(ActionRequestValidationException validationException, String[] strings) {
         boolean containsEmptyString = false;
         for (String string : strings) {
@@ -95,11 +95,7 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
      * to delete all warmers.
      */
     public DeleteWarmerRequest names(@Nullable String... names) {
-        if (names == null) {
-            names = new String[0];
-        } else {
-            this.names = names;
-        }
+        this.names = names;
         return this;
     }
 
@@ -107,11 +103,7 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
      * Sets the indices this put mapping operation will execute on.
      */
     public DeleteWarmerRequest indices(String... indices) {
-        if (indices == null) {
-            indices = new String[0];
-        } else {
-            this.indices = indices;
-        }
+        this.indices = indices;
         return this;
     }
 
@@ -143,8 +135,8 @@ public class DeleteWarmerRequest extends AcknowledgedRequest<DeleteWarmerRequest
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeStringArray(names);
-        out.writeStringArray(indices);
+        out.writeStringArrayNullable(names);
+        out.writeStringArrayNullable(indices);
         indicesOptions.writeIndicesOptions(out);
         writeTimeout(out, Version.V_0_90_6);
     }
