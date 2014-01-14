@@ -38,7 +38,7 @@ import static org.elasticsearch.rest.RestRequest.Method.PUT;
 public class RestPutMappingAction extends BaseRestHandler {
 
     /*
-     * This TestHandler is a workaround. With the current path registration
+     * This RestHandler is a workaround. With the current path registration
      * (PathTrie) registering /{type}/_mapping in order to leave the index
      * blank, the first parameter in the path will still map to "index". * In
      * order to register /{type}/_mapping as path, we instead register

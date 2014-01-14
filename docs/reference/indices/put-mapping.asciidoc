@@ -65,9 +65,9 @@ All options:
 [source,js]
 --------------------------------------------------
 
-[PUT|POST] /{index}/_mapping/{type}        
+PUT /{index}/_mapping/{type}        
     
-[PUT|POST] /{index}/{type}/_mapping        
+PUT /{index}/{type}/_mapping        
 
 --------------------------------------------------
     
