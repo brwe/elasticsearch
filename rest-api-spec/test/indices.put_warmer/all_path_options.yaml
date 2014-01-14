@@ -30,7 +30,7 @@ setup:
             match_all: {}
 
   - do:
-      indices.get_warmer: {}
+      indices.get_warmer: { index: _all, name: '*' }
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
@@ -46,7 +46,7 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer: {}
+      indices.get_warmer: { index: _all, name: '*' }
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
@@ -62,7 +62,7 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer: {}
+      indices.get_warmer: { index: _all, name: '*' }
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
@@ -78,7 +78,7 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer: {}
+      indices.get_warmer: { index: _all, name: '*' }
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
@@ -94,7 +94,7 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer: {}
+      indices.get_warmer: { index: _all, name: '*' }
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
@@ -109,7 +109,7 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer: {}
+      indices.get_warmer: { index: _all, name: '*' }
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
