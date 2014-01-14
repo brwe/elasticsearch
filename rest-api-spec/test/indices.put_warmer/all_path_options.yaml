@@ -7,6 +7,9 @@ setup:
   - do:
       indices.create:
         index: test_index2
+  - do:
+      indices.create:
+        index: foo
 
 ---
 "put warmer per index":
@@ -27,17 +30,11 @@ setup:
             match_all: {}
 
   - do:
-      indices.get_warmer:
-        index: test_index1
+      indices.get_warmer: {}
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-
-  - do:
-      indices.get_warmer:
-        index: test_index2
-
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
-
+  - is_false: foo
 
 ---
 "put warmer in _all index":
@@ -49,16 +46,11 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer:
-        index: test_index1
+      indices.get_warmer: {}
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-
-  - do:
-      indices.get_warmer:
-        index: test_index2
-
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
+  - match: {foo.warmers.warmer.source.query.match_all: {}}
 
 ---
 "put warmer in * index":
@@ -70,16 +62,11 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer:
-        index: test_index1
+      indices.get_warmer: {}
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-
-  - do:
-      indices.get_warmer:
-        index: test_index2
-
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
+  - match: {foo.warmers.warmer.source.query.match_all: {}}
 
 ---
 "put warmer prefix* index":
@@ -91,17 +78,11 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer:
-        index: test_index1
+      indices.get_warmer: {}
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-
-  - do:
-      indices.get_warmer:
-        index: test_index2
-
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
-
+  - is_false: foo
 
 ---
 "put warmer in list of indices":
@@ -113,16 +94,11 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer:
-        index: test_index1
+      indices.get_warmer: {}
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-
-  - do:
-      indices.get_warmer:
-        index: test_index2
-
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
+  - is_false: foo
 
 ---
 "put warmer with blank index":
@@ -133,16 +109,11 @@ setup:
           query:
             match_all: {}
   - do:
-      indices.get_warmer:
-        index: test_index1
+      indices.get_warmer: {}
 
   - match: {test_index1.warmers.warmer.source.query.match_all: {}}
-
-  - do:
-      indices.get_warmer:
-        index: test_index2
-
   - match: {test_index2.warmers.warmer.source.query.match_all: {}}
+  - match: {foo.warmers.warmer.source.query.match_all: {}}
 
 
 

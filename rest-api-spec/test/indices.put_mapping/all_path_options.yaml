@@ -5,6 +5,9 @@ setup:
   - do:
       indices.create:
         index: test_index2
+  - do:
+      indices.create:
+        index: foo
 
 
 ---
@@ -18,7 +21,7 @@ setup:
             properties:
               text:
                 type:     string
-                analyzer: whitespace     
+                analyzer: whitespace
   - do:
       indices.put_mapping:
         index: test_index2
@@ -29,21 +32,18 @@ setup:
               text:
                 type:     string
                 analyzer: whitespace
-                
+
 
   - do:
-      indices.get_mapping:
-        index: test_index1
-  
+      indices.get_mapping: {}
+
   - match: {test_index1.test_type.properties.text.type:     string}
   - match: {test_index1.test_type.properties.text.analyzer: whitespace}
-  
-  - do:
-      indices.get_mapping:
-        index: test_index2
-  
+
   - match: {test_index2.test_type.properties.text.type:     string}
   - match: {test_index2.test_type.properties.text.analyzer: whitespace}
+
+  - match: {foo: {}}
 
 ---
 "put mapping in _all index":
@@ -60,21 +60,19 @@ setup:
                 analyzer: whitespace
 
   - do:
-      indices.get_mapping:
-        index: test_index1
-  
+      indices.get_mapping: {}
+
   - match: {test_index1.test_type.properties.text.type:     string}
   - match: {test_index1.test_type.properties.text.analyzer: whitespace}
-  
-  - do:
-      indices.get_mapping:
-        index: test_index2
-  
+
   - match: {test_index2.test_type.properties.text.type:     string}
   - match: {test_index2.test_type.properties.text.analyzer: whitespace}
-  
+
+  - match: {foo.test_type.properties.text.type:     string}
+  - match: {foo.test_type.properties.text.analyzer: whitespace}
+
 ---
-"put mapping in * index": 
+"put mapping in * index":
   - do:
       indices.put_mapping:
         index: "*"
@@ -87,21 +85,19 @@ setup:
                 analyzer: whitespace
 
   - do:
-      indices.get_mapping:
-        index: test_index1
-  
+      indices.get_mapping: {}
+
   - match: {test_index1.test_type.properties.text.type:     string}
   - match: {test_index1.test_type.properties.text.analyzer: whitespace}
-  
-  - do:
-      indices.get_mapping:
-        index: test_index2
-  
+
   - match: {test_index2.test_type.properties.text.type:     string}
   - match: {test_index2.test_type.properties.text.analyzer: whitespace}
-  
+
+  - match: {foo.test_type.properties.text.type:     string}
+  - match: {foo.test_type.properties.text.analyzer: whitespace}
+
 ---
-"put mapping in prefix* index": 
+"put mapping in prefix* index":
   - do:
       indices.put_mapping:
         index: "test_index*"
@@ -114,22 +110,18 @@ setup:
                 analyzer: whitespace
 
   - do:
-      indices.get_mapping:
-        index: test_index1
-  
+      indices.get_mapping: {}
+
   - match: {test_index1.test_type.properties.text.type:     string}
   - match: {test_index1.test_type.properties.text.analyzer: whitespace}
-  
-  - do:
-      indices.get_mapping:
-        index: test_index2
-  
+
   - match: {test_index2.test_type.properties.text.type:     string}
   - match: {test_index2.test_type.properties.text.analyzer: whitespace}
 
+  - match: {foo: {}}
 
 ---
-"put mapping in list of indices": 
+"put mapping in list of indices":
   - do:
       indices.put_mapping:
         index: [test_index1, test_index2]
@@ -140,23 +132,20 @@ setup:
               text:
                 type:     string
                 analyzer: whitespace
-                
+
   - do:
-      indices.get_mapping:
-        index: test_index1
-  
+      indices.get_mapping: {}
+
   - match: {test_index1.test_type.properties.text.type:     string}
   - match: {test_index1.test_type.properties.text.analyzer: whitespace}
-  
-  - do:
-      indices.get_mapping:
-        index: test_index2
-  
+
   - match: {test_index2.test_type.properties.text.type:     string}
   - match: {test_index2.test_type.properties.text.analyzer: whitespace}
-  
+
+  - match: {foo: {}}
+
 ---
-"put mapping with blank index":   
+"put mapping with blank index":
   - do:
       indices.put_mapping:
         type: test_type
@@ -166,19 +155,16 @@ setup:
               text:
                 type:     string
                 analyzer: whitespace
-                
+
   - do:
-      indices.get_mapping:
-        index: test_index1
-  
+      indices.get_mapping: {}
+
   - match: {test_index1.test_type.properties.text.type:     string}
   - match: {test_index1.test_type.properties.text.analyzer: whitespace}
-  
-  - do:
-      indices.get_mapping:
-        index: test_index2
-  
+
   - match: {test_index2.test_type.properties.text.type:     string}
   - match: {test_index2.test_type.properties.text.analyzer: whitespace}
 
+  - match: {foo.test_type.properties.text.type:     string}
+  - match: {foo.test_type.properties.text.analyzer: whitespace}
 
