@@ -36,6 +36,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.indices.IndexMissingException;
+import org.elasticsearch.rest.action.admin.indices.alias.delete.AliasesMissingException;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.facet.FacetBuilders;
@@ -550,10 +551,16 @@ public class IndexAliasesTests extends ElasticsearchIntegrationTest {
         assertThat(admin().indices().prepareAliases().removeAlias("test", "alias1").setTimeout(timeout).execute().actionGet().isAcknowledged(), equalTo(true));
         assertThat(stopWatch.stop().lastTaskTime().millis(), lessThan(timeout.millis()));
 
-        logger.info("--> deleting alias1 one more time");
-        stopWatch.start();
-        assertThat(admin().indices().prepareAliases().removeAlias("test", "alias1").setTimeout(timeout).execute().actionGet().isAcknowledged(), equalTo(true));
-        assertThat(stopWatch.stop().lastTaskTime().millis(), lessThan(timeout.millis()));
+        
+    }
+    
+    @Test(expected = AliasesMissingException.class)
+    public void testIndicesRemoveNonExistingAliasResponds404() throws Exception {
+        logger.info("--> creating index [test]");
+        createIndex("test");
+        ensureGreen();
+        logger.info("--> deleting alias1 which does not exist");
+        assertThat(admin().indices().prepareAliases().removeAlias("test", "alias1").execute().actionGet().isAcknowledged(), equalTo(true));
     }
 
     @Test

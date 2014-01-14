@@ -34,10 +34,12 @@ import org.elasticsearch.cluster.metadata.AliasAction;
 import org.elasticsearch.cluster.metadata.MetaDataIndexAliasesService;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.rest.action.admin.indices.alias.delete.AliasesMissingException;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -93,17 +95,28 @@ public class TransportIndicesAliasesAction extends TransportMasterNodeOperationA
         //Expand the indices names
         List<AliasActions> actions = request.aliasActions();
         List<AliasAction> finalActions = new ArrayList<AliasAction>();
+        boolean hasOnlyDeletesButNoneCanBeDone = true;
+        Set aliases = new HashSet<String>();
         for (AliasActions action : actions) {
             //expand indices
             String[] concreteIndices = state.metaData().concreteIndices(action.indices(), request.indicesOptions());
+            //collect the aliases
+            for (String alias : action.aliases()) {
+                aliases.add(alias);
+            }
             for (String index : concreteIndices) {
                 for (String alias : action.concreteAliases(state.metaData(), index)) { 
                     AliasAction finalAction = new AliasAction(action.aliasAction());
                     finalAction.index(index);
                     finalAction.alias(alias);
                     finalActions.add(finalAction);
+                    //if there is only delete requests, none will be added if the types do not map to any existing type
+                    hasOnlyDeletesButNoneCanBeDone = false;
                 }
             }
+        }
+        if (hasOnlyDeletesButNoneCanBeDone && actions.size() != 0) {
+            throw new AliasesMissingException((String[])aliases.toArray( new String[aliases.size()]));
         }
         request.aliasActions().clear();
         IndicesAliasesClusterStateUpdateRequest updateRequest = new IndicesAliasesClusterStateUpdateRequest()
