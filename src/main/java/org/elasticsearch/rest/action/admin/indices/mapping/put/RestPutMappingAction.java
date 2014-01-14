@@ -37,57 +37,27 @@ import static org.elasticsearch.rest.RestRequest.Method.PUT;
  */
 public class RestPutMappingAction extends BaseRestHandler {
 
-    /*
-     * This RestHandler is a workaround. With the current path registration
-     * (PathTrie) registering /{type}/_mapping in order to leave the index
-     * blank, the first parameter in the path will still map to "index". * In
-     * order to register /{type}/_mapping as path, we instead register
-     * /{index}/_mapping and interpret the parameter "index" as type if no type
-     * is given in the uri parameters.
-     */
-    protected final class RestHandlerForMissingIndex implements RestHandler {
-        @Override
-        public void handleRequest(RestRequest request, RestChannel channel) {
-            PutMappingRequest putMappingRequest;
-            if (request.param("type") != null) {
-                putMappingRequest = putMappingRequest(Strings.splitStringByCommaToArray(request.param("index")));
-                putMappingRequest.type(request.param("type"));
-            } else {
-                putMappingRequest = putMappingRequest(new String[0]);
-                putMappingRequest.type(request.param("index"));
-            }
-            putMappingRequest.listenerThreaded(false);
-            putMappingRequest.source(request.content().toUtf8());
-            putMappingRequest.timeout(request.paramAsTime("timeout", putMappingRequest.timeout()));
-            putMappingRequest.ignoreConflicts(request.paramAsBoolean("ignore_conflicts", putMappingRequest.ignoreConflicts()));
-            putMappingRequest.masterNodeTimeout(request.paramAsTime("master_timeout", putMappingRequest.masterNodeTimeout()));
-            putMappingRequest.indicesOptions(IndicesOptions.fromRequest(request, putMappingRequest.indicesOptions()));
-            client.admin()
-                    .indices()
-                    .putMapping(putMappingRequest, new AcknowledgedRestResponseActionListener<PutMappingResponse>(request, channel, logger));
-        }
-    }
 
     @Inject
     public RestPutMappingAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(PUT, "/{index}/_mapping/", new RestHandlerForMissingIndex());
+        controller.registerHandler(PUT, "/{index}/_mapping/", this);
         controller.registerHandler(PUT, "/{index}/{type}/_mapping", this);
         controller.registerHandler(PUT, "/{index}/_mapping/{type}", this);
         controller.registerHandler(PUT, "/_mapping/{type}", this);
 
-        controller.registerHandler(POST, "/{index}/_mapping/", new RestHandlerForMissingIndex());
+        controller.registerHandler(POST, "/{index}/_mapping/", this);
         controller.registerHandler(POST, "/{index}/{type}/_mapping", this);
         controller.registerHandler(POST, "/{index}/_mapping/{type}", this);
         controller.registerHandler(POST, "/_mapping/{type}", this);
         
         //register the same paths, but with plural form _mappings
-        controller.registerHandler(PUT, "/{index}/_mappings/", new RestHandlerForMissingIndex());
+        controller.registerHandler(PUT, "/{index}/_mappings/", this);
         controller.registerHandler(PUT, "/{index}/{type}/_mappings", this);
         controller.registerHandler(PUT, "/{index}/_mappings/{type}", this);
         controller.registerHandler(PUT, "/_mappings/{type}", this);
 
-        controller.registerHandler(POST, "/{index}/_mappings/", new RestHandlerForMissingIndex());
+        controller.registerHandler(POST, "/{index}/_mappings/", this);
         controller.registerHandler(POST, "/{index}/{type}/_mappings", this);
         controller.registerHandler(POST, "/{index}/_mappings/{type}", this);
         controller.registerHandler(POST, "/_mappings/{type}", this);

@@ -4,7 +4,7 @@
     "methods": ["PUT", "POST"],
     "url": {
       "path": "/{index}/{type}/_mapping",
-      "paths": ["/{index}/{type}/_mapping", "/{type}/_mapping", "/{index}/_mapping/{type}", "/_mapping/{type}", "/{index}/{type}/_mappings", "/{type}/_mappings", "/{index}/_mappings/{type}", "/_mappings/{type}"],
+      "paths": ["/{index}/{type}/_mapping", "/{index}/_mapping/{type}", "/_mapping/{type}", "/{index}/{type}/_mappings", "/{index}/_mappings/{type}", "/_mappings/{type}"],
       "parts": {
         "index": {
           "type" : "list",

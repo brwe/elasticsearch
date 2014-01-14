@@ -66,8 +66,7 @@ All options:
 --------------------------------------------------
 
 PUT /{index}/_mapping/{type}        
-    
-PUT /{index}/{type}/_mapping        
+         
 
 --------------------------------------------------
     
@@ -81,3 +80,4 @@ where
 
 
 Instead of `_mapping` you can also use the plural `_mappings`.
+The uri `PUT /{index}/{type}/_mapping` is still supported for backwardscompatibility.  
