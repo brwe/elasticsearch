@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.Strings.toCamelCase;
 
 /**
  * <pre>
@@ -55,6 +56,7 @@ public class HighlighterParseElement implements SearchParseElement {
 
     private static final String[] DEFAULT_PRE_TAGS = new String[]{"<em>"};
     private static final String[] DEFAULT_POST_TAGS = new String[]{"</em>"};
+    private static final String REQUIRE_STRICT_MATCH = "require_strict_match";
 
     private static final String[] STYLED_PRE_TAG = {
             "<em class=\"hlt1\">", "<em class=\"hlt2\">", "<em class=\"hlt3\">",
@@ -76,6 +78,7 @@ public class HighlighterParseElement implements SearchParseElement {
         boolean globalHighlightFilter = false;
         boolean globalRequireFieldMatch = false;
         boolean globalForceSource = false;
+        boolean globalRequireStrictMatch = false;
         int globalFragmentSize = 100;
         int globalNumOfFragments = 5;
         String globalEncoder = "default";
@@ -142,6 +145,8 @@ public class HighlighterParseElement implements SearchParseElement {
                     globalForceSource = parser.booleanValue();
                 } else if ("phrase_limit".equals(topLevelFieldName) || "phraseLimit".equals(topLevelFieldName)) {
                     globalPhraseLimit = parser.intValue();
+                } else if (REQUIRE_STRICT_MATCH.equals(topLevelFieldName) || toCamelCase(REQUIRE_STRICT_MATCH).equals(topLevelFieldName)) {
+                    globalRequireStrictMatch = parser.booleanValue();
                 }
             } else if (token == XContentParser.Token.START_OBJECT && "options".equals(topLevelFieldName)) {
                 globalOptions = parser.map();
@@ -209,6 +214,8 @@ public class HighlighterParseElement implements SearchParseElement {
                                         field.forceSource(parser.booleanValue());
                                     } else if ("phrase_limit".equals(fieldName) || "phraseLimit".equals(fieldName)) {
                                         field.phraseLimit(parser.intValue());
+                                    } else if (REQUIRE_STRICT_MATCH.equals(fieldName) || toCamelCase(REQUIRE_STRICT_MATCH).equals(fieldName)) {
+                                        field.requireStrictMatch(parser.booleanValue());
                                     }
                                 } else if (token == XContentParser.Token.START_OBJECT) {
                                     if ("highlight_query".equals(fieldName) || "highlightQuery".equals(fieldName)) {
@@ -282,6 +289,9 @@ public class HighlighterParseElement implements SearchParseElement {
             }
             if (field.phraseLimit() == -1) {
                 field.phraseLimit(globalPhraseLimit);
+            }
+            if (field.requireStrictMatch() == null) {
+                field.requireStrictMatch(globalRequireStrictMatch);
             }
         }
 

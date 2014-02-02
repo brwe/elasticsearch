@@ -62,6 +62,8 @@ public class SearchContextHighlight {
 
         private Boolean requireFieldMatch;
 
+        private Boolean requireStrictMatch;
+
         private String highlighterType;
 
         private Boolean forceSource;
@@ -240,6 +242,14 @@ public class SearchContextHighlight {
 
         public void options(Map<String, Object> options) {
             this.options = options;
+        }
+
+        public void requireStrictMatch(boolean requireStrictMatch) {
+            this.requireStrictMatch = requireStrictMatch;
+        }
+
+        public Boolean requireStrictMatch() {
+            return requireStrictMatch;
         }
     }
 }

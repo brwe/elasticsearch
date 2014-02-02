@@ -22,21 +22,36 @@ package org.elasticsearch.search.highlight;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.queries.TermsFilter;
+import org.apache.lucene.search.FilteredQuery;
+import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.search.TopDocs;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.lucene.search.MatchAllDocsFilter;
+import org.elasticsearch.common.lucene.search.MatchNoDocsFilter;
 import org.elasticsearch.common.regex.Regex;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.MapperService;
+import org.elasticsearch.index.mapper.Uid;
 import org.elasticsearch.index.mapper.internal.SourceFieldMapper;
+import org.elasticsearch.index.mapper.internal.UidFieldMapper;
+import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.IdsQueryParser;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchParseElement;
 import org.elasticsearch.search.fetch.FetchSubPhase;
 import org.elasticsearch.search.internal.InternalSearchHit;
 import org.elasticsearch.search.internal.SearchContext;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -120,6 +135,26 @@ public class HighlightPhase extends AbstractComponent implements FetchSubPhase {
                     highlightQuery = new HighlighterContext.HighlightQuery(context.parsedQuery().query(), context.query(), context.queryRewritten());
                 } else {
                     highlightQuery = new HighlighterContext.HighlightQuery(field.highlightQuery(), field.highlightQuery(), false);
+                }
+                //here check if query actually matches?
+                if (field.requireStrictMatch()) {
+                    List types = new ArrayList<String>();
+                    types.add(hitContext.hit().type());
+                    List ids = new ArrayList<String>();
+                    ids.add(hitContext.hit().getId());
+
+                    TermsFilter filter = new TermsFilter(UidFieldMapper.NAME, Uid.createTypeUids(types, ids));
+                    FilteredQuery fq = new FilteredQuery(highlightQuery.query(), filter);
+                    TopDocs docs;
+                    try {
+                         docs = context.searcher().search(fq,1);
+                    } catch (IOException e) {
+                        throw new ElasticsearchException("Could not execute highlight query on field...");
+                    }
+                    if (docs.totalHits != 1) {
+                        continue;
+                    }
+
                 }
                 HighlighterContext highlighterContext = new HighlighterContext(fieldName, field, fieldMapper, context, hitContext, highlightQuery);
                 HighlightField highlightField = highlighter.highlight(highlighterContext);
