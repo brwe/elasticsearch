@@ -1,0 +1,74 @@
+---
+"Require field match":
+
+  - do:
+      index:
+        index:  highlighttest
+        type:   doc
+        id:     1
+        body:   { "text": "foo bar" }
+  - do:
+      index:
+        index:  highlighttest
+        type:   doc
+        id:     2
+        body:   { "text": "foo foo" }
+  - do:
+      indices.refresh: {}
+
+
+  - do:
+      search:
+        body: {"sort":[{"_uid":{"order":"asc"}}],"highlight":{"fields":{"text":{"require_strict_match":true,"highlight_query":{"match":{"text":{"query":"foo bar","operator":"and"}}}}}}}
+
+  - length:   { hits.hits: 2  }
+  - match: { hits.hits.0.highlight.text.0: "<em>foo</em> <em>bar</em>" }
+  - is_false: hits.hits.1.highlight
+  
+  - do:
+      search:
+        body: {"sort":[{"_uid":{"order":"asc"}}],"highlight":{"fields":{"text":{"require_strict_match":false,"highlight_query":{"match":{"text":{"query":"foo bar","operator":"and"}}}}}}}
+
+  - length:   { hits.hits: 2  }
+  - match: { hits.hits.0.highlight.text.0: "<em>foo</em> <em>bar</em>" }
+  - match: { hits.hits.1.highlight.text.0: "<em>foo</em> <em>foo</em>"}
+  
+  
+  
+---
+"Require field match false on different field":
+
+  - do:
+      index:
+        index:  highlighttest
+        type:   doc
+        id:     1
+        body:   { "text": "foo bar" }
+  - do:
+      index:
+        index:  highlighttest
+        type:   doc
+        id:     2
+        body:   { "text": "foo foo" }
+  - do:
+      indices.refresh: {}
+
+
+  - do:
+      search:
+        body: {"sort":[{"_uid":{"order":"asc"}}],"highlight":{"fields":{"text":{"require_field_match":true,"highlight_query":{"match":{"text2":{"query":"foo bar","operator":"and"}}}}}}}
+
+  - length:   { hits.hits: 2  }
+  - is_false: hits.hits.0.highlight
+  - is_false: hits.hits.1.highlight
+  
+  - do:
+      search:
+        body: {"sort":[{"_uid":{"order":"asc"}}],"highlight":{"fields":{"text":{"require_strict_match":false,"highlight_query":{"match":{"text2":{"query":"foo bar","operator":"and"}}}}}}}
+
+  - length:   { hits.hits: 2  }
+  - match: { hits.hits.0.highlight.text.0: "<em>foo</em> <em>bar</em>" }
+  - match: { hits.hits.1.highlight.text.0: "<em>foo</em> <em>foo</em>"}
+
+
+
