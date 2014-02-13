@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.memory.ExtendedMemoryIndex;
 import org.apache.lucene.index.memory.MemoryIndex;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
