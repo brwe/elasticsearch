@@ -68,15 +68,15 @@ public class RAMDirectoryVSMemoryIndexTests extends ElasticsearchIntegrationTest
     public void duelMemoryIndexRAMDirectory() throws Exception {
         DirectoryReader ramDir = indexDocInRAMDircetory();
 
-        MemoryIndex memIndex = indexDocInMemoryIndex();
+        ExtendedMemoryIndex memIndex = indexDocInMemoryIndex();
         Terms ramTv = ramDir.getTermVector(0, "body.text");
         Terms memTv = memIndex.createSearcher().getIndexReader().getTermVector(0, "body.text");
         validateResponse(ramTv, memTv);
     }
 
-    protected MemoryIndex indexDocInMemoryIndex() throws IOException {
 
-        MemoryIndex memoryIndex = new MemoryIndex(true);
+    protected ExtendedMemoryIndex indexDocInMemoryIndex() throws IOException {
+        ExtendedMemoryIndex memoryIndex = new ExtendedMemoryIndex(true);
         Analyzer ana = new StandardAnalyzer(Version.CURRENT.luceneVersion);
         memoryIndex.addField(field_name, "la la", ana);
         memoryIndex.addField(field_name, "foo bar foo bar foo", ana);

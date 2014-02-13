@@ -250,6 +250,7 @@ public final class ExtendedMemoryIndex {
             final SliceByteStartArray sliceArray;
             Info info = null;
             long sumTotalTermFreq = 0;
+            int lastOffset = 0;
             if ((info = fields.get(fieldName)) != null) {
                 numTokens = info.numTokens;
                 numOverlapTokens = info.numOverlapTokens;
@@ -258,6 +259,7 @@ public final class ExtendedMemoryIndex {
                 boost *= info.boost;
                 sliceArray = info.sliceArray;
                 sumTotalTermFreq = info.sumTotalTermFreq;
+                lastOffset = info.lastOffset;
             } else {
                 sliceArray = new SliceByteStartArray(BytesRefHash.DEFAULT_CAPACITY);
                 terms = new BytesRefHash(byteBlockPool, BytesRefHash.DEFAULT_CAPACITY, sliceArray);
@@ -294,8 +296,8 @@ public final class ExtendedMemoryIndex {
                     postingsWriter.writeInt(pos);
                 } else {
                     postingsWriter.writeInt(pos);
-                    postingsWriter.writeInt(offsetAtt.startOffset());
-                    postingsWriter.writeInt(offsetAtt.endOffset());
+                    postingsWriter.writeInt(offsetAtt.startOffset() + lastOffset);
+                    postingsWriter.writeInt(offsetAtt.endOffset() + lastOffset);
                 }
                 sliceArray.end[ord] = postingsWriter.getCurrentOffset();
             }
@@ -303,7 +305,7 @@ public final class ExtendedMemoryIndex {
 
             // ensure infos.numTokens > 0 invariant; needed for correct operation of terms()
             if (numTokens > 0) {
-                fields.put(fieldName, new Info(terms, sliceArray, numTokens, numOverlapTokens, boost, pos, sumTotalTermFreq));
+                fields.put(fieldName, new Info(terms, sliceArray, numTokens, numOverlapTokens, boost, pos, offsetAtt.endOffset() + 1, sumTotalTermFreq));
                 sortedFields = null;    // invalidate sorted view, if any
             }
         } catch (Exception e) { // can never happen
@@ -517,7 +519,10 @@ public final class ExtendedMemoryIndex {
         /** the last position encountered in this field for multi field support*/
         private int lastPosition;
 
-        public Info(BytesRefHash terms, SliceByteStartArray sliceArray, int numTokens, int numOverlapTokens, float boost, int lastPosition, long sumTotalTermFreq) {
+        /** the last offset encountered in this field for multi field support*/
+        private int lastOffset;
+
+        public Info(BytesRefHash terms, SliceByteStartArray sliceArray, int numTokens, int numOverlapTokens, float boost, int lastPosition, int lastOffset, long sumTotalTermFreq) {
             this.terms = terms;
             this.sliceArray = sliceArray;
             this.numTokens = numTokens;
@@ -525,6 +530,7 @@ public final class ExtendedMemoryIndex {
             this.boost = boost;
             this.sumTotalTermFreq = sumTotalTermFreq;
             this.lastPosition = lastPosition;
+            this.lastOffset = lastOffset;
         }
 
         public long getSumTotalTermFreq() {
