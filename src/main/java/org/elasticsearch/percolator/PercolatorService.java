@@ -106,7 +106,7 @@ public class PercolatorService extends AbstractComponent {
     public final static float NO_SCORE = Float.NEGATIVE_INFINITY;
     public final static String TYPE_NAME = ".percolator";
 
-    private final CloseableThreadLocal<MemoryIndex> cache;
+    private final CloseableThreadLocal<ExtendedMemoryIndex> cache;
     private final IndicesService indicesService;
     private final ByteObjectOpenHashMap<PercolatorType> percolatorTypes;
     private final CacheRecycler cacheRecycler;
@@ -135,9 +135,9 @@ public class PercolatorService extends AbstractComponent {
         this.sortParseElement = new SortParseElement();
 
         final long maxReuseBytes = settings.getAsBytesSize("indices.memory.memory_index.size_per_thread", new ByteSizeValue(1, ByteSizeUnit.MB)).bytes();
-        cache = new CloseableThreadLocal<MemoryIndex>() {
+        cache = new CloseableThreadLocal<ExtendedMemoryIndex>() {
             @Override
-            protected MemoryIndex initialValue() {
+            protected ExtendedMemoryIndex initialValue() {
                 return new ExtendedMemoryIndex(true, maxReuseBytes);
             }
         };
@@ -199,7 +199,7 @@ public class PercolatorService extends AbstractComponent {
             }
 
             // first, parse the source doc into a MemoryIndex
-            final MemoryIndex memoryIndex = cache.get();
+            final ExtendedMemoryIndex memoryIndex = cache.get();
             // TODO: This means percolation does not support nested docs...
             // So look into: ByteBufferDirectory
             for (IndexableField field : parsedDocument.rootDoc().getFields()) {

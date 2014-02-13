@@ -135,7 +135,7 @@ public class PercolateContext extends SearchContext {
         this.scriptService = scriptService;
     }
 
-    public void initialize(final MemoryIndex memoryIndex, ParsedDocument parsedDocument) {
+    public void initialize(final ExtendedMemoryIndex memoryIndex, ParsedDocument parsedDocument) {
         final IndexSearcher docSearcher = memoryIndex.createSearcher();
         final IndexReader topLevelReader = docSearcher.getIndexReader();
         AtomicReaderContext readerContext = topLevelReader.leaves().get(0);
