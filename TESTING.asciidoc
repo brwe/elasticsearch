@@ -1,12 +1,14 @@
 [[Testing Framework Cheatsheet]]
+
+[float]
 = Testing
 
 [partintro]
---
 Elasticsearch uses jUnit for testing, it also uses randomness in the
 tests, that can be set using a seed, the following is a cheatsheet of
 options for running the tests for ES.
 
+[float]
 == Creating packages
 
 To create a distribution without running the tests, simply run the
@@ -16,6 +18,7 @@ following:
 mvn clean package -DskipTests
 -----------------------------
 
+[float]
 == Other test options
 
 To disable and enable network transport, set the `Des.node.mode`.
@@ -38,6 +41,7 @@ Alternatively, you can set the `ES_TEST_LOCAL` environment variable:
 export ES_TEST_LOCAL=true && mvn test
 -------------------------------------
 
+[float]
 === Test case filtering.
 
 - `tests.class` is a class-filtering shell-like glob pattern,
@@ -62,6 +66,7 @@ Run any test methods that contain 'esi' (like: ...r*esi*ze...).
 mvn test "-Dtests.method=*esi*"
 -------------------------------
 
+[float]
 === Seed and repetitions.
 
 Run with a given seed (seed is a hex-encoded long).
@@ -70,6 +75,7 @@ Run with a given seed (seed is a hex-encoded long).
 mvn test -Dtests.seed=DEADBEEF
 ------------------------------
 
+[float]
 === Repeats _all_ tests of ClassName N times.
 
 Every test repetition will have a different method seed 
@@ -79,6 +85,7 @@ Every test repetition will have a different method seed
 mvn test -Dtests.iters=N -Dtests.class=*.ClassName
 --------------------------------------------------
 
+[float]
 === Repeats _all_ tests of ClassName N times.
 
 Every test repetition will have exactly the same master (0xdead) and
@@ -88,6 +95,7 @@ method-level (0xbeef) seed.
 mvn test -Dtests.iters=N -Dtests.class=*.ClassName -Dtests.seed=DEAD:BEEF
 ------------------------------------------------------------------------
 
+[float]
 === Repeats a given test N times
 
 (note the filters - individual test repetitions are given suffixes,
@@ -105,6 +113,7 @@ mvn test -Dtests.iters=N -Dtests.failfast=true -Dtestcase=...
 mvn test -Dtests.iters=N -Dtests.maxfailures=M -Dtestcase=...
 -------------------------------------------------------------
 
+[float]
 === Test groups.
 
 Test groups can be enabled or disabled (true/false).
@@ -118,6 +127,7 @@ mvn test -Dtests.awaitsfix=[false] - known issue (@AwaitsFix)
 mvn test -Dtests.slow=[true]       - slow tests (@Slow)
 ------------------------------------------------------------------
 
+[float]
 === Load balancing and caches.
 
 By default, the tests run sequentially on a single forked JVM. 
@@ -132,7 +142,7 @@ Don't count hypercores for CPU-intense tests and leave some slack
 for JVM-internal threads (like the garbage collector). Make sure there is 
 enough RAM to handle child JVMs.
 
-
+[float]
 === Miscellaneous.
 
 Run all tests without stopping on errors (inspect log files).
@@ -167,6 +177,7 @@ even if tests are passing.
 mvn test -Dtests.output=always
 ------------------------------
 
+[float]
 == Testing the REST layer
 
 The available integration tests make use of the java API to communicate with
