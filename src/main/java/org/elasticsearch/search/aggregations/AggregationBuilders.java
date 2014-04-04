@@ -40,6 +40,7 @@ import org.elasticsearch.search.aggregations.metrics.max.MaxBuilder;
 import org.elasticsearch.search.aggregations.metrics.min.MinBuilder;
 import org.elasticsearch.search.aggregations.metrics.percentiles.PercentilesBuilder;
 import org.elasticsearch.search.aggregations.metrics.percentiles.PercentileRanksBuilder;
+import org.elasticsearch.search.aggregations.metrics.sgd.SgdBuilder;
 import org.elasticsearch.search.aggregations.metrics.stats.StatsBuilder;
 import org.elasticsearch.search.aggregations.metrics.stats.extended.ExtendedStatsBuilder;
 import org.elasticsearch.search.aggregations.metrics.sum.SumBuilder;
@@ -155,5 +156,9 @@ public class AggregationBuilders {
     
     public static GeoBoundsBuilder geoBounds(String name) {
         return new GeoBoundsBuilder(name);
+    }
+
+    public static SgdBuilder sgd(String name) {
+        return new SgdBuilder(name);
     }
 }
