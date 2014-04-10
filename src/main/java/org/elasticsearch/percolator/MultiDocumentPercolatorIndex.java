@@ -43,6 +43,11 @@ import java.util.List;
  */
 class MultiDocumentPercolatorIndex implements PercolatorIndex {
 
+    /*
+    * TODO: I removed the cache member here because I did not know how to handle it in case someone percolates multiple docs all fo which are nested.
+    * See commit 502f24d7e442173c3b17171d6655ce4f62564f06 What to do?
+    *
+    * */
 
     MultiDocumentPercolatorIndex() {
     }
