@@ -48,7 +48,7 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
 
     private String[] indices;
     // document type used if no type is given explicitely in percolate requests
-    private String documentType;
+    private String defaultDocumentType;
     private IndicesOptions indicesOptions = IndicesOptions.strict();
     private List<PercolateRequest> requests = Lists.newArrayList();
 
@@ -60,8 +60,8 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
         if (request.indices() == null && indices != null) {
             request.indices(indices);
         }
-        if (request.documentType() == null && documentType != null) {
-            request.documentType(documentType);
+        if (request.getDefaultDocumentType() == null && defaultDocumentType != null) {
+            request.setDefaultDocumentType(defaultDocumentType);
         }
         if (request.indicesOptions() == IndicesOptions.strict() && indicesOptions != IndicesOptions.strict()) {
             request.indicesOptions(indicesOptions);
@@ -94,8 +94,8 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
             if (indices != null) {
                 percolateRequest.indices(indices);
             }
-            if (documentType != null) {
-                percolateRequest.documentType(documentType);
+            if (defaultDocumentType != null) {
+                percolateRequest.setDefaultDocumentType(defaultDocumentType);
             }
             if (indicesOptions != IndicesOptions.strict()) {
                 percolateRequest.indicesOptions(indicesOptions);
@@ -197,7 +197,7 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
                         percolateRequest.indices(Strings.splitStringByCommaToArray((String) value));
                     }
                 } else if ("percolate_type".equals(entry.getKey()) || "percolateType".equals(entry.getKey())) {
-                    percolateRequest.documentType((String) value);
+                    percolateRequest.setDefaultDocumentType((String) value);
                 } else if ("percolate_preference".equals(entry.getKey()) || "percolatePreference".equals(entry.getKey())) {
                     percolateRequest.preference((String) value);
                 } else if ("percolate_routing".equals(entry.getKey()) || "percolateRouting".equals(entry.getKey())) {
@@ -230,8 +230,8 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
             if ((percolateRequest.indices() == null || percolateRequest.indices().length == 0) && getRequest.index() != null) {
                 percolateRequest.indices(getRequest.index());
             }
-            if (percolateRequest.documentType() == null && getRequest.type() != null) {
-                percolateRequest.documentType(getRequest.type());
+            if (percolateRequest.getDefaultDocumentType() == null && getRequest.type() != null) {
+                percolateRequest.setDefaultDocumentType(getRequest.type());
             }
             if (percolateRequest.routing() == null && getRequest.routing() != null) {
                 percolateRequest.routing(getRequest.routing());
@@ -252,7 +252,7 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
                         percolateRequest.indices(Strings.splitStringByCommaToArray((String) value));
                     }
                 } else if ("type".equals(entry.getKey())) {
-                    percolateRequest.documentType((String) value);
+                    percolateRequest.setDefaultDocumentType((String) value);
                 } else if ("preference".equals(entry.getKey())) {
                     percolateRequest.preference((String) value);
                 } else if ("routing".equals(entry.getKey())) {
@@ -324,12 +324,12 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
         return this;
     }
 
-    public String documentType() {
-        return documentType;
+    public String getDefaultDocumentType() {
+        return defaultDocumentType;
     }
 
-    public MultiPercolateRequest documentType(String type) {
-        this.documentType = type;
+    public MultiPercolateRequest setDefaultDocumentType(String type) {
+        this.defaultDocumentType = type;
         return this;
     }
 
@@ -356,7 +356,7 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         indices = in.readStringArray();
-        documentType = in.readOptionalString();
+        defaultDocumentType = in.readOptionalString();
         indicesOptions = IndicesOptions.readIndicesOptions(in);
         int size = in.readVInt();
         for (int i = 0; i < size; i++) {
@@ -370,7 +370,7 @@ public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> 
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeStringArrayNullable(indices);
-        out.writeOptionalString(documentType);
+        out.writeOptionalString(defaultDocumentType);
         indicesOptions.writeIndicesOptions(out);
         out.writeVInt(requests.size());
         for (PercolateRequest request : requests) {

@@ -41,7 +41,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
         assertThat(request.requests().size(), equalTo(6));
         PercolateRequest percolateRequest = request.requests().get(0);
         assertThat(percolateRequest.indices()[0], equalTo("my-index1"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.strict()));
@@ -54,7 +54,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
         percolateRequest = request.requests().get(1);
         assertThat(percolateRequest.indices()[0], equalTo("my-index2"));
         assertThat(percolateRequest.indices()[1], equalTo("my-index3"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.lenient()));
@@ -67,7 +67,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
         percolateRequest = request.requests().get(2);
         assertThat(percolateRequest.indices()[0], equalTo("my-index4"));
         assertThat(percolateRequest.indices()[1], equalTo("my-index5"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.fromOptions(false, true, true, true)));
@@ -79,7 +79,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
 
         percolateRequest = request.requests().get(3);
         assertThat(percolateRequest.indices()[0], equalTo("my-index6"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.fromOptions(false, true, true, true)));
@@ -93,7 +93,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
 
         percolateRequest = request.requests().get(4);
         assertThat(percolateRequest.indices()[0], equalTo("my-index7"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.strict()));
@@ -107,7 +107,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
 
         percolateRequest = request.requests().get(5);
         assertThat(percolateRequest.indices()[0], equalTo("my-index8"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("primary"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.strict()));
@@ -122,13 +122,13 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
     public void testParseBulkRequests_defaults() throws Exception {
         byte[] data = Streams.copyToBytesFromClasspath("/org/elasticsearch/action/percolate/mpercolate2.json");
         MultiPercolateRequest request = new MultiPercolateRequest();
-        request.indices("my-index1").documentType("my-type1").indicesOptions(IndicesOptions.lenient());
+        request.indices("my-index1").setDefaultDocumentType("my-type1").indicesOptions(IndicesOptions.lenient());
         request.add(data, 0, data.length, false);
 
         assertThat(request.requests().size(), equalTo(3));
         PercolateRequest percolateRequest = request.requests().get(0);
         assertThat(percolateRequest.indices()[0], equalTo("my-index1"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.lenient()));
@@ -140,7 +140,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
 
         percolateRequest = request.requests().get(1);
         assertThat(percolateRequest.indices()[0], equalTo("my-index1"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.routing(), equalTo("my-routing-1"));
         assertThat(percolateRequest.preference(), equalTo("_local"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.lenient()));
@@ -152,7 +152,7 @@ public class MultiPercolatorRequestTests extends ElasticsearchTestCase {
 
         percolateRequest = request.requests().get(2);
         assertThat(percolateRequest.indices()[0], equalTo("my-index1"));
-        assertThat(percolateRequest.documentType(), equalTo("my-type1"));
+        assertThat(percolateRequest.getDefaultDocumentType(), equalTo("my-type1"));
         assertThat(percolateRequest.indicesOptions(), equalTo(IndicesOptions.lenient()));
         assertThat(percolateRequest.onlyCount(), equalTo(false));
         assertThat(percolateRequest.getRequest(), nullValue());

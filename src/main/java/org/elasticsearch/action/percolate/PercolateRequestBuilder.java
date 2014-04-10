@@ -55,8 +55,8 @@ public class PercolateRequestBuilder extends BroadcastOperationRequestBuilder<Pe
         return this;
     }
 
-    public PercolateRequestBuilder setDocumentType(String type) {
-        request.documentType(type);
+    public PercolateRequestBuilder setDefaultDocumentType(String type) {
+        request.setDefaultDocumentType(type);
         return this;
     }
 
@@ -131,14 +131,14 @@ public class PercolateRequestBuilder extends BroadcastOperationRequestBuilder<Pe
     /**
      * Adds a document that is percolated.
      */
-    public PercolateRequestBuilder setPercolateDoc(String type, String id, String parent, PercolateSourceBuilder.DocBuilder docBuilder) {
-        sourceBuilder().setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(type, id, parent, docBuilder));
+    public PercolateRequestBuilder addPercolateDoc(String type, String id, String parent, PercolateSourceBuilder.DocBuilder docBuilder) {
+        sourceBuilder().addDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(type, id, parent, docBuilder));
         return this;
     }
 
 
-    public PercolateRequestBuilder setPercolateDoc(PercolateSourceBuilder.DocBuilder docBuilder) {
-        sourceBuilder().setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder));
+    public PercolateRequestBuilder addPercolateDoc(PercolateSourceBuilder.DocBuilder docBuilder) {
+        sourceBuilder().addDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder));
         return this;
     }
 

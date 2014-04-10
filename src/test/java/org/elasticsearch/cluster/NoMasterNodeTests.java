@@ -86,9 +86,9 @@ public class NoMasterNodeTests extends ElasticsearchIntegrationTest {
 
         try {
             PercolateSourceBuilder percolateSource = new PercolateSourceBuilder();
-            percolateSource.setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder().setDoc(new HashMap())));
+            percolateSource.addDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder().setDoc(new HashMap())));
             client().preparePercolate()
-                    .setIndices("test").setDocumentType("type1")
+                    .setIndices("test").setDefaultDocumentType("type1")
                     .setSource(percolateSource).execute().actionGet();
             fail("Expected ClusterBlockException");
         } catch (ClusterBlockException e) {

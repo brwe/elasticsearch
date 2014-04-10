@@ -100,19 +100,19 @@ public class ConcurrentPercolatorTests extends ElasticsearchIntegrationTest {
                             }
                             PercolateResponse percolate;
                             if (count % 3 == 0) {
-                                percolate = client().preparePercolate().setIndices("index").setDocumentType("type")
+                                percolate = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                                         .setSource(bothFields)
                                         .execute().actionGet();
                                 assertThat(percolate.getMatches(), arrayWithSize(2));
                                 assertThat(convertFromTextArray(percolate.getMatches(), "index"), arrayContainingInAnyOrder("test1", "test2"));
                             } else if (count % 3 == 1) {
-                                percolate = client().preparePercolate().setIndices("index").setDocumentType("type")
+                                percolate = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                                         .setSource(onlyField2)
                                         .execute().actionGet();
                                 assertThat(percolate.getMatches(), arrayWithSize(1));
                                 assertThat(convertFromTextArray(percolate.getMatches(), "index"), arrayContaining("test1"));
                             } else {
-                                percolate = client().preparePercolate().setIndices("index").setDocumentType("type")
+                                percolate = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                                         .setSource(onlyField1)
                                         .execute().actionGet();
                                 assertThat(percolate.getMatches(), arrayWithSize(1));
@@ -240,7 +240,7 @@ public class ConcurrentPercolatorTests extends ElasticsearchIntegrationTest {
                             switch (x) {
                                 case 0:
                                     atLeastExpected = type1.get();
-                                    response = client().preparePercolate().setIndices("index").setDocumentType("type")
+                                    response = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                                             .setSource(onlyField1Doc).execute().actionGet();
                                     assertNoFailures(response);
                                     assertThat(response.getSuccessfulShards(), equalTo(response.getTotalShards()));
@@ -248,7 +248,7 @@ public class ConcurrentPercolatorTests extends ElasticsearchIntegrationTest {
                                     break;
                                 case 1:
                                     atLeastExpected = type2.get();
-                                    response = client().preparePercolate().setIndices("index").setDocumentType("type")
+                                    response = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                                             .setSource(onlyField2Doc).execute().actionGet();
                                     assertNoFailures(response);
                                     assertThat(response.getSuccessfulShards(), equalTo(response.getTotalShards()));
@@ -256,7 +256,7 @@ public class ConcurrentPercolatorTests extends ElasticsearchIntegrationTest {
                                     break;
                                 case 2:
                                     atLeastExpected = type3.get();
-                                    response = client().preparePercolate().setIndices("index").setDocumentType("type")
+                                    response = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                                             .setSource(field1AndField2Doc).execute().actionGet();
                                     assertNoFailures(response);
                                     assertThat(response.getSuccessfulShards(), equalTo(response.getTotalShards()));
@@ -365,7 +365,7 @@ public class ConcurrentPercolatorTests extends ElasticsearchIntegrationTest {
                     break;
                 }
                 int atLeastExpected = liveIds.size();
-                PercolateResponse response = client().preparePercolate().setIndices("index").setDocumentType("type")
+                PercolateResponse response = client().preparePercolate().setIndices("index").setDefaultDocumentType("type")
                         .setSource(percolateDoc).execute().actionGet();
                 assertThat(response.getShardFailures(), emptyArray());
                 assertThat(response.getSuccessfulShards(), equalTo(response.getTotalShards()));

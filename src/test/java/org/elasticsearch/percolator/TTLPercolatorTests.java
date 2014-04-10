@@ -97,7 +97,7 @@ public class TTLPercolatorTests extends ElasticsearchIntegrationTest {
         assertThat(response.getIndices().get("test").getTotal().getIndexing().getTotal().getIndexCount(), equalTo((long)test.dataCopies));
 
         PercolateResponse percolateResponse = client.preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder()
                         .startObject()
                         .startObject("doc")
@@ -137,7 +137,7 @@ public class TTLPercolatorTests extends ElasticsearchIntegrationTest {
         }, 5, TimeUnit.SECONDS), equalTo(true));
 
         percolateResponse = client.preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder()
                         .startObject()
                         .startObject("doc")

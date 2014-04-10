@@ -73,8 +73,8 @@ public class PercolatorFacetsAndAggregationsTests extends ElasticsearchIntegrati
         for (int i = 0; i < numQueries; i++) {
             String value = values[i % numUniqueQueries];
             PercolateRequestBuilder percolateRequestBuilder = client().preparePercolate()
-                    .setIndices("test").setDocumentType("type")
-                    .setPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", value).endObject()));
+                    .setIndices("test").setDefaultDocumentType("type")
+                    .addPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", value).endObject()));
 
             boolean useAggs = randomBoolean();
             if (useAggs) {

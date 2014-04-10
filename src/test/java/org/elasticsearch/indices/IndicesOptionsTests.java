@@ -804,7 +804,7 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
 
     private static PercolateRequestBuilder percolate(String... indices) {
         return client().preparePercolate().setIndices(indices)
-                .setPercolateDoc(docBuilder().setDoc("k", "v")).setDocumentType("type");
+                .addPercolateDoc(docBuilder().setDoc("k", "v")).setDefaultDocumentType("type");
     }
 
     private static MultiPercolateRequestBuilder mpercolate(IndicesOptions options, String... indices) {

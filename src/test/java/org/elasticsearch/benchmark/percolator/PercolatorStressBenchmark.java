@@ -114,7 +114,7 @@ public class PercolatorStressBenchmark {
                 expectedMatches = 1;
             }
             PercolateResponse percolate = client.preparePercolate()
-                    .setIndices("test").setDocumentType("type1")
+                    .setIndices("test").setDefaultDocumentType("type1")
                     .setSource(source)
                     .execute().actionGet();
             if (percolate.getMatches().length != expectedMatches) {

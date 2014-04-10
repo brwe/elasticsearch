@@ -63,7 +63,7 @@ public class RestMultiPercolateAction extends BaseRestHandler {
         MultiPercolateRequest multiPercolateRequest = new MultiPercolateRequest();
         multiPercolateRequest.indicesOptions(IndicesOptions.fromRequest(restRequest, multiPercolateRequest.indicesOptions()));
         multiPercolateRequest.indices(Strings.splitStringByCommaToArray(restRequest.param("index")));
-        multiPercolateRequest.documentType(restRequest.param("type"));
+        multiPercolateRequest.setDefaultDocumentType(restRequest.param("type"));
         multiPercolateRequest.add(RestActions.getRestContent(restRequest), restRequest.contentUnsafe(), allowExplicitIndex);
 
         client.multiPercolate(multiPercolateRequest, new RestToXContentListener<MultiPercolateResponse>(restChannel));

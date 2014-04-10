@@ -111,7 +111,7 @@ public class PercolateSourceBuilder implements ToXContent {
     /**
      * Add a document to run the percolate queries against.
      */
-    public PercolateSourceBuilder setDoc(PercolateDocumentBuilder docBuilder) {
+    public PercolateSourceBuilder addDoc(PercolateDocumentBuilder docBuilder) {
         if (this.documents == null) {
             documents = new ArrayList<PercolateDocumentBuilder>();
         }

@@ -84,7 +84,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
                 .execute().actionGet();
 
         PercolateResponse percolate = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc")
                         .field("field1", "value1")
                         .endObject().endObject())
@@ -99,7 +99,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
         assertThat(clusterHealth.isTimedOut(), equalTo(false));
 
         percolate = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc")
                         .field("field1", "value1")
                         .endObject().endObject())
@@ -126,7 +126,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
         assertThat(client().prepareCount().setTypes(PercolatorService.TYPE_NAME).setQuery(matchAllQuery()).execute().actionGet().getCount(), equalTo(1l));
 
         PercolateResponse percolate = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc")
                         .field("field1", "value1")
                         .endObject().endObject())
@@ -152,7 +152,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
         assertThat(client().prepareCount().setTypes(PercolatorService.TYPE_NAME).setQuery(matchAllQuery()).execute().actionGet().getCount(), equalTo(0l));
 
         percolate = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc")
                         .field("field1", "value1")
                         .endObject().endObject())
@@ -172,7 +172,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
         assertThat(client().prepareCount().setTypes(PercolatorService.TYPE_NAME).setQuery(matchAllQuery()).execute().actionGet().getCount(), equalTo(1l));
 
         percolate = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc")
                         .field("field1", "value1")
                         .endObject().endObject())
@@ -211,7 +211,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
 
         logger.info("--> Percolate doc with field1=95");
         PercolateResponse response = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc").field("field1", 95).endObject().endObject())
                 .execute().actionGet();
         assertMatchCount(response, 6l);
@@ -225,7 +225,7 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
 
         logger.info("--> Percolate doc with field1=100");
         response = client().preparePercolate()
-                .setIndices("test").setDocumentType("type1")
+                .setIndices("test").setDefaultDocumentType("type1")
                 .setSource(jsonBuilder().startObject().startObject("doc").field("field1", 100).endObject().endObject()).get();
 
         assertMatchCount(response, 1l);
@@ -325,14 +325,14 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
                                             client.preparePercolate()
                                                     .setPreference(preference)
                                                     .setGetRequest(Requests.getRequest("test").type("type").id("1"))
-                                                    .setIndices("test").setDocumentType("type")
+                                                    .setIndices("test").setDefaultDocumentType("type")
                                     );
                                 } else {
                                     builder.add(
                                             client.preparePercolate()
                                                     .setPreference(preference)
-                                                    .setIndices("test").setDocumentType("type")
-                                                    .setPercolateDoc(docBuilder().setDoc(doc)));
+                                                    .setIndices("test").setDefaultDocumentType("type")
+                                                    .addPercolateDoc(docBuilder().setDoc(doc)));
                                 }
                             }
 
@@ -349,14 +349,14 @@ public class RecoveryPercolatorTests extends ElasticsearchIntegrationTest {
                             PercolateResponse response;
                             if (randomBoolean()) {
                                 response = client.preparePercolate()
-                                        .setIndices("test").setDocumentType("type")
-                                        .setPercolateDoc(docBuilder().setDoc(doc))
+                                        .setIndices("test").setDefaultDocumentType("type")
+                                        .addPercolateDoc(docBuilder().setDoc(doc))
                                         .setPreference(preference)
                                         .execute().actionGet();
                             } else {
                                 response = client.preparePercolate()
                                         .setGetRequest(Requests.getRequest("test").type("type").id("1"))
-                                        .setIndices("test").setDocumentType("type")
+                                        .setIndices("test").setDefaultDocumentType("type")
                                         .setPreference(preference)
                                         .execute().actionGet();
                             }

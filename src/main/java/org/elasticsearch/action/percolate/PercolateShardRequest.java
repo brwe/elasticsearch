@@ -87,6 +87,6 @@ public class PercolateShardRequest extends BroadcastShardOperationRequest {
     }
 
     public String getDefaultDocumentType() {
-        return request.documentType();
+        return request.getDefaultDocumentType();
     }
 }

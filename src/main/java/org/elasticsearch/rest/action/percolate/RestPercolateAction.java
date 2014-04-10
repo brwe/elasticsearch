@@ -66,7 +66,7 @@ public class RestPercolateAction extends BaseRestHandler {
 
     void parseDocPercolate(PercolateRequest percolateRequest, RestRequest restRequest, RestChannel restChannel) {
         percolateRequest.indices(Strings.splitStringByCommaToArray(restRequest.param("index")));
-        percolateRequest.documentType(restRequest.param("type"));
+        percolateRequest.setDefaultDocumentType(restRequest.param("type"));
         percolateRequest.routing(restRequest.param("routing"));
         percolateRequest.preference(restRequest.param("preference"));
         percolateRequest.source(RestActions.getRestContent(restRequest), restRequest.contentUnsafe());
@@ -79,7 +79,7 @@ public class RestPercolateAction extends BaseRestHandler {
         String index = restRequest.param("index");
         String type = restRequest.param("type");
         percolateRequest.indices(Strings.splitStringByCommaToArray(restRequest.param("percolate_index", index)));
-        percolateRequest.documentType(restRequest.param("percolate_type", type));
+        percolateRequest.setDefaultDocumentType(restRequest.param("percolate_type", type));
 
         GetRequest getRequest = new GetRequest(index, type,
                 restRequest.param("id"));

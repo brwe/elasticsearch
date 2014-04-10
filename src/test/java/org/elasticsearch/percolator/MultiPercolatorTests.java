@@ -68,19 +68,19 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
 
         MultiPercolateResponse response = client().prepareMultiPercolate()
                 .add(client().preparePercolate()
-                        .setIndices("test").setDocumentType("type")
-                        .setPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", "b").endObject())))
+                        .setIndices("test").setDefaultDocumentType("type")
+                        .addPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", "b").endObject())))
                 .add(client().preparePercolate()
-                        .setIndices("test").setDocumentType("type")
-                        .setPercolateDoc(docBuilder().setDoc(yamlBuilder().startObject().field("field1", "c").endObject())))
+                        .setIndices("test").setDefaultDocumentType("type")
+                        .addPercolateDoc(docBuilder().setDoc(yamlBuilder().startObject().field("field1", "c").endObject())))
                 .add(client().preparePercolate()
-                        .setIndices("test").setDocumentType("type")
-                        .setPercolateDoc(docBuilder().setDoc(smileBuilder().startObject().field("field1", "b c").endObject())))
+                        .setIndices("test").setDefaultDocumentType("type")
+                        .addPercolateDoc(docBuilder().setDoc(smileBuilder().startObject().field("field1", "b c").endObject())))
                 .add(client().preparePercolate()
-                        .setIndices("test").setDocumentType("type")
-                        .setPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", "d").endObject())))
+                        .setIndices("test").setDefaultDocumentType("type")
+                        .addPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", "d").endObject())))
                 .add(client().preparePercolate() // non existing doc, so error element
-                        .setIndices("test").setDocumentType("type")
+                        .setIndices("test").setDefaultDocumentType("type")
                         .setGetRequest(Requests.getRequest("test").type("type").id("5")))
                 .execute().actionGet();
 
@@ -136,7 +136,7 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
             builder.add(
                     client().preparePercolate()
                             .setGetRequest(Requests.getRequest("test").type("type").id("1"))
-                            .setIndices("test").setDocumentType("type"));
+                            .setIndices("test").setDefaultDocumentType("type"));
         }
 
         MultiPercolateResponse response = builder.execute().actionGet();
@@ -153,7 +153,7 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
             builder.add(
                     client().preparePercolate()
                             .setGetRequest(Requests.getRequest("test").type("type").id("2"))
-                            .setIndices("test").setDocumentType("type"));
+                            .setIndices("test").setDefaultDocumentType("type"));
         }
 
         response = builder.execute().actionGet();
@@ -170,12 +170,12 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
             builder.add(
                     client().preparePercolate()
                             .setGetRequest(Requests.getRequest("test").type("type").id("2"))
-                            .setIndices("test").setDocumentType("type"));
+                            .setIndices("test").setDefaultDocumentType("type"));
         }
         builder.add(
                 client().preparePercolate()
                         .setGetRequest(Requests.getRequest("test").type("type").id("1"))
-                        .setIndices("test").setDocumentType("type"));
+                        .setIndices("test").setDefaultDocumentType("type"));
 
         response = builder.execute().actionGet();
         assertThat(response.items().length, equalTo(numPercolateRequest + 1));
@@ -204,8 +204,8 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
         for (int i = 0; i < numPercolateRequest; i++) {
             builder.add(
                     client().preparePercolate()
-                            .setIndices("test").setDocumentType("type")
-                            .setPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field", "a").endObject())));
+                            .setIndices("test").setDefaultDocumentType("type")
+                            .addPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field", "a").endObject())));
         }
 
         MultiPercolateResponse response = builder.execute().actionGet();
@@ -221,7 +221,7 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
         for (int i = 0; i < numPercolateRequest; i++) {
             builder.add(
                     client().preparePercolate()
-                            .setIndices("test").setDocumentType("type")
+                            .setIndices("test").setDefaultDocumentType("type")
                             .setSource("illegal json"));
         }
 
@@ -242,13 +242,13 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
         for (int i = 0; i < numPercolateRequest; i++) {
             builder.add(
                     client().preparePercolate()
-                            .setIndices("test").setDocumentType("type")
+                            .setIndices("test").setDefaultDocumentType("type")
                             .setSource("illegal json"));
         }
         builder.add(
                 client().preparePercolate()
-                        .setIndices("test").setDocumentType("type")
-                        .setPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field", "a").endObject())));
+                        .setIndices("test").setDefaultDocumentType("type")
+                        .addPercolateDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field", "a").endObject())));
 
         response = builder.execute().actionGet();
         assertThat(response.items().length, equalTo(numPercolateRequest + 1));
@@ -262,8 +262,8 @@ public class MultiPercolatorTests extends ElasticsearchIntegrationTest {
     public void testNestedMultiPercolation() throws IOException {
         initNestedIndexAndPercolation();
         MultiPercolateRequestBuilder mpercolate= client().prepareMultiPercolate();
-        mpercolate.add(client().preparePercolate().setPercolateDoc(new PercolateSourceBuilder.DocBuilder().setDoc(getNotMatchingNestedDoc())).setIndices("nestedindex").setDocumentType("company"));
-        mpercolate.add(client().preparePercolate().setPercolateDoc(new PercolateSourceBuilder.DocBuilder().setDoc(getMatchingNestedDoc())).setIndices("nestedindex").setDocumentType("company"));
+        mpercolate.add(client().preparePercolate().addPercolateDoc(new PercolateSourceBuilder.DocBuilder().setDoc(getNotMatchingNestedDoc())).setIndices("nestedindex").setDefaultDocumentType("company"));
+        mpercolate.add(client().preparePercolate().addPercolateDoc(new PercolateSourceBuilder.DocBuilder().setDoc(getMatchingNestedDoc())).setIndices("nestedindex").setDefaultDocumentType("company"));
         MultiPercolateResponse response = mpercolate.get();
         assertEquals(response.getItems()[0].getResponse().getMatches().length, 0);
         assertEquals(response.getItems()[1].getResponse().getMatches().length, 1);

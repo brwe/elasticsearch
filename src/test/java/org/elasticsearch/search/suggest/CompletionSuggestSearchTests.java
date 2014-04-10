@@ -120,7 +120,7 @@ public class CompletionSuggestSearchTests extends ElasticsearchIntegrationTest {
 
         refresh();
 
-        PercolateResponse response = client().preparePercolate().setIndices(INDEX).setDocumentType(TYPE)
+        PercolateResponse response = client().preparePercolate().setIndices(INDEX).setDefaultDocumentType(TYPE)
                 .setGetRequest(Requests.getRequest(INDEX).type(TYPE).id("1"))
                 .execute().actionGet();
         assertThat(response.getCount(), equalTo(1l));

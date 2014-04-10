@@ -43,7 +43,7 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
  */
 public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest> {
 
-    String documentType;
+    String defaultDocumentType;
     private String routing;
     private String preference;
     private GetRequest getRequest;
@@ -63,12 +63,12 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
         return documents;
     }
 
-    public void documentType(String type) {
-        this.documentType = type;
+    public void setDefaultDocumentType(String type) {
+        this.defaultDocumentType = type;
     }
 
-    public String documentType() {
-        return documentType;
+    public String getDefaultDocumentType() {
+        return defaultDocumentType;
     }
 
     public static class PercolateDocument {
@@ -125,7 +125,7 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
     public PercolateRequest(PercolateRequest request, List<PercolateDocument> documents) {
         super(request.indices());
         operationThreading(request.operationThreading());
-        this.documentType = request.documentType();
+        this.defaultDocumentType = request.getDefaultDocumentType();
         this.routing = request.routing();
         this.preference = request.preference();
         this.source = request.source;
@@ -242,7 +242,7 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
         if (getRequest != null && getRequest.fields() != null) {
             validationException = addValidationError("get fields option isn't supported via percolate request", validationException);
         }
-        if (documentType == null) {
+        if (defaultDocumentType == null) {
             if (documents != null) {
                 for (PercolateDocument doc : documents) {
                     if (doc.type == null) {
@@ -263,7 +263,7 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
         for (int i = 0; i < numDocs; i++) {
             documents.add(new PercolateDocument().readFrom(in));
         }
-        documentType = in.readOptionalString();
+        defaultDocumentType = in.readOptionalString();
         routing = in.readOptionalString();
         preference = in.readOptionalString();
         unsafe = false;
@@ -287,7 +287,7 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
         } else {
             out.writeVInt(0);
         }
-        out.writeOptionalString(documentType);
+        out.writeOptionalString(defaultDocumentType);
         out.writeOptionalString(routing);
         out.writeOptionalString(preference);
         out.writeBytesReference(source);
