@@ -32,6 +32,7 @@ import org.elasticsearch.index.mapper.ParsedDocument;
 import org.elasticsearch.index.mapper.internal.UidFieldMapper;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Implementation of {@link PercolatorIndex} that can only hold a single Lucene document
@@ -45,8 +46,9 @@ class SingleDocumentPercolatorIndex implements PercolatorIndex {
         this.cache = cache;
     }
 
-    @Override
-    public void prepare(PercolateContext context, ParsedDocument parsedDocument) {
+    public void prepare(PercolateContext context, List<ParsedDocument> parsedDocumentList) {
+        //TODO: Here be a for loop
+        ParsedDocument parsedDocument = parsedDocumentList.get(0);
         MemoryIndex memoryIndex = cache.get();
         for (IndexableField field : parsedDocument.rootDoc().getFields()) {
             if (!field.fieldType().indexed() && field.name().equals(UidFieldMapper.NAME)) {
@@ -61,7 +63,7 @@ class SingleDocumentPercolatorIndex implements PercolatorIndex {
                 throw new ElasticsearchException("Failed to create token stream", e);
             }
         }
-        context.initialize(new DocEngineSearcher(memoryIndex), parsedDocument);
+        context.initialize(new DocEngineSearcher(memoryIndex), parsedDocumentList);
     }
 
     private class DocEngineSearcher implements Engine.Searcher {

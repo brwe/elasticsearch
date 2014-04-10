@@ -21,6 +21,8 @@ package org.elasticsearch.percolator;
 
 import org.elasticsearch.index.mapper.ParsedDocument;
 
+import java.util.List;
+
 /**
  * Abstraction on how to index the percolator document.
  */
@@ -32,6 +34,7 @@ interface PercolatorIndex {
      * @param context  Initialized with document related properties for fetch phase.
      * @param document Document that is percolated. Can contain several documents.
      * */
-    void prepare(PercolateContext context, ParsedDocument document);
+    void prepare(PercolateContext context, List<ParsedDocument> document);
+
 
 }

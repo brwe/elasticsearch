@@ -60,6 +60,8 @@ import org.elasticsearch.search.warmer.IndexWarmersMetaData;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
+import java.util.HashMap;
+
 import static org.elasticsearch.action.percolate.PercolateSourceBuilder.docBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -802,8 +804,7 @@ public class IndicesOptionsTests extends ElasticsearchIntegrationTest {
 
     private static PercolateRequestBuilder percolate(String... indices) {
         return client().preparePercolate().setIndices(indices)
-                .setSource(new PercolateSourceBuilder().setDoc(docBuilder().setDoc("k", "v")))
-                .setDocumentType("type");
+                .setPercolateDoc(docBuilder().setDoc("k", "v")).setDocumentType("type");
     }
 
     private static MultiPercolateRequestBuilder mpercolate(IndicesOptions options, String... indices) {

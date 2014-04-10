@@ -48,18 +48,15 @@ public class PercolateRequestBuilder extends BroadcastOperationRequestBuilder<Pe
     }
 
     /**
-     * Sets the type of the document to percolate.
-     */
-    public PercolateRequestBuilder setDocumentType(String type) {
-        request.documentType(type);
-        return this;
-    }
-
-    /**
      * A comma separated list of routing values to control the shards the search will be executed on.
      */
     public PercolateRequestBuilder setRouting(String routing) {
         request.routing(routing);
+        return this;
+    }
+
+    public PercolateRequestBuilder setDocumentType(String type) {
+        request.documentType(type);
         return this;
     }
 
@@ -132,11 +129,16 @@ public class PercolateRequestBuilder extends BroadcastOperationRequestBuilder<Pe
     }
 
     /**
-     * Sets a query to reduce the number of percolate queries to be evaluated and score the queries that match based
-     * on this query.
+     * Adds a document that is percolated.
      */
+    public PercolateRequestBuilder setPercolateDoc(String type, String id, String parent, PercolateSourceBuilder.DocBuilder docBuilder) {
+        sourceBuilder().setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(type, id, parent, docBuilder));
+        return this;
+    }
+
+
     public PercolateRequestBuilder setPercolateDoc(PercolateSourceBuilder.DocBuilder docBuilder) {
-        sourceBuilder().setDoc(docBuilder);
+        sourceBuilder().setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder));
         return this;
     }
 

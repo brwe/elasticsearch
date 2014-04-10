@@ -32,6 +32,8 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.action.ValidateActions.addValidationError;
@@ -41,7 +43,7 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
  */
 public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest> {
 
-    private String documentType;
+    String documentType;
     private String routing;
     private String preference;
     private GetRequest getRequest;
@@ -50,33 +52,86 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
     private BytesReference source;
     private boolean unsafe;
 
-    private BytesReference docSource;
+    private List<PercolateDocument> documents;
+
 
     // Used internally in order to compute tookInMillis, TransportBroadcastOperationAction itself doesn't allow
     // to hold it temporarily in an easy way
     long startTime;
 
-    public PercolateRequest() {
+    public List<PercolateDocument> docs() {
+        return documents;
     }
 
-    public PercolateRequest(PercolateRequest request, BytesReference docSource) {
-        super(request.indices());
-        operationThreading(request.operationThreading());
-        this.documentType = request.documentType();
-        this.routing = request.routing();
-        this.preference = request.preference();
-        this.source = request.source;
-        this.docSource = docSource;
-        this.onlyCount = request.onlyCount;
-        this.startTime = request.startTime;
+    public void documentType(String type) {
+        this.documentType = type;
     }
 
     public String documentType() {
         return documentType;
     }
 
-    public void documentType(String type) {
-        this.documentType = type;
+    public static class PercolateDocument {
+        String type;
+        String id;
+        String parent;
+        private BytesReference docSource;
+
+        public PercolateDocument () {
+        }
+
+        public PercolateDocument (String type, String id, String parent, BytesReference docSource) {
+            this.type = type;
+            this.id = id;
+            this.parent = parent;
+            this.docSource = docSource;
+        }
+
+        public PercolateDocument readFrom(StreamInput in) throws IOException {
+            this.type = in.readOptionalString();
+            this.id = in.readOptionalString();
+            this.parent = in.readOptionalString();
+            this.docSource = in.readBytesReference();
+            return this;
+        }
+
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeOptionalString(this.type);
+            out.writeOptionalString(this.id);
+            out.writeOptionalString(this.parent);
+            out.writeBytesReference(this.docSource);
+        }
+
+        public String type() {
+            return type;
+        }
+
+        public BytesReference getSource() {
+            return docSource;
+        }
+
+        public String id() {
+            return id;
+        }
+
+        public String parent() {
+            return parent;
+        }
+    }
+
+    public PercolateRequest() {
+    }
+
+    public PercolateRequest(PercolateRequest request, List<PercolateDocument> documents) {
+        super(request.indices());
+        operationThreading(request.operationThreading());
+        this.documentType = request.documentType();
+        this.routing = request.routing();
+        this.preference = request.preference();
+        this.source = request.source;
+        this.onlyCount = request.onlyCount;
+        this.startTime = request.startTime;
+        this.documents = documents;
     }
 
     public String routing() {
@@ -178,21 +233,23 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
         this.onlyCount = onlyCount;
     }
 
-    BytesReference docSource() {
-        return docSource;
-    }
-
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = super.validate();
-        if (documentType == null) {
-            validationException = addValidationError("type is missing", validationException);
-        }
         if (source == null && getRequest == null) {
             validationException = addValidationError("source or get is missing", validationException);
         }
         if (getRequest != null && getRequest.fields() != null) {
             validationException = addValidationError("get fields option isn't supported via percolate request", validationException);
+        }
+        if (documentType == null) {
+            if (documents != null) {
+                for (PercolateDocument doc : documents) {
+                    if (doc.type == null) {
+                        validationException = addValidationError("type missing for a docment", validationException);
+                    }
+                }
+            }
         }
         return validationException;
     }
@@ -201,12 +258,16 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         startTime = in.readVLong();
-        documentType = in.readString();
+        int numDocs = in.readVInt();
+        documents = new ArrayList<PercolateDocument>();
+        for (int i = 0; i < numDocs; i++) {
+            documents.add(new PercolateDocument().readFrom(in));
+        }
+        documentType = in.readOptionalString();
         routing = in.readOptionalString();
         preference = in.readOptionalString();
         unsafe = false;
         source = in.readBytesReference();
-        docSource = in.readBytesReference();
         if (in.readBoolean()) {
             getRequest = new GetRequest(null);
             getRequest.readFrom(in);
@@ -218,11 +279,18 @@ public class PercolateRequest extends BroadcastOperationRequest<PercolateRequest
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeVLong(startTime);
-        out.writeString(documentType);
+        if (documents != null) {
+            out.writeVInt(documents.size());
+            for (PercolateDocument doc : documents) {
+                doc.writeTo(out);
+            }
+        } else {
+            out.writeVInt(0);
+        }
+        out.writeOptionalString(documentType);
         out.writeOptionalString(routing);
         out.writeOptionalString(preference);
         out.writeBytesReference(source);
-        out.writeBytesReference(docSource);
         if (getRequest != null) {
             out.writeBoolean(true);
             getRequest.writeTo(out);

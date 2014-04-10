@@ -33,7 +33,9 @@ import org.junit.Test;
 
 import java.util.HashMap;
 
+import static org.elasticsearch.action.percolate.PercolateSourceBuilder.docBuilder;
 import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 
@@ -84,7 +86,7 @@ public class NoMasterNodeTests extends ElasticsearchIntegrationTest {
 
         try {
             PercolateSourceBuilder percolateSource = new PercolateSourceBuilder();
-            percolateSource.percolateDocument().setDoc(new HashMap());
+            percolateSource.setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder().setDoc(new HashMap())));
             client().preparePercolate()
                     .setIndices("test").setDocumentType("type1")
                     .setSource(percolateSource).execute().actionGet();

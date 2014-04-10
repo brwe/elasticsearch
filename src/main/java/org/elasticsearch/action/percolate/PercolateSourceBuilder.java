@@ -36,6 +36,7 @@ import org.elasticsearch.search.sort.ScoreSortBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,53 @@ import java.util.Map;
  */
 public class PercolateSourceBuilder implements ToXContent {
 
-    private DocBuilder docBuilder;
+    public static class PercolateDocumentBuilder {
+        private DocBuilder docBuilder;
+        String type;
+        String id;
+        String parent;
+
+        public PercolateDocumentBuilder(String type, String id, String parent, PercolateSourceBuilder.DocBuilder docBuilder) {
+            this.type = type;
+            this.id = id;
+            this.parent = parent;
+            this.docBuilder = docBuilder;
+        }
+
+        public PercolateDocumentBuilder(DocBuilder docBuilder) {
+            this.type = null;
+            this.id = null;
+            this.parent = null;
+            this.docBuilder = docBuilder;
+        }
+
+        public PercolateDocumentBuilder setType(String type) {
+            this.type = type;
+            return this;
+        }
+
+        public void toXContent(XContentBuilder builder, Params params) throws IOException {
+            builder.startObject();
+            if (type != null) {
+                builder.field("type", type);
+            }
+            if (id != null) {
+                builder.field("id", id);
+            }
+            if (parent != null) {
+                builder.field("parent", parent);
+            }
+
+            if (docBuilder != null) {
+                docBuilder.toXContent(builder, params);
+            }
+            builder.endObject();
+        }
+    }
+
+    List <PercolateDocumentBuilder> documents;
+
+    private String defaultType;
     private QueryBuilder queryBuilder;
     private FilterBuilder filterBuilder;
     private Integer size;
@@ -56,22 +103,19 @@ public class PercolateSourceBuilder implements ToXContent {
     private List<FacetBuilder> facets;
     private List<AggregationBuilder> aggregations;
 
-    public DocBuilder percolateDocument() {
-        if (docBuilder == null) {
-            docBuilder = new DocBuilder();
-        }
-        return docBuilder;
-    }
 
-    public DocBuilder getDoc() {
-        return docBuilder;
+    public PercolateSourceBuilder setDefaultType (String defaultType) {
+        this.defaultType = defaultType;
+        return this;
     }
-
     /**
-     * Sets the document to run the percolate queries against.
+     * Add a document to run the percolate queries against.
      */
-    public PercolateSourceBuilder setDoc(DocBuilder docBuilder) {
-        this.docBuilder = docBuilder;
+    public PercolateSourceBuilder setDoc(PercolateDocumentBuilder docBuilder) {
+        if (this.documents == null) {
+            documents = new ArrayList<PercolateDocumentBuilder>();
+        }
+        documents.add(docBuilder);
         return this;
     }
 
@@ -171,6 +215,7 @@ public class PercolateSourceBuilder implements ToXContent {
     }
 
     public BytesReference buildAsBytes(XContentType contentType) throws SearchSourceBuilderException {
+
         try {
             XContentBuilder builder = XContentFactory.contentBuilder(contentType);
             toXContent(builder, ToXContent.EMPTY_PARAMS);
@@ -178,14 +223,24 @@ public class PercolateSourceBuilder implements ToXContent {
         } catch (Exception e) {
             throw new SearchSourceBuilderException("Failed to build search source", e);
         }
+
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        if (docBuilder != null) {
-            docBuilder.toXContent(builder, params);
+        if (documents != null  && documents.size() > 0) {
+            builder.startArray("docs");
+            for (PercolateDocumentBuilder doc : documents) {
+                if (doc.type == null) {
+                    doc.type = defaultType;
+                }
+                doc.toXContent(builder, params);
+
+            }
+            builder.endArray();
         }
+
         if (queryBuilder != null) {
             builder.field("query");
             queryBuilder.toXContent(builder, params);
@@ -280,10 +335,13 @@ public class PercolateSourceBuilder implements ToXContent {
             if (contentType == builder.contentType()) {
                 builder.rawField("doc", doc);
             } else {
-                try (XContentParser parser = XContentFactory.xContent(contentType).createParser(doc)) {
+                XContentParser parser = XContentFactory.xContent(contentType).createParser(doc);
+                try {
                     parser.nextToken();
                     builder.field("doc");
                     builder.copyCurrentStructure(parser);
+                } finally {
+                    parser.close();
                 }
             }
             return builder;

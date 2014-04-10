@@ -31,6 +31,7 @@ import org.apache.lucene.util.CloseableThreadLocal;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.ElasticsearchParseException;
+import org.elasticsearch.action.percolate.PercolateRequest;
 import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.percolate.PercolateShardRequest;
 import org.elasticsearch.action.percolate.PercolateShardResponse;
@@ -143,7 +144,7 @@ public class PercolatorService extends AbstractComponent {
             }
         };
         single = new SingleDocumentPercolatorIndex(cache);
-        multi = new MultiDocumentPercolatorIndex(cache);
+        multi = new MultiDocumentPercolatorIndex();
 
         percolatorTypes = new ByteObjectOpenHashMap<>(6);
         percolatorTypes.put(countPercolator.id(), countPercolator);
@@ -173,13 +174,13 @@ public class PercolatorService extends AbstractComponent {
                 request, searchShardTarget, indexShard, percolateIndexService, cacheRecycler, pageCacheRecycler, bigArrays, scriptService
         );
         try {
-            ParsedDocument parsedDocument = parseRequest(percolateIndexService, request, context);
+            List<ParsedDocument> parsedDocument = parseRequest(percolateIndexService, request, context);
             if (context.percolateQueries().isEmpty()) {
                 return new PercolateShardResponse(context, request.index(), request.shardId());
             }
 
-            if (request.docSource() != null && request.docSource().length() != 0) {
-                parsedDocument = parseFetchedDoc(context, request.docSource(), percolateIndexService, request.documentType());
+            if (request.docs() != null && request.docs().size() != 0) {
+                parsedDocument = parseFetchedDoc(context, request.docs(), request.getDefaultDocumentType(), percolateIndexService);
             } else if (parsedDocument == null) {
                 throw new ElasticsearchIllegalArgumentException("Nothing to percolate");
             }
@@ -202,7 +203,7 @@ public class PercolatorService extends AbstractComponent {
 
             // parse the source either into one MemoryIndex, if it is a single document or index multiple docs if nested
             PercolatorIndex percolatorIndex;
-            if (indexShard.mapperService().documentMapper(request.documentType()).hasNestedObjects()) {
+            if (parsedDocument.size() > 2 || (indexShard.mapperService().documentMapper(parsedDocument.get(0).type()).hasNestedObjects())) {
                 percolatorIndex = multi;
             } else {
                 percolatorIndex = single;
@@ -225,14 +226,18 @@ public class PercolatorService extends AbstractComponent {
             percolatorIndex.prepare(context, parsedDocument);
 
             indexShard.readAllowed();
-            return action.doPercolate(request, context);
+            SearchContext.setCurrent(context);
+            PercolateShardResponse response = action.doPercolate(request, context);
+            SearchContext.current().clearReleasables();
+            SearchContext.removeCurrent();
+            return response;
         } finally {
             context.release();
             shardPercolateService.postPercolate(System.nanoTime() - startTime);
         }
     }
 
-    private ParsedDocument parseRequest(IndexService documentIndexService, PercolateShardRequest request, PercolateContext context) throws ElasticsearchException {
+    private List<ParsedDocument> parseRequest(IndexService documentIndexService, PercolateShardRequest request, PercolateContext context) throws ElasticsearchException {
         BytesReference source = request.source();
         if (source == null || source.length() == 0) {
             return null;
@@ -243,7 +248,7 @@ public class PercolatorService extends AbstractComponent {
         Map<String, ? extends SearchParseElement> facetElements = facetPhase.parseElements();
         Map<String, ? extends SearchParseElement> aggregationElements = aggregationPhase.parseElements();
 
-        ParsedDocument doc = null;
+        List<ParsedDocument> docs = null;
         XContentParser parser = null;
 
         // Some queries (function_score query when for decay functions) rely on a SearchContext being set:
@@ -262,15 +267,76 @@ public class PercolatorService extends AbstractComponent {
                     // we need to check the "doc" here, so the next token will be START_OBJECT which is
                     // the actual document starting
                     if ("doc".equals(currentFieldName)) {
-                        if (doc != null) {
+                        if (docs != null) {
                             throw new ElasticsearchParseException("Either specify doc or get, not both");
                         }
+                        docs = new ArrayList<ParsedDocument>();
 
                         MapperService mapperService = documentIndexService.mapperService();
-                        DocumentMapper docMapper = mapperService.documentMapperWithAutoCreate(request.documentType());
-                        doc = docMapper.parse(source(parser).type(request.documentType()).flyweight(true));
+                        DocumentMapper docMapper = mapperService.documentMapperWithAutoCreate(request.getDefaultDocumentType());
+                        docs.add(docMapper.parse(source(parser).type(request.getDefaultDocumentType()).flyweight(true)));
                         // the document parsing exists the "doc" object, so we need to set the new current field.
                         currentFieldName = parser.currentName();
+                    }
+                    if ("docs".equals(currentFieldName)) {
+                        if (docs != null) {
+                            throw new ElasticsearchParseException("Either specify doc(s) or get, not both");
+                        }
+                        docs = new ArrayList<ParsedDocument>();
+                        token = parser.nextToken();
+
+                        if (token != XContentParser.Token.START_ARRAY) {
+                            //exp
+                        }
+                        token = parser.nextToken();
+                        while (token != XContentParser.Token.END_ARRAY) {
+                            //first, parse the meta data
+                            if (token != XContentParser.Token.START_OBJECT) {
+                                //exp
+                            }
+
+                            String type = null;
+                            String id = null;
+                            String parent = null;
+                            ParsedDocument doc;
+                            BytesStreamOutput bStream = new BytesStreamOutput();
+                            XContentBuilder builder = null;
+                            while (token != XContentParser.Token.END_OBJECT) {
+                                if (token == XContentParser.Token.FIELD_NAME) {
+                                    currentFieldName = parser.currentName();
+                                } else {
+                                    if (currentFieldName.equals("type")) {
+                                        type = parser.text();
+                                    }
+                                    if (currentFieldName.equals("parent")) {
+                                        parent = parser.text();
+                                    }
+                                    if (currentFieldName.equals("id")) {
+                                        id = parser.text();
+                                    }
+                                    if (currentFieldName.equals("doc")) {
+                                        builder = XContentFactory.contentBuilder(XContentType.SMILE, bStream);
+                                        builder.copyCurrentStructure(parser);
+                                    }
+                                }
+                                token = parser.nextToken();
+
+                            }
+                            if (type == null) {
+                                type = request.getDefaultDocumentType();
+                            }
+                            if (type == null) {
+                                throw new ElasticsearchException("type missing!");
+                            }
+                            //now parse the document
+                            if (builder != null) {
+                                MapperService mapperService = documentIndexService.mapperService();
+                                DocumentMapper docMapper = mapperService.documentMapperWithAutoCreate(type);
+                                docs.add(docMapper.parse(source(builder.bytes()).type(type).flyweight(true).parent(parent).id(id)));
+                            }
+                            token = parser.nextToken();
+                            currentFieldName = "";
+                        }
                     }
                 } else if (token == XContentParser.Token.START_OBJECT) {
                     SearchParseElement element = hlElements.get(currentFieldName);
@@ -334,7 +400,7 @@ public class PercolatorService extends AbstractComponent {
                             XContentBuilder builder = XContentFactory.contentBuilder(XContentType.SMILE, bStream);
                             builder.copyCurrentStructure(parser);
                             builder.close();
-                            doc.setSource(bStream.bytes());
+                            docs.get(0).setSource(bStream.bytes());
                             break;
                         } else {
                             parser.skipChildren();
@@ -355,7 +421,7 @@ public class PercolatorService extends AbstractComponent {
             }
         }
 
-        return doc;
+        return docs;
     }
 
     private void parseSort(XContentParser parser, PercolateContext context) throws Exception {
@@ -368,31 +434,39 @@ public class PercolatorService extends AbstractComponent {
         }
     }
 
-    private ParsedDocument parseFetchedDoc(PercolateContext context, BytesReference fetchedDoc, IndexService documentIndexService, String type) {
-        ParsedDocument doc = null;
+    private List<ParsedDocument> parseFetchedDoc(PercolateContext context, List<PercolateRequest.PercolateDocument> fetchedDoc, String defaultDocumentType, IndexService documentIndexService) {
+        List<ParsedDocument> docs = new ArrayList<ParsedDocument>();
         XContentParser parser = null;
-        try {
-            parser = XContentFactory.xContent(fetchedDoc).createParser(fetchedDoc);
-            MapperService mapperService = documentIndexService.mapperService();
-            DocumentMapper docMapper = mapperService.documentMapperWithAutoCreate(type);
-            doc = docMapper.parse(source(parser).type(type).flyweight(true));
+        int docCounter = 0;
+        for (PercolateRequest.PercolateDocument doc : fetchedDoc) {
+            try {
 
-            if (context.highlight() != null) {
-                doc.setSource(fetchedDoc);
+                parser = XContentFactory.xContent(doc.getSource()).createParser(doc.getSource());
+                MapperService mapperService = documentIndexService.mapperService();
+                String documentType = doc.type() == null? defaultDocumentType : doc.type();
+                DocumentMapper docMapper = mapperService.documentMapperWithAutoCreate(documentType);
+                //TODO: Here loop over all docs, The input fetchedDoc should then also be an array
+                docs.add(docMapper.parse(source(parser).type(doc.type()).flyweight(true).id(doc.id()).parent(doc.parent())));
+
+                if (context.highlight() != null) {
+                    docs.get(docCounter).setSource(doc.getSource());
+                }
+
+            } catch (Throwable e) {
+                throw new ElasticsearchParseException("failed to parse request", e);
+            } finally {
+                if (parser != null) {
+                    parser.close();
+                }
             }
-        } catch (Throwable e) {
-            throw new ElasticsearchParseException("failed to parse request", e);
-        } finally {
-            if (parser != null) {
-                parser.close();
-            }
+            docCounter ++;
         }
 
-        if (doc == null) {
+        if (docs == null) {
             throw new ElasticsearchParseException("No doc to percolate in the request");
         }
 
-        return doc;
+        return docs;
     }
 
     public void close() {
@@ -535,7 +609,7 @@ public class PercolatorService extends AbstractComponent {
                     context.hitContext().cache().clear();
                 }
                 try {
-                    context.docSearcher().search(entry.getValue(), collector);
+                    context.docSearcher().search(entry.getValue().clone(), collector);
                 } catch (Throwable e) {
                     logger.debug("[" + entry.getKey() + "] failed to execute query", e);
                     throw new PercolateException(context.indexShard().shardId(), "failed to execute", e);

@@ -155,10 +155,7 @@ public class TransportShardMultiPercolateAction extends TransportShardSingleOper
             for (int i = 0; i < size; i++) {
                 int slot = in.readVInt();
                 PercolateShardRequest shardRequest = new PercolateShardRequest(index(), shardId);
-                shardRequest.documentType(in.readString());
-                shardRequest.source(in.readBytesReference());
-                shardRequest.docSource(in.readBytesReference());
-                shardRequest.onlyCount(in.readBoolean());
+                shardRequest.readFrom(in);
                 Item item = new Item(slot, shardRequest);
                 items.add(item);
             }
@@ -172,10 +169,7 @@ public class TransportShardMultiPercolateAction extends TransportShardSingleOper
             out.writeVInt(items.size());
             for (Item item : items) {
                 out.writeVInt(item.slot);
-                out.writeString(item.request.documentType());
-                out.writeBytesReference(item.request.source());
-                out.writeBytesReference(item.request.docSource());
-                out.writeBoolean(item.request.onlyCount());
+                item.request.writeTo(out);
             }
         }
 

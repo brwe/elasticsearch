@@ -26,16 +26,15 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.index.shard.ShardId;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  */
 public class PercolateShardRequest extends BroadcastShardOperationRequest {
 
-    private String documentType;
-    private BytesReference source;
-    private BytesReference docSource;
-    private boolean onlyCount;
 
+    private boolean onlyCount;
+    private PercolateRequest request;
     public PercolateShardRequest() {
     }
 
@@ -45,46 +44,23 @@ public class PercolateShardRequest extends BroadcastShardOperationRequest {
 
     public PercolateShardRequest(String index, int shardId, PercolateRequest request) {
         super(index, shardId, request);
-        this.documentType = request.documentType();
-        this.source = request.source();
-        this.docSource = request.docSource();
+        this.request = request;
         this.onlyCount = request.onlyCount();
     }
 
     public PercolateShardRequest(ShardId shardId, PercolateRequest request) {
         super(shardId.index().name(), shardId.id());
-        this.documentType = request.documentType();
-        this.source = request.source();
-        this.docSource = request.docSource();
+        this.request = request;
         this.onlyCount = request.onlyCount();
     }
 
-    public String documentType() {
-        return documentType;
-    }
-
     public BytesReference source() {
-        return source;
+        return request.source();
     }
 
-    public BytesReference docSource() {
-        return docSource;
-    }
 
     public boolean onlyCount() {
         return onlyCount;
-    }
-
-    void documentType(String documentType) {
-        this.documentType = documentType;
-    }
-
-    void source(BytesReference source) {
-        this.source = source;
-    }
-
-    void docSource(BytesReference docSource) {
-        this.docSource = docSource;
     }
 
     void onlyCount(boolean onlyCount) {
@@ -94,19 +70,23 @@ public class PercolateShardRequest extends BroadcastShardOperationRequest {
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        documentType = in.readString();
-        source = in.readBytesReference();
-        docSource = in.readBytesReference();
+        request = new PercolateRequest();
+        request.readFrom(in);
         onlyCount = in.readBoolean();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeString(documentType);
-        out.writeBytesReference(source);
-        out.writeBytesReference(docSource);
+        request.writeTo(out);
         out.writeBoolean(onlyCount);
     }
 
+    public List<PercolateRequest.PercolateDocument> docs() {
+        return request.docs();
+    }
+
+    public String getDefaultDocumentType() {
+        return request.documentType();
+    }
 }

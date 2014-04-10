@@ -26,6 +26,7 @@ import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
 import org.elasticsearch.action.count.CountResponse;
+import org.elasticsearch.action.percolate.PercolateRequestBuilder;
 import org.elasticsearch.action.percolate.PercolateResponse;
 import org.elasticsearch.action.percolate.PercolateSourceBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -250,6 +251,187 @@ public class PercolatorTests extends ElasticsearchIntegrationTest {
         assertMatchCount(response, 1l);
         assertThat(response.getMatches(), arrayWithSize(1));
         assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("1"));
+    }
+
+    @Test
+    public void testDefaultTypeOverwritten() throws Exception {
+        XContentBuilder cmapping = XContentFactory.jsonBuilder().startObject().startObject("_parent").field("type", "ptype").endObject().endObject();
+        XContentBuilder pmapping = XContentFactory.jsonBuilder().startObject().startObject("pfield").field("type", "string").endObject().endObject();
+        client().admin().indices().prepareCreate("test").setSettings(
+                ImmutableSettings.settingsBuilder()
+                        .put("index.number_of_shards", 1)
+                        .put("index.number_of_replicas", 0)
+                        .build()
+        ).addMapping("ctype", cmapping).addMapping("ptype", pmapping).execute().actionGet();
+        ensureGreen();
+        // introduce the doc
+        XContentBuilder pdoc = XContentFactory.jsonBuilder().startObject()
+                .field("pfield", "foo")
+                .endObject();
+
+        // introduce the doc
+        XContentBuilder cdoc1 = XContentFactory.jsonBuilder().startObject()
+                .field("cfield", "bar")
+                .endObject();
+        // introduce the doc
+        XContentBuilder cdoc2 = XContentFactory.jsonBuilder().startObject()
+                .field("cfield", "bra")
+                .endObject();
+
+        // add has parent query...
+        client().prepareIndex("test", PercolatorService.TYPE_NAME, "test1")
+                .setSource(XContentFactory.jsonBuilder().startObject().field("query", hasParentQuery("ptype", matchQuery("pfield", "foo"))).endObject())
+                .execute().actionGet();
+
+
+        refresh();
+
+        PercolateRequestBuilder requestBuilder = client().preparePercolate();
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        requestBuilder.setDocumentType("non_existing_type");
+        PercolateResponse response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+        // add has child query...
+        client().prepareIndex("test", PercolatorService.TYPE_NAME, "test1")
+                .setSource(XContentFactory.jsonBuilder().startObject().field("query", hasChildQuery("ctype", matchQuery("cfield", "bar"))).endObject())
+                .execute().actionGet();
+
+        refresh();
+
+        requestBuilder = client().preparePercolate();
+        requestBuilder.setDocumentType("non_existing_type");
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+        requestBuilder = client().preparePercolate();
+        requestBuilder.setDocumentType("ptype");
+        requestBuilder.setPercolateDoc(null, "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+        requestBuilder = client().preparePercolate();
+
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc(null, "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc(null, "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        requestBuilder.setDocumentType("ctype");
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+    }
+
+
+    @Test
+    public void testSimpleParentChild() throws Exception {
+
+        XContentBuilder cmapping = XContentFactory.jsonBuilder().startObject().startObject("_parent").field("type", "ptype").endObject().endObject();
+        XContentBuilder pmapping = XContentFactory.jsonBuilder().startObject().startObject("pfield").field("type", "string").endObject().endObject();
+        client().admin().indices().prepareCreate("test").setSettings(
+                ImmutableSettings.settingsBuilder()
+                        .put("index.number_of_shards", 1)
+                        .put("index.number_of_replicas", 0)
+                        .build()
+        ).addMapping("ctype", cmapping).addMapping("ptype", pmapping).execute().actionGet();
+        ensureGreen();
+        // introduce the doc
+        XContentBuilder pdoc = XContentFactory.jsonBuilder().startObject()
+                .field("pfield", "foo")
+                .endObject();
+
+        // introduce the doc
+        XContentBuilder cdoc1 = XContentFactory.jsonBuilder().startObject()
+                .field("cfield", "bar")
+                .endObject();
+        // introduce the doc
+        XContentBuilder cdoc2 = XContentFactory.jsonBuilder().startObject()
+                .field("cfield", "bra")
+                .endObject();
+
+        PercolateRequestBuilder requestBuilder = client().preparePercolate();
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        PercolateResponse response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 0l);
+        assertThat(response.getMatches(), emptyArray());
+
+        // add match_all query...
+        client().prepareIndex("test", PercolatorService.TYPE_NAME, "test1")
+                .setSource(XContentFactory.jsonBuilder().startObject().field("query", matchAllQuery()).endObject())
+                .execute().actionGet();
+
+        refresh();
+
+        requestBuilder = client().preparePercolate();
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+
+        // add has parent query...
+        client().prepareIndex("test", PercolatorService.TYPE_NAME, "test1")
+                .setSource(XContentFactory.jsonBuilder().startObject().field("query", hasParentQuery("ptype", matchQuery("pfield", "foo"))).endObject())
+                .execute().actionGet();
+
+        refresh();
+
+        requestBuilder = client().preparePercolate();
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+        // add has child query...
+        client().prepareIndex("test", PercolatorService.TYPE_NAME, "test1")
+                .setSource(XContentFactory.jsonBuilder().startObject().field("query", hasChildQuery("ctype", matchQuery("cfield", "bar"))).endObject())
+                .execute().actionGet();
+
+        refresh();
+
+        requestBuilder = client().preparePercolate();
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+        //make sure no match if query no match
+
+        cdoc1 = XContentFactory.jsonBuilder().startObject()
+                .field("cfield", "bra")
+                .endObject();
+
+
+        requestBuilder = client().preparePercolate();
+        requestBuilder.setPercolateDoc("ptype", "pid", null, new PercolateSourceBuilder.DocBuilder().setDoc(pdoc));
+        requestBuilder.setPercolateDoc("ctype", "cid1", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc1));
+        requestBuilder.setPercolateDoc("ctype", "cid2", "pid", new PercolateSourceBuilder.DocBuilder().setDoc(cdoc2));
+        response = requestBuilder.execute().actionGet();
+        assertMatchCount(response, 0l);
+        assertThat(response.getMatches(), arrayWithSize(0));
+
     }
 
     @Test
@@ -502,7 +684,7 @@ public class PercolatorTests extends ElasticsearchIntegrationTest {
                 .execute().actionGet();
 
         PercolateSourceBuilder sourceBuilder = new PercolateSourceBuilder()
-                .setDoc(docBuilder().setDoc(jsonBuilder().startObject().field("field1", "value2").endObject()))
+                .setDoc(new PercolateSourceBuilder.PercolateDocumentBuilder(docBuilder().setDoc(jsonBuilder().startObject().field("field1", "value2").endObject())))
                 .setQueryBuilder(termQuery("color", "red"));
         percolate = client().preparePercolate()
                 .setIndices("test").setDocumentType("type1")

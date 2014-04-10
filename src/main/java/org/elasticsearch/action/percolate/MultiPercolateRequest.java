@@ -47,6 +47,7 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
 public class MultiPercolateRequest extends ActionRequest<MultiPercolateRequest> {
 
     private String[] indices;
+    // document type used if no type is given explicitely in percolate requests
     private String documentType;
     private IndicesOptions indicesOptions = IndicesOptions.strict();
     private List<PercolateRequest> requests = Lists.newArrayList();

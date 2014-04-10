@@ -31,6 +31,7 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.routing.GroupShardsIterator;
 import org.elasticsearch.cluster.routing.ShardIterator;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
@@ -107,10 +108,14 @@ public class TransportMultiPercolateAction extends TransportAction<MultiPercolat
                         MultiGetItemResponse itemResponse = multiGetItemResponses.getResponses()[i];
                         int slot = getRequestSlots.get(i);
                         if (!itemResponse.isFailed()) {
+                            //TODO: for several get requests
                             GetResponse getResponse = itemResponse.getResponse();
                             if (getResponse.isExists()) {
                                 PercolateRequest originalRequest = (PercolateRequest) percolateRequests.get(slot);
-                                percolateRequests.set(slot, new PercolateRequest(originalRequest, getResponse.getSourceAsBytesRef()));
+                                BytesReference docSource = getResponse.getSourceAsBytesRef();
+                                List<PercolateRequest.PercolateDocument> docs = new ArrayList<PercolateRequest.PercolateDocument>();
+                                docs.add(new PercolateRequest.PercolateDocument(getResponse.getType(), getResponse.getId(), originalRequest.getRequest().routing(), docSource));
+                                percolateRequests.set(slot, new PercolateRequest(originalRequest, docs));
                             } else {
                                 logger.trace("mpercolate existing doc, item[{}] doesn't exist", slot);
                                 percolateRequests.set(slot, new DocumentMissingException(null, getResponse.getType(), getResponse.getId()));

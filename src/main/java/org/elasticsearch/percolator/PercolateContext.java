@@ -24,11 +24,13 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.*;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.percolate.PercolateRequest;
 import org.elasticsearch.action.percolate.PercolateShardRequest;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.cache.recycler.CacheRecycler;
 import org.elasticsearch.cache.recycler.PageCacheRecycler;
 import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.lucene.HashedBytesRef;
 import org.elasticsearch.common.text.StringText;
 import org.elasticsearch.common.util.BigArrays;
@@ -69,9 +71,7 @@ import org.elasticsearch.search.rescore.RescoreSearchContext;
 import org.elasticsearch.search.scan.ScanContext;
 import org.elasticsearch.search.suggest.SuggestionSearchContext;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -111,6 +111,8 @@ public class PercolateContext extends SearchContext {
     private QuerySearchResult querySearchResult;
     private Sort sort;
 
+    private List<Releasable> clearables = null;
+
     public PercolateContext(PercolateShardRequest request, SearchShardTarget searchShardTarget, IndexShard indexShard,
                             IndexService indexService, CacheRecycler cacheRecycler, PageCacheRecycler pageCacheRecycler,
                             BigArrays bigArrays, ScriptService scriptService) {
@@ -119,7 +121,7 @@ public class PercolateContext extends SearchContext {
         this.fieldDataService = indexService.fieldData();
         this.searchShardTarget = searchShardTarget;
         this.percolateQueries = indexShard.percolateRegistry().percolateQueries();
-        this.types = new String[]{request.documentType()};
+        // TODO: What to do with the types?
         this.cacheRecycler = cacheRecycler;
         this.pageCacheRecycler = pageCacheRecycler;
         this.bigArrays = bigArrays;
@@ -133,23 +135,34 @@ public class PercolateContext extends SearchContext {
         return docSearcher.searcher();
     }
 
-    public void initialize(Engine.Searcher docSearcher, ParsedDocument parsedDocument) {
+    public void initialize(Engine.Searcher docSearcher, List<ParsedDocument> parsedDocumentList) {
         this.docSearcher = docSearcher;
 
+        //set the types
+        List<String> allTypes = new ArrayList<>();
+        for (ParsedDocument doc : parsedDocumentList) {
+            allTypes.add(doc.type());
+        }
+        types = allTypes.toArray(new String[allTypes.size()]);
         IndexReader indexReader = docSearcher.reader();
         AtomicReaderContext atomicReaderContext = indexReader.leaves().get(0);
         lookup().setNextReader(atomicReaderContext);
         lookup().setNextDocId(0);
-        lookup().source().setNextSource(parsedDocument.source());
+        lookup().source().setNextSource(parsedDocumentList.get(0).source());
 
-        Map<String, SearchHitField> fields = new HashMap<>();
-        for (IndexableField field : parsedDocument.rootDoc().getFields()) {
-            fields.put(field.name(), new InternalSearchHitField(field.name(), ImmutableList.of()));
+        Map<String, SearchHitField> fields = new HashMap<String, SearchHitField>();
+        //Here make sure all fields are taken care of?
+        //TODO: Why is this initialized here? Does this here make any sense?
+        for (ParsedDocument parsedDocument : parsedDocumentList) {
+            for (IndexableField field : parsedDocument.rootDoc().getFields()) {
+                fields.put(field.name(), new InternalSearchHitField(field.name(), ImmutableList.of()));
+            }
         }
         hitContext().reset(
-                new InternalSearchHit(0, "unknown", new StringText(parsedDocument.type()), fields),
+                new InternalSearchHit(0, "unknown", new StringText(parsedDocumentList.get(0).type()), fields),
                 atomicReaderContext, 0, indexReader, 0, new JustSourceFieldsVisitor()
         );
+
     }
 
     public IndexShard indexShard() {
@@ -679,15 +692,6 @@ public class PercolateContext extends SearchContext {
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public void addReleasable(Releasable releasable) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void clearReleasables() {
-        throw new UnsupportedOperationException();
-    }
 
     @Override
     public ScanContext scanContext() {
@@ -722,5 +726,22 @@ public class PercolateContext extends SearchContext {
     @Override
     public SearchContext useSlowScroll(boolean useSlowScroll) {
         throw new UnsupportedOperationException();
+    }
+    public void addReleasable(Releasable releasable) {
+        if (clearables == null) {
+            clearables = new ArrayList<Releasable>();
+        }
+        clearables.add(releasable);
+    }
+
+    @Override
+    public void clearReleasables() {
+        if (clearables != null) {
+            try {
+                Releasables.release(clearables);
+            } finally {
+                clearables.clear();
+            }
+        }
     }
 }

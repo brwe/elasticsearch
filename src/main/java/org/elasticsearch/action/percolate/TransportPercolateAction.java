@@ -42,6 +42,7 @@ import org.elasticsearch.percolator.PercolatorService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,8 +79,11 @@ public class TransportPercolateAction extends TransportBroadcastOperationAction<
                         return;
                     }
 
+                    //TODO: here make for several get requests
                     BytesReference docSource = getResponse.getSourceAsBytesRef();
-                    TransportPercolateAction.super.doExecute(new PercolateRequest(request, docSource), listener);
+                    List<PercolateRequest.PercolateDocument> docs = new ArrayList<PercolateRequest.PercolateDocument>();
+                    docs.add(new PercolateRequest.PercolateDocument(getResponse.getType(), getResponse.getId(), null, docSource));
+                    TransportPercolateAction.super.doExecute(new PercolateRequest(request, docs), listener);
                 }
 
                 @Override
