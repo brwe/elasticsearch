@@ -23,6 +23,7 @@ import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
 import org.elasticsearch.action.count.CountResponse;
@@ -251,6 +252,130 @@ public class PercolatorTests extends ElasticsearchIntegrationTest {
         assertThat(response.getMatches(), arrayWithSize(1));
         assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("1"));
     }
+
+    @Test
+    public void testSmartMapperCannotResolvePath() throws Exception {
+       /*
+       * This test makes apparent a strange effect with the smart mappers and percolation. Unsure if it is critical.
+       *
+       * A term query on field X will also match documents that have the term in the field A.B.C....X.
+       * This is handled by the smart mappers. Now, when a document is parsed while processing a percolate regest,
+       * the smart mapper cannot resolve A.B.C...X -> X because the mapping is not yet there.
+       * */
+        client().admin().indices().prepareCreate("test").setSettings(
+                ImmutableSettings.settingsBuilder()
+                        .put("index.number_of_shards", 1)
+                        .put("index.number_of_replicas", 0)
+                        .build()
+        ).execute().actionGet();
+        ensureGreen();
+
+        // introduce the doc
+        XContentBuilder doc = XContentFactory.jsonBuilder().startObject().startObject("doc").startObject("redundant_object")
+                .field("field1", 1)
+                .field("field2", "value")
+                .endObject().endObject().endObject();
+
+        // add first query...
+        client().prepareIndex("test", PercolatorService.TYPE_NAME, "test1")
+                .setSource(XContentFactory.jsonBuilder().startObject().field("query", termQuery("field2", "value")).endObject())
+                .execute().actionGet();
+
+        PercolateResponse response = client().preparePercolate()
+                .setIndices("test").setDocumentType("type1")
+                .setSource(doc).execute().actionGet();
+        assertMatchCount(response, 1l);
+        assertThat(response.getMatches(), arrayWithSize(1));
+        assertThat(convertFromTextArray(response.getMatches(), "test"), arrayContaining("test1"));
+
+        /*
+        * Now, if we would repeat the same percolation, this would suddenly work, because while parsing the
+        * first request the mapper service was updated. But not the mapping! See test testPercolationInhibitsMappingUpdateOnIndexing.
+        * */
+    }
+
+
+    @Test // Fails randomly
+    public void testPercolationInhibitsMappingUpdateOnIndexing() throws Exception {
+
+        client().admin().indices().prepareCreate("test").execute().actionGet();
+        ensureGreen();
+
+        // percolation source
+        XContentBuilder percolateRequestSource = XContentFactory.jsonBuilder().startObject().startObject("doc")
+                .field("field1", 1)
+                .field("field2", "value")
+                .endObject().endObject();
+
+        PercolateResponse response = client().preparePercolate()
+                .setIndices("test").setDocumentType("type1")
+                .setSource(percolateRequestSource).execute().actionGet();
+        assertMatchCount(response, 0l);
+        assertThat(response.getMatches(), arrayWithSize(0));
+
+        //make sure mapping was not created while percolating
+        awaitBusy(new Predicate<Object>() {
+            @Override
+            public boolean apply(Object input) {
+                try {
+                    GetMappingsResponse mappingsResponse = client().admin().indices().prepareGetMappings("test").get();
+                    if (mappingsResponse.getMappings().containsKey("test")) {
+                        return mappingsResponse.getMappings().get("test").containsKey("type1");
+                    } else {
+                        return false;
+                    }
+
+                } catch (Throwable t) {
+                    return false;
+                }
+            }
+        });
+        GetMappingsResponse mappingsResponse = client().admin().indices().prepareGetMappings("test").get();
+        if (mappingsResponse.getMappings().containsKey("test")) {
+            assertFalse(mappingsResponse.getMappings().get("test").containsKey("type1"));
+        }
+
+        /* At this point the mapping service knows the mapping because it was changed while parsing the document for
+         percolation (DocumentMapper.parse(..)). However, because it was no indexing request, the cluster state was not updated with the new mapping.
+         This is good, becausue we probably do not want percolation to update the mapping, but the new mapping should
+         not be in the mapping service either, because.... */
+
+        // same document, now we index it
+        XContentBuilder rawField = XContentFactory.jsonBuilder().startObject()
+                .field("field1", 1)
+                .field("field2", "value")
+                .endObject();
+
+        client().prepareIndex("test", "type1").setSource(rawField).execute().get();
+
+        //make sure that indexing creates the mapping
+        awaitBusy(new Predicate<Object>() {
+            @Override
+            public boolean apply(Object input) {
+                try {
+                    GetMappingsResponse mappingsResponse = client().admin().indices().prepareGetMappings("test").get();
+                    if (mappingsResponse.getMappings().containsKey("test")) {
+                        return mappingsResponse.getMappings().get("test").containsKey("type1");
+                    } else {
+                        return false;
+                    }
+
+                } catch (Throwable t) {
+                    return false;
+                }
+            }
+        });
+        mappingsResponse = client().admin().indices().prepareGetMappings("test").get();
+        if (mappingsResponse.getMappings().containsKey("test")) {
+            assertTrue(mappingsResponse.getMappings().get("test").containsKey("type1"));
+        }
+
+        /*
+        * I think the mapping was not created because the service has it already and does not check if it is alose on the cluster
+        * state. This effect is similar to the one observed in https://github.com/elasticsearch/elasticsearch/pull/5623
+        * */
+    }
+
 
     @Test
     public void testPercolateQueriesWithRouting() throws Exception {
