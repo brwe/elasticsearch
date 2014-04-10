@@ -146,7 +146,10 @@ public class HasChildQueryParser implements QueryParser {
         // wrap the query with type query
         innerQuery = new XFilteredQuery(innerQuery, parseContext.cacheFilter(childDocMapper.typeFilter(), null));
 
-        boolean deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        boolean deleteByQuery = false;
+        if (SearchContext.current() != null) {
+            deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        }
         Query query;
         Filter parentFilter = parseContext.cacheFilter(parentDocMapper.typeFilter(), null);
         ParentChildIndexFieldData parentChildIndexFieldData = parseContext.fieldData().getForField(parentFieldMapper);

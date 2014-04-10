@@ -116,7 +116,11 @@ public class TopChildrenQueryParser implements QueryParser {
             return null;
         }
 
-        if ("delete_by_query".equals(SearchContext.current().source())) {
+        boolean deleteByQuery = false;
+        if (SearchContext.current() != null) {
+            deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        }
+        if (deleteByQuery) {
             throw new QueryParsingException(parseContext.index(), "[top_children] unsupported in delete_by_query api");
         }
 

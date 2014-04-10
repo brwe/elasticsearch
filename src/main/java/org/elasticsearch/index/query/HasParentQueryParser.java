@@ -164,7 +164,10 @@ public class HasParentQueryParser implements QueryParser {
         }
         Filter childrenFilter = parseContext.cacheFilter(new NotFilter(parentFilter), null);
 
-        boolean deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        boolean deleteByQuery = false;
+        if (SearchContext.current() != null) {
+            deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        }
         Query query;
         if (!deleteByQuery && score) {
             query = new ParentQuery(parentChildIndexFieldData, innerQuery, parentType, childrenFilter);

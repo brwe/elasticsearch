@@ -169,7 +169,10 @@ public class HasParentFilterParser implements FilterParser {
             parseContext.addNamedFilter(filterName, new CustomQueryWrappingFilter(parentConstantScoreQuery));
         }
 
-        boolean deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        boolean deleteByQuery = false;
+        if (SearchContext.current() != null) {
+            deleteByQuery = "delete_by_query".equals(SearchContext.current().source());
+        }
         if (deleteByQuery) {
             return new DeleteByQueryWrappingFilter(parentConstantScoreQuery);
         } else {
