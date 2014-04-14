@@ -42,15 +42,19 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
 
     protected long numCollectedDocs;
     protected final SignificantTermsAggregatorFactory termsAggFactory;
+    String significanceMethod;
+    boolean excludeNegatives;
 
     public GlobalOrdinalsSignificantTermsAggregator(String name, AggregatorFactories factories, ValuesSource.Bytes.WithOrdinals.FieldData valuesSource,
                                                     long estimatedBucketCount, long maxOrd, int requiredSize, int shardSize, long minDocCount,
                                                     AggregationContext aggregationContext, Aggregator parent,
-                                                    SignificantTermsAggregatorFactory termsAggFactory) {
+                                                    SignificantTermsAggregatorFactory termsAggFactory, String significanceMethod, boolean excludeNegatives) {
 
         super(name, factories, valuesSource, estimatedBucketCount, maxOrd, null, requiredSize, shardSize,
                 minDocCount, aggregationContext, parent);
         this.termsAggFactory = termsAggFactory;
+        this.significanceMethod = significanceMethod;
+        this.excludeNegatives = excludeNegatives;
     }
 
     @Override
@@ -85,7 +89,7 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
                 continue;
             }
             if (spare == null) {
-                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null);
+                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null, "DEFAULT", false);
             }
             spare.bucketOrd = bucketOrd;
             copy(globalValues.getValueByOrd(termOrd), spare.termBytes);
@@ -93,6 +97,8 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
             spare.subsetSize = subsetSize;
             spare.supersetDf = termsAggFactory.getBackgroundFrequency(spare.termBytes);
             spare.supersetSize = supersetSize;
+            spare.significanceMethod = significanceMethod;
+            spare.excludeNegatives = excludeNegatives;
             assert spare.subsetDf <= spare.supersetDf;
             // During shard-local down-selection we use subset/superset stats
             // that are for this shard only
@@ -112,7 +118,7 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
             list[i] = bucket;
         }
 
-        return new SignificantStringTerms(subsetSize, supersetSize, name, requiredSize, minDocCount, Arrays.asList(list));
+        return new SignificantStringTerms(subsetSize, supersetSize, name, requiredSize, minDocCount, Arrays.asList(list), significanceMethod, excludeNegatives);
     }
 
     @Override
@@ -121,7 +127,7 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
         ContextIndexSearcher searcher = context.searchContext().searcher();
         IndexReader topReader = searcher.getIndexReader();
         int supersetSize = topReader.numDocs();
-        return new SignificantStringTerms(0, supersetSize, name, requiredSize, minDocCount, Collections.<InternalSignificantTerms.Bucket>emptyList());
+        return new SignificantStringTerms(0, supersetSize, name, requiredSize, minDocCount, Collections.<InternalSignificantTerms.Bucket>emptyList(), significanceMethod, excludeNegatives);
     }
 
     @Override
@@ -133,8 +139,8 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
 
         private final LongHash bucketOrds;
 
-        public WithHash(String name, AggregatorFactories factories, ValuesSource.Bytes.WithOrdinals.FieldData valuesSource, long estimatedBucketCount, int requiredSize, int shardSize, long minDocCount, AggregationContext aggregationContext, Aggregator parent, SignificantTermsAggregatorFactory termsAggFactory) {
-            super(name, factories, valuesSource, estimatedBucketCount, estimatedBucketCount, requiredSize, shardSize, minDocCount, aggregationContext, parent, termsAggFactory);
+        public WithHash(String name, AggregatorFactories factories, ValuesSource.Bytes.WithOrdinals.FieldData valuesSource, long estimatedBucketCount, int requiredSize, int shardSize, long minDocCount, AggregationContext aggregationContext, Aggregator parent, SignificantTermsAggregatorFactory termsAggFactory, String significanceMethod, boolean excludeNegatives) {
+            super(name, factories, valuesSource, estimatedBucketCount, estimatedBucketCount, requiredSize, shardSize, minDocCount, aggregationContext, parent, termsAggFactory, significanceMethod, excludeNegatives);
             bucketOrds = new LongHash(estimatedBucketCount, aggregationContext.bigArrays());
         }
 

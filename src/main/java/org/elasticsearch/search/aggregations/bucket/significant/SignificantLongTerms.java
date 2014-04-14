@@ -56,11 +56,13 @@ public class SignificantLongTerms extends InternalSignificantTerms {
 
     static class Bucket extends InternalSignificantTerms.Bucket {
 
+
         long term;
 
-        public Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, long term, InternalAggregations aggregations) {
-            super(subsetDf, subsetSize, supersetDf, supersetSize, aggregations);
+        public Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, long term, InternalAggregations aggregations, String significanceMethod) {
+            super(subsetDf, subsetSize, supersetDf, supersetSize, aggregations, significanceMethod, false);
             this.term = term;
+
         }
 
         @Override
@@ -90,9 +92,9 @@ public class SignificantLongTerms extends InternalSignificantTerms {
     SignificantLongTerms() {} // for serialization
 
     public SignificantLongTerms(long subsetSize, long supersetSize, String name, @Nullable ValueFormatter formatter,
-                                int requiredSize, long minDocCount, Collection<InternalSignificantTerms.Bucket> buckets) {
+                                int requiredSize, long minDocCount, Collection<InternalSignificantTerms.Bucket> buckets, String significanceMethod, boolean excludeNegatives) {
 
-        super(subsetSize, supersetSize, name, requiredSize, minDocCount, buckets);
+        super(subsetSize, supersetSize, name, requiredSize, minDocCount, buckets, significanceMethod, excludeNegatives);
         this.formatter = formatter;
     }
 
@@ -109,14 +111,14 @@ public class SignificantLongTerms extends InternalSignificantTerms {
         this.minDocCount = in.readVLong();
         this.subsetSize = in.readVLong();
         this.supersetSize = in.readVLong();
-
+        this.significanceMethod = in.readOptionalString();
         int size = in.readVInt();
         List<InternalSignificantTerms.Bucket> buckets = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             long subsetDf = in.readVLong();
             long supersetDf = in.readVLong();
             long term = in.readLong();
-            buckets.add(new Bucket(subsetDf, subsetSize, supersetDf,supersetSize, term, InternalAggregations.readAggregations(in)));
+            buckets.add(new Bucket(subsetDf, subsetSize, supersetDf,supersetSize, term, InternalAggregations.readAggregations(in), significanceMethod));
         }
         this.buckets = buckets;
         this.bucketMap = null;
@@ -130,6 +132,7 @@ public class SignificantLongTerms extends InternalSignificantTerms {
         out.writeVLong(minDocCount);
         out.writeVLong(subsetSize);
         out.writeVLong(supersetSize);
+        out.writeOptionalString(significanceMethod);
         out.writeVInt(buckets.size());
         for (InternalSignificantTerms.Bucket bucket : buckets) {
             out.writeVLong(((Bucket) bucket).subsetDf);

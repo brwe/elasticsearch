@@ -63,6 +63,10 @@ public class SignificantTermsParser implements Aggregator.Parser {
         int shardSize = DEFAULT_SHARD_SIZE;
         long minDocCount = DEFAULT_MIN_DOC_COUNT;
         String executionHint = null;
+        String significanceMethod = "DEFAULT";
+        boolean excludeNegatives = false;
+        //TODO: Here add the things to factory, but here also register the computation
+        //maybe refactor so that in a first step a class that computes the significance and later plug in?
 
         XContentParser.Token token;
         String currentFieldName = null;
@@ -76,6 +80,8 @@ public class SignificantTermsParser implements Aggregator.Parser {
             } else if (token == XContentParser.Token.VALUE_STRING) {
                 if ("execution_hint".equals(currentFieldName) || "executionHint".equals(currentFieldName)) {
                     executionHint = parser.text();
+                } else if ("sigMethod".equals(currentFieldName) || "sig_method".equals(currentFieldName)) {
+                    significanceMethod = parser.text();
                 } else {
                     throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
                 }
@@ -89,7 +95,14 @@ public class SignificantTermsParser implements Aggregator.Parser {
                 } else {
                     throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
                 }
-            } else if (token == XContentParser.Token.START_OBJECT) {
+            } else if (token == XContentParser.Token.VALUE_BOOLEAN) {
+                if ("exclude_negatives".equals(currentFieldName)) {
+                    excludeNegatives = parser.booleanValue();
+                } else {
+                    throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
+                }
+            }
+            else if (token == XContentParser.Token.START_OBJECT) {
                 // TODO not sure if code below is the best means to declare a filter for 
                 // defining an alternative background stats context.
                 // In trial runs it becomes obvious that the choice of background does have to  
@@ -125,7 +138,7 @@ public class SignificantTermsParser implements Aggregator.Parser {
         }
 
         IncludeExclude includeExclude = incExcParser.includeExclude();
-        return new SignificantTermsAggregatorFactory(aggregationName, vsParser.config(), requiredSize, shardSize, minDocCount, includeExclude, executionHint, filter);
+        return new SignificantTermsAggregatorFactory(aggregationName, vsParser.config(), requiredSize, shardSize, minDocCount, includeExclude, executionHint, significanceMethod, excludeNegatives, filter);
     }
 
 }

@@ -43,17 +43,21 @@ import java.util.Collections;
  */
 public class SignificantStringTermsAggregator extends StringTermsAggregator {
 
+    private final String significanceMetric;
+    private boolean excludeNegatives;
     protected long numCollectedDocs;
     protected final SignificantTermsAggregatorFactory termsAggFactory;
 
     public SignificantStringTermsAggregator(String name, AggregatorFactories factories, ValuesSource valuesSource,
             long estimatedBucketCount, int requiredSize, int shardSize, long minDocCount,
             IncludeExclude includeExclude, AggregationContext aggregationContext, Aggregator parent,
-            SignificantTermsAggregatorFactory termsAggFactory) {
+            SignificantTermsAggregatorFactory termsAggFactory, String significanceMetric, boolean excludeNegatives) {
 
         super(name, factories, valuesSource, estimatedBucketCount, null, requiredSize, shardSize,
                 minDocCount, includeExclude, aggregationContext, parent);
         this.termsAggFactory = termsAggFactory;
+        this.significanceMetric = significanceMetric;
+        this.excludeNegatives = excludeNegatives;
     }
 
     @Override
@@ -74,7 +78,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
         SignificantStringTerms.Bucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
             if (spare == null) {
-                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null);
+                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null, significanceMetric, excludeNegatives);
             }
 
             bucketOrds.get(i, spare.termBytes);
@@ -102,7 +106,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
             list[i] = bucket;
         }
 
-        return new SignificantStringTerms(subsetSize, supersetSize, name, requiredSize, minDocCount, Arrays.asList(list));
+        return new SignificantStringTerms(subsetSize, supersetSize, name, requiredSize, minDocCount, Arrays.asList(list), significanceMetric, excludeNegatives);
     }
 
     @Override
@@ -111,7 +115,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
         ContextIndexSearcher searcher = context.searchContext().searcher();
         IndexReader topReader = searcher.getIndexReader();
         int supersetSize = topReader.numDocs();
-        return new SignificantStringTerms(0, supersetSize, name, requiredSize, minDocCount, Collections.<InternalSignificantTerms.Bucket>emptyList());
+        return new SignificantStringTerms(0, supersetSize, name, requiredSize, minDocCount, Collections.<InternalSignificantTerms.Bucket>emptyList(), significanceMetric, excludeNegatives);
     }
 
     @Override
@@ -131,8 +135,8 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
 
         public WithOrdinals(String name, AggregatorFactories factories, ValuesSource.Bytes.WithOrdinals valuesSource,
                 long esitmatedBucketCount, int requiredSize, int shardSize, long minDocCount, AggregationContext aggregationContext,
-                Aggregator parent, SignificantTermsAggregatorFactory termsAggFactory) {
-            super(name, factories, valuesSource, esitmatedBucketCount, requiredSize, shardSize, minDocCount, null, aggregationContext, parent, termsAggFactory);
+                Aggregator parent, SignificantTermsAggregatorFactory termsAggFactory, String significanceMethod, boolean excludeNegatives) {
+            super(name, factories, valuesSource, esitmatedBucketCount, requiredSize, shardSize, minDocCount, null, aggregationContext, parent, termsAggFactory, significanceMethod, excludeNegatives);
             this.valuesSource = valuesSource;
         }
 

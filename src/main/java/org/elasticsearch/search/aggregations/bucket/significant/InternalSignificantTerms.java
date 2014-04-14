@@ -40,6 +40,9 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
     protected Map<String, Bucket> bucketMap;
     protected long subsetSize;
     protected long supersetSize;
+    protected String significanceMethod;
+    protected boolean excludeNegatives;
+
 
     protected InternalSignificantTerms() {} // for serialization
 
@@ -47,13 +50,17 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
     @SuppressWarnings("PMD.ConstructorCallsOverridableMethod")
     public static abstract class Bucket extends SignificantTerms.Bucket {
 
+        protected boolean excludeNegatives;
+        protected String significanceMethod;
         long bucketOrd;
         protected InternalAggregations aggregations;
         double score;
 
-        protected Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations) {
+        protected Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations, String significanceMethod, boolean excludeNegatives) {
             super(subsetDf, subsetSize, supersetDf, supersetSize);
             this.aggregations = aggregations;
+            this.significanceMethod = significanceMethod;
+            this.excludeNegatives = excludeNegatives;
             assert subsetDf <= supersetDf;
             updateScore();
         }
@@ -91,7 +98,7 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
          * @param supersetSize The size of the superset from which the sample was taken  (typically number of docs)
          * @return a "significance" score
          */
-        public static double getSampledTermSignificance(long subsetFreq, long subsetSize, long supersetFreq, long supersetSize) {
+        public static double getDefaultTermSignificance(long subsetFreq, long subsetSize, long supersetFreq, long supersetSize) {
             if ((subsetSize == 0) || (supersetSize == 0)) {
                 // avoid any divide by zero issues
                 return 0;
@@ -125,7 +132,48 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
         }
 
         public void updateScore() {
-            score = getSampledTermSignificance(subsetDf, subsetSize, supersetDf, supersetSize);
+            if (significanceMethod.equals("DEFAULT")) {
+                score = getDefaultTermSignificance(subsetDf, subsetSize, supersetDf, supersetSize);
+            } else {
+                score = mutual(subsetDf, subsetSize, supersetDf, supersetSize, excludeNegatives);
+            }
+
+        }
+        /** see "Information Retrieval", Manning et al., Eq. 13.17 */
+        private static double mutual(long subsetDf, long subsetSize, long supersetDf, long supersetSize, boolean excludeNegatives) {
+
+            //documents not in class and do not contain term
+            double N00 = supersetSize - supersetDf - (subsetSize - subsetDf);
+            //documents in class and do not contain term
+            double N01 = (subsetSize - subsetDf);
+            // documents not in class and do contain term
+            double N10 = supersetDf - subsetDf;
+            // documents in class and do contain term
+            double N11 = subsetDf;
+            //documents that do not contain term
+            double N0_ = supersetSize - supersetDf;
+            //documents that contain term
+            double N1_ = supersetDf;
+            //documents that are not in class
+            double N_0 = supersetSize - subsetSize;
+            //documents that are in class
+            double N_1 = subsetSize;
+            //all docs
+            double N = supersetSize;
+
+            double score =
+                      N11/N * Math.log((N*N11)/(N1_*N_1))
+                    + N01/N * Math.log((N*N01)/(N0_*N_1))
+                    + N10/N * Math.log((N*N10)/(N1_*N_0))
+                    + N00/N * Math.log((N*N00)/(N0_*N_0));
+            if (Double.isNaN(score)) {
+                score = -1.0 * Float.MAX_VALUE;
+            }
+            if (excludeNegatives && N11/N_1 < N10/N_0) {
+                score = -1.0 * Float.MAX_VALUE;
+            }
+            return score;
+
         }
 
         @Override
@@ -165,13 +213,15 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
         }
     }
 
-    protected InternalSignificantTerms(long subsetSize, long supersetSize, String name, int requiredSize, long minDocCount, Collection<Bucket> buckets) {
+    protected InternalSignificantTerms(long subsetSize, long supersetSize, String name, int requiredSize, long minDocCount, Collection<Bucket> buckets, String significanceMethod, boolean excludeNegatives) {
         super(name);
         this.requiredSize = requiredSize;
         this.minDocCount = minDocCount;
         this.buckets = buckets;
         this.subsetSize = subsetSize;
         this.supersetSize = supersetSize;
+        this.significanceMethod = significanceMethod;
+        this.excludeNegatives = excludeNegatives;
     }
 
     @Override
@@ -203,6 +253,17 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
         if (aggregations.size() == 1) {
             InternalSignificantTerms terms = (InternalSignificantTerms) aggregations.get(0);
             terms.trimExcessEntries();
+            final int size = Math.min(requiredSize, terms.buckets.size());
+            BucketSignificancePriorityQueue ordered = new BucketSignificancePriorityQueue(size);
+            for (Bucket b : terms.buckets) {
+
+                    ordered.insertWithOverflow(b);
+            }
+            Bucket[] list = new Bucket[ordered.size()];
+            for (int i = ordered.size() - 1; i >= 0; i--) {
+                list[i] = (Bucket) ordered.pop();
+            }
+            terms.buckets = Arrays.asList(list);
             return terms;
         }
         InternalSignificantTerms reduced = null;

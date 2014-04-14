@@ -68,7 +68,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
         SignificantLongTerms.Bucket spare = null;
         for (long i = 0; i < bucketOrds.size(); i++) {
             if (spare == null) {
-                spare = new SignificantLongTerms.Bucket(0, 0, 0, 0, 0, null);
+                spare = new SignificantLongTerms.Bucket(0, 0, 0, 0, 0, null, "DEFAULT");
             }
             spare.term = bucketOrds.get(i);
             spare.subsetDf = bucketDocCount(i);
@@ -90,7 +90,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
             bucket.aggregations = bucketAggregations(bucket.bucketOrd);
             list[i] = bucket;
         }
-        return new SignificantLongTerms(subsetSize, supersetSize, name, formatter, requiredSize, minDocCount, Arrays.asList(list));
+        return new SignificantLongTerms(subsetSize, supersetSize, name, formatter, requiredSize, minDocCount, Arrays.asList(list), "DEFAULT", false);
     }
 
     @Override
@@ -99,7 +99,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
         ContextIndexSearcher searcher = context.searchContext().searcher();
         IndexReader topReader = searcher.getIndexReader();
         int supersetSize = topReader.numDocs();
-        return new SignificantLongTerms(0, supersetSize, name, formatter, requiredSize, minDocCount, Collections.<InternalSignificantTerms.Bucket>emptyList());
+        return new SignificantLongTerms(0, supersetSize, name, formatter, requiredSize, minDocCount, Collections.<InternalSignificantTerms.Bucket>emptyList(), "DEFAULT", false);
     }
 
     @Override
