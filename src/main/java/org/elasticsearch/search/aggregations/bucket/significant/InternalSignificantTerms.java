@@ -50,10 +50,12 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
         long bucketOrd;
         protected InternalAggregations aggregations;
         double score;
+        long minDocCount;
 
-        protected Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations) {
+        protected Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations, long minDocCount) {
             super(subsetDf, subsetSize, supersetDf, supersetSize);
             this.aggregations = aggregations;
+            this.minDocCount = minDocCount;
             assert subsetDf <= supersetDf;
             updateScore();
         }
@@ -125,7 +127,12 @@ public abstract class InternalSignificantTerms extends InternalAggregation imple
         }
 
         public void updateScore() {
-            score = getSampledTermSignificance(subsetDf, subsetSize, supersetDf, supersetSize);
+            if (minDocCount <= subsetDf) {
+                score = getSampledTermSignificance(subsetDf, subsetSize, supersetDf, supersetSize);
+            } else {
+                score = -1.0 * Float.MAX_VALUE;
+            }
+
         }
 
         @Override

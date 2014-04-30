@@ -59,8 +59,8 @@ public class SignificantStringTerms extends InternalSignificantTerms {
         BytesRef termBytes;
 
 
-        public Bucket(BytesRef term, long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations) {
-            super(subsetDf, subsetSize, supersetDf, supersetSize, aggregations);
+        public Bucket(BytesRef term, long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations, long minDocCount) {
+            super(subsetDf, subsetSize, supersetDf, supersetSize, aggregations, minDocCount);
             this.termBytes = term;
         }
 
@@ -112,7 +112,7 @@ public class SignificantStringTerms extends InternalSignificantTerms {
             BytesRef term = in.readBytesRef();
             long subsetDf = in.readVLong();
             long supersetDf = in.readVLong();
-            buckets.add(new Bucket(term, subsetDf, subsetSize, supersetDf, supersetSize, InternalAggregations.readAggregations(in)));
+            buckets.add(new Bucket(term, subsetDf, subsetSize, supersetDf, supersetSize, InternalAggregations.readAggregations(in), minDocCount));
         }
         this.buckets = buckets;
         this.bucketMap = null;

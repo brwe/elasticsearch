@@ -85,7 +85,7 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
                 continue;
             }
             if (spare == null) {
-                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null);
+                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null, 0);
             }
             spare.bucketOrd = bucketOrd;
             copy(globalValues.getValueByOrd(termOrd), spare.termBytes);
@@ -93,6 +93,7 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
             spare.subsetSize = subsetSize;
             spare.supersetDf = termsAggFactory.getBackgroundFrequency(spare.termBytes);
             spare.supersetSize = supersetSize;
+            spare.minDocCount = minDocCount;
             assert spare.subsetDf <= spare.supersetDf;
             // During shard-local down-selection we use subset/superset stats
             // that are for this shard only

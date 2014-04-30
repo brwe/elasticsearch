@@ -74,7 +74,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
         SignificantStringTerms.Bucket spare = null;
         for (int i = 0; i < bucketOrds.size(); i++) {
             if (spare == null) {
-                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null);
+                spare = new SignificantStringTerms.Bucket(new BytesRef(), 0, 0, 0, 0, null, 0);
             }
 
             bucketOrds.get(i, spare.termBytes);
@@ -82,6 +82,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
             spare.subsetSize = subsetSize;
             spare.supersetDf = termsAggFactory.getBackgroundFrequency(spare.termBytes);
             spare.supersetSize = supersetSize;
+            spare.minDocCount = minDocCount;
             assert spare.subsetDf <= spare.supersetDf;
             // During shard-local down-selection we use subset/superset stats 
             // that are for this shard only

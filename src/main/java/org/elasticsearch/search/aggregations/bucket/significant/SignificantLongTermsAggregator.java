@@ -68,13 +68,14 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
         SignificantLongTerms.Bucket spare = null;
         for (long i = 0; i < bucketOrds.size(); i++) {
             if (spare == null) {
-                spare = new SignificantLongTerms.Bucket(0, 0, 0, 0, 0, null);
+                spare = new SignificantLongTerms.Bucket(0, 0, 0, 0, 0, null, 0);
             }
             spare.term = bucketOrds.get(i);
             spare.subsetDf = bucketDocCount(i);
             spare.subsetSize = subsetSize;
             spare.supersetDf = termsAggFactory.getBackgroundFrequency(spare.term);
             spare.supersetSize = supersetSize;
+            spare.minDocCount = minDocCount;
             assert spare.subsetDf <= spare.supersetDf;
             // During shard-local down-selection we use subset/superset stats that are for this shard only
             // Back at the central reducer these properties will be updated with global stats

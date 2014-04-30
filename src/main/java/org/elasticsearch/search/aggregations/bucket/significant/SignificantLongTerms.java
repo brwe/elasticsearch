@@ -58,8 +58,8 @@ public class SignificantLongTerms extends InternalSignificantTerms {
 
         long term;
 
-        public Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, long term, InternalAggregations aggregations) {
-            super(subsetDf, subsetSize, supersetDf, supersetSize, aggregations);
+        public Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, long term, InternalAggregations aggregations, long minDocCount) {
+            super(subsetDf, subsetSize, supersetDf, supersetSize, aggregations, minDocCount);
             this.term = term;
         }
 
@@ -116,7 +116,7 @@ public class SignificantLongTerms extends InternalSignificantTerms {
             long subsetDf = in.readVLong();
             long supersetDf = in.readVLong();
             long term = in.readLong();
-            buckets.add(new Bucket(subsetDf, subsetSize, supersetDf,supersetSize, term, InternalAggregations.readAggregations(in)));
+            buckets.add(new Bucket(subsetDf, subsetSize, supersetDf,supersetSize, term, InternalAggregations.readAggregations(in), minDocCount));
         }
         this.buckets = buckets;
         this.bucketMap = null;
