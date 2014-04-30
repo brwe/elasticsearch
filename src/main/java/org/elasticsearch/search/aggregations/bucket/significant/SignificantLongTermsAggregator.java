@@ -81,7 +81,9 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
             spare.updateScore();
 
             spare.bucketOrd = i;
-            spare = (SignificantLongTerms.Bucket) ordered.insertWithOverflow(spare);
+            if (spare.subsetDf >= minDocCount) {
+                spare = (SignificantLongTerms.Bucket) ordered.insertWithOverflow(spare);
+            }
         }
 
         final InternalSignificantTerms.Bucket[] list = new InternalSignificantTerms.Bucket[ordered.size()];

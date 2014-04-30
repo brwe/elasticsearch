@@ -99,8 +99,9 @@ public class GlobalOrdinalsSignificantTermsAggregator extends GlobalOrdinalsStri
             // Back at the central reducer these properties will be updated with
             // global stats
             spare.updateScore();
-
-            spare = (SignificantStringTerms.Bucket) ordered.insertWithOverflow(spare);
+            if (spare.subsetDf >= minDocCount) {
+                spare = (SignificantStringTerms.Bucket) ordered.insertWithOverflow(spare);
+            }
         }
 
         final InternalSignificantTerms.Bucket[] list = new InternalSignificantTerms.Bucket[ordered.size()];

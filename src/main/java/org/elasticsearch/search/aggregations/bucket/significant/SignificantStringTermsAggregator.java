@@ -90,7 +90,9 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
             spare.updateScore();
 
             spare.bucketOrd = i;
-            spare = (SignificantStringTerms.Bucket) ordered.insertWithOverflow(spare);
+            if (spare.subsetDf >= minDocCount) {
+                spare = (SignificantStringTerms.Bucket) ordered.insertWithOverflow(spare);
+            }
         }
 
         final InternalSignificantTerms.Bucket[] list = new InternalSignificantTerms.Bucket[ordered.size()];
