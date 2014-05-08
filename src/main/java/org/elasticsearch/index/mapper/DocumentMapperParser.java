@@ -285,9 +285,18 @@ public class DocumentMapperParser extends AbstractIndexComponent {
         if (type == null || type.equals(rootName)) {
             mapping = new Tuple<>(rootName, (Map<String, Object>) root.get(rootName));
         } else {
+            checkRootKeysValid(root);
             mapping = new Tuple<>(type, root);
         }
 
         return mapping;
+    }
+
+    private void checkRootKeysValid(Map<String, Object> root) {
+        for (String key : root.keySet()) {
+            if (!rootTypeParsers.containsKey(key) && !key.equals("properties")) {
+                throw  new MapperParsingException("Got unrecognized key "+ key + " in root of mapping for type ");
+            }
+        }
     }
 }
