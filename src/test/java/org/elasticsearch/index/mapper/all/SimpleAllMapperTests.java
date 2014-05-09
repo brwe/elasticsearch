@@ -344,6 +344,20 @@ public class SimpleAllMapperTests extends ElasticsearchTestCase {
     }
 
     // issue https://github.com/elasticsearch/elasticsearch/issues/5864
+    // test that RootObjectMapping still works
+    @Test
+    public void testRootObjectMapperPropertiesDoNotCauseException() throws IOException {
+        String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/all/type_dynamic_template_mapping.json");
+        MapperTestUtils.newParser().parse("test", mapping);
+        mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/all/type_dynamic_date_formats_mapping.json");
+        MapperTestUtils.newParser().parse("test", mapping);
+        mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/all/type_date_detection_mapping.json");
+        MapperTestUtils.newParser().parse("test", mapping);
+        mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/all/type_numeric_detection_mapping.json");
+        MapperTestUtils.newParser().parse("test", mapping);
+    }
+
+    // issue https://github.com/elasticsearch/elasticsearch/issues/5864
     @Test
     public void testRootMappersStillWorking() {
         String mapping = "{";
