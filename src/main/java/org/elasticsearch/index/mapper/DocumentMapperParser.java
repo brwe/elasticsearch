@@ -297,7 +297,7 @@ public class DocumentMapperParser extends AbstractIndexComponent {
         Set<String> rootObjectParserKeys = RootObjectMapper.getSupportedKeys();
         for (String key : root.keySet()) {
             if (!rootTypeParsers.containsKey(key) && !key.equals("properties") && !rootObjectParserKeys.contains(key)) {
-                throw  new MapperParsingException("Got unrecognized key "+ key + " in root of mapping for type ");
+                throw  new MapperParsingException("Got unrecognized key ["+ key + "] in root of mapping for type ");
             }
         }
     }
