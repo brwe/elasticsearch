@@ -29,10 +29,7 @@ import org.elasticsearch.index.mapper.*;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeBooleanValue;
@@ -42,6 +39,16 @@ import static org.elasticsearch.index.mapper.core.TypeParsers.parseDateTimeForma
  *
  */
 public class RootObjectMapper extends ObjectMapper {
+
+    public static Set<String> getSupportedKeys() {
+        Set<String> supportedKeys = new HashSet<>();
+        supportedKeys.add("date_formats");
+        supportedKeys.add("dynamic_date_formats");
+        supportedKeys.add("dynamic_templates");
+        supportedKeys.add("date_detection");
+        supportedKeys.add("numeric_detection");
+        return supportedKeys;
+    }
 
     public static class Defaults {
         public static final FormatDateTimeFormatter[] DYNAMIC_DATE_TIME_FORMATTERS =

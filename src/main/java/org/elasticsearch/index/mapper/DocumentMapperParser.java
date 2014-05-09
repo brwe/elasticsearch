@@ -49,6 +49,7 @@ import org.elasticsearch.index.settings.IndexSettings;
 import org.elasticsearch.index.similarity.SimilarityLookupService;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.elasticsearch.index.mapper.MapperBuilders.doc;
 
@@ -293,8 +294,9 @@ public class DocumentMapperParser extends AbstractIndexComponent {
     }
 
     private void checkRootKeysValid(Map<String, Object> root) {
+        Set<String> rootObjectParserKeys = RootObjectMapper.getSupportedKeys();
         for (String key : root.keySet()) {
-            if (!rootTypeParsers.containsKey(key) && !key.equals("properties")) {
+            if (!rootTypeParsers.containsKey(key) && !key.equals("properties") && !rootObjectParserKeys.contains(key)) {
                 throw  new MapperParsingException("Got unrecognized key "+ key + " in root of mapping for type ");
             }
         }
