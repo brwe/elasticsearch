@@ -22,6 +22,7 @@ import org.elasticsearch.ElasticsearchIllegalArgumentException;
 
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  */
@@ -78,5 +79,15 @@ public class ParseField {
         return false;
     }
 
+    public Set<String> getAllNames() {
+        Set<String> allKeys = new HashSet<>();
+        allKeys.add(camelCaseName);
+        allKeys.add(underscoreName);
+
+        for (String depName : deprecatedNames) {
+            allKeys.add(depName);
+        }
+        return allKeys;
+    }
 
 }

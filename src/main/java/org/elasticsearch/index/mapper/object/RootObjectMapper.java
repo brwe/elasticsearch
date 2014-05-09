@@ -21,6 +21,7 @@ package org.elasticsearch.index.mapper.object;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.joda.FormatDateTimeFormatter;
 import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.xcontent.ToXContent;
@@ -40,14 +41,18 @@ import static org.elasticsearch.index.mapper.core.TypeParsers.parseDateTimeForma
  */
 public class RootObjectMapper extends ObjectMapper {
 
+    public static final ParseField DATE_DETECTION_FIELD =  new ParseField("date_detection");
+    public static final ParseField NUMERIC_DETECTION_FIELD = new ParseField("numeric_detection");
+    public static final ParseField DYNAMIC_DATE_FORMATS_FIELD = new ParseField("dynamic_date_formats", "date_formats");
+    public static final ParseField DYNAMIC_TEMPLATES_FIELD = new ParseField("dynamic_templates");
+
     public static Set<String> getSupportedKeys() {
-        Set<String> supportedKeys = new HashSet<>();
-        supportedKeys.add("date_formats");
-        supportedKeys.add("dynamic_date_formats");
-        supportedKeys.add("dynamic_templates");
-        supportedKeys.add("date_detection");
-        supportedKeys.add("numeric_detection");
-        return supportedKeys;
+        Set<String> allNames = new HashSet<String>();
+        allNames.addAll(DATE_DETECTION_FIELD.getAllNames());
+        allNames.addAll(NUMERIC_DETECTION_FIELD.getAllNames());
+        allNames.addAll(DYNAMIC_DATE_FORMATS_FIELD.getAllNames());
+        allNames.addAll(DYNAMIC_TEMPLATES_FIELD.getAllNames());
+        return  allNames;
     }
 
     public static class Defaults {
@@ -132,7 +137,7 @@ public class RootObjectMapper extends ObjectMapper {
 
         @Override
         protected void processField(ObjectMapper.Builder builder, String fieldName, Object fieldNode) {
-            if (fieldName.equals("date_formats") || fieldName.equals("dynamic_date_formats")) {
+            if (DYNAMIC_DATE_FORMATS_FIELD.match(fieldName)) {
                 List<FormatDateTimeFormatter> dateTimeFormatters = newArrayList();
                 if (fieldNode instanceof List) {
                     for (Object node1 : (List) fieldNode) {
@@ -148,7 +153,7 @@ public class RootObjectMapper extends ObjectMapper {
                 } else {
                     ((Builder) builder).dynamicDateTimeFormatter(dateTimeFormatters);
                 }
-            } else if (fieldName.equals("dynamic_templates")) {
+            } else if (DYNAMIC_TEMPLATES_FIELD.match(fieldName)) {
                 //  "dynamic_templates" : [
                 //      {
                 //          "template_1" : {
@@ -167,9 +172,9 @@ public class RootObjectMapper extends ObjectMapper {
                     Map.Entry<String, Object> entry = tmpl.entrySet().iterator().next();
                     ((Builder) builder).add(DynamicTemplate.parse(entry.getKey(), (Map<String, Object>) entry.getValue()));
                 }
-            } else if (fieldName.equals("date_detection")) {
+            } else if (DATE_DETECTION_FIELD.match(fieldName)) {
                 ((Builder) builder).dateDetection = nodeBooleanValue(fieldNode);
-            } else if (fieldName.equals("numeric_detection")) {
+            } else if (NUMERIC_DETECTION_FIELD.match(fieldName)) {
                 ((Builder) builder).numericDetection = nodeBooleanValue(fieldNode);
             }
         }
@@ -261,7 +266,7 @@ public class RootObjectMapper extends ObjectMapper {
     protected void doXContent(XContentBuilder builder, ToXContent.Params params) throws IOException {
         if (dynamicDateTimeFormatters != Defaults.DYNAMIC_DATE_TIME_FORMATTERS) {
             if (dynamicDateTimeFormatters.length > 0) {
-                builder.startArray("dynamic_date_formats");
+                builder.startArray(DYNAMIC_DATE_FORMATS_FIELD.getPreferredName());
                 for (FormatDateTimeFormatter dateTimeFormatter : dynamicDateTimeFormatters) {
                     builder.value(dateTimeFormatter.format());
                 }
@@ -270,7 +275,7 @@ public class RootObjectMapper extends ObjectMapper {
         }
 
         if (dynamicTemplates != null && dynamicTemplates.length > 0) {
-            builder.startArray("dynamic_templates");
+            builder.startArray(DYNAMIC_TEMPLATES_FIELD.getPreferredName());
             for (DynamicTemplate dynamicTemplate : dynamicTemplates) {
                 builder.startObject();
                 builder.field(dynamicTemplate.name());
@@ -281,10 +286,10 @@ public class RootObjectMapper extends ObjectMapper {
         }
 
         if (dateDetection != Defaults.DATE_DETECTION) {
-            builder.field("date_detection", dateDetection);
+            builder.field(DATE_DETECTION_FIELD.getPreferredName(), dateDetection);
         }
         if (numericDetection != Defaults.NUMERIC_DETECTION) {
-            builder.field("numeric_detection", numericDetection);
+            builder.field(NUMERIC_DETECTION_FIELD.getPreferredName(), numericDetection);
         }
     }
 }
