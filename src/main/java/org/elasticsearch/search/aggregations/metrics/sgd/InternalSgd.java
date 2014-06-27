@@ -23,8 +23,7 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.AggregationStreams;
 import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.metrics.MetricsAggregation;
-import org.elasticsearch.search.aggregations.metrics.sum.Sum;
+import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
 import org.elasticsearch.search.aggregations.support.format.ValueFormatterStreams;
 
 import java.io.IOException;
@@ -33,7 +32,7 @@ import java.util.List;
 /**
 *
 */
-public class InternalSgd extends MetricsAggregation.SingleValue implements Sgd {
+public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue implements Sgd {
 
     public final static Type TYPE = new Type("sgd");
 

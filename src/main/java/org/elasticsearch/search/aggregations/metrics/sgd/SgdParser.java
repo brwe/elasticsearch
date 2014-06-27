@@ -177,13 +177,13 @@ public class SgdParser implements Aggregator.Parser {
         indexFieldData[0] = context.fieldData().getForField(mappers[0]);
 
         ValuesSourceConfig<ValuesSource.Numeric> config = new ValuesSourceConfig<>(ValuesSource.Numeric.class);
-        config.fieldContext(new FieldContext(y, indexFieldData[0]));
+        config.fieldContext(new FieldContext(y, indexFieldData[0], mappers[0]));
         configs.add(config);
 
         for (int i = 0; i < xs.length; i++) {
             indexFieldData[i+1] = context.fieldData().getForField(mappers[i+1]);
             config = new ValuesSourceConfig<>(ValuesSource.Numeric.class);
-            config.fieldContext(new FieldContext(xs[i], indexFieldData[i + 1]));
+            config.fieldContext(new FieldContext(xs[i], indexFieldData[i + 1], mappers[i+1]));
             configs.add(config);
         }
 

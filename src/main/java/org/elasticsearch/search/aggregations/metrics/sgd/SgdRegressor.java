@@ -128,8 +128,8 @@ public abstract class SgdRegressor implements Releasable {
     }
 
     public boolean release() throws ElasticsearchException {
-        this.thetasBuckets.release();
-        this.scaleBuckets.release();
+        this.thetasBuckets.close();
+        this.scaleBuckets.close();
         return true;
     }
 

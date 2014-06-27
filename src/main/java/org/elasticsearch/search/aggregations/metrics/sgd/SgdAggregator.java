@@ -23,6 +23,7 @@ import org.elasticsearch.index.fielddata.DoubleValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.metrics.MetricsAggregator;
+import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregator;
 import org.elasticsearch.search.aggregations.support.*;
 
 import java.io.IOException;
@@ -33,7 +34,7 @@ import static java.lang.Math.min;
 /**
  *
  */
-public class SgdAggregator extends MetricsAggregator.SingleValue {
+public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
 
     private final ArrayList<ValuesSource.Numeric> valuesSources;
     private DoubleValues[] values;
@@ -116,10 +117,6 @@ public class SgdAggregator extends MetricsAggregator.SingleValue {
         return new InternalSgd(name, regressor.emptyResult(), predictXs, displayThetas);      //TODO don't really need to pass predictXs
     }
 
-    @Override
-    protected void doRelease() {
-        regressor.release();
-    }
 
     public static class Factory extends MultiValuesSourceAggregatorFactory.LeafOnly<ValuesSource.Numeric> {
 

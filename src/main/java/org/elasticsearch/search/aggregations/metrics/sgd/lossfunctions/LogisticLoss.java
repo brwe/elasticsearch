@@ -18,6 +18,7 @@
  */
 package org.elasticsearch.search.aggregations.metrics.sgd.lossfunctions;
 
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.search.aggregations.metrics.sgd.SgdRegressor;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
@@ -37,6 +38,11 @@ public class LogisticLoss extends SgdRegressor {
             y_hat += thetas[i] * xs[i];
         }
         return y - 1 / (1 + Math.exp(-y_hat));
+    }
+
+    @Override
+    public void close() throws ElasticsearchException {
+        release();
     }
 
 
