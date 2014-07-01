@@ -35,7 +35,6 @@ import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcke
 /**
  *
  */
-@ElasticsearchIntegrationTest.SuiteScopeTest
 public class SGDTests extends ElasticsearchIntegrationTest {
 
     private void indexNoisyLine(String indexName, String docType, String x1field, String type, String yField) throws ExecutionException, InterruptedException {
