@@ -47,6 +47,7 @@ public class SgdParser implements Aggregator.Parser {
     public static final String XS = "xs";
     public static final String PREDICT = "predict";
     public static final String DISPLAY_THETAS = "display_thetas";
+    public static final String ALPHA = "alpha";
 
     @Override
     public String type() {

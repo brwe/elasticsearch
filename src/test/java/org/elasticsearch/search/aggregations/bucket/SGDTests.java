@@ -64,7 +64,7 @@ public class SGDTests extends ElasticsearchIntegrationTest {
         indexNoisyLine(indexName, docType, x1field, type, yField);
 
         SearchResponse response = client().prepareSearch(indexName).setTypes(docType)
-                .addAggregation(new SgdBuilder("sgd").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field))
+                .addAggregation(new SgdBuilder("sgd").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field).setAlpha(0.1))
                 .execute()
                 .actionGet();
         double[] thetas = ((InternalSgd) (response.getAggregations().getAsMap().get("sgd"))).getThetas();

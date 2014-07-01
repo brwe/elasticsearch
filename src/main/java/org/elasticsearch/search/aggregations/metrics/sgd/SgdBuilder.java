@@ -33,6 +33,15 @@ public class SgdBuilder extends ValuesSourceMetricsAggregationBuilder<SgdBuilder
     String[] xs = null;
     float[] predict = null;
     boolean display_thetas = false;
+    private boolean alphaWasSet = false;
+
+    public SgdBuilder setAlpha(double alpha) {
+        this.alpha = alpha;
+        alphaWasSet = true;
+        return this;
+    }
+
+    double alpha;
 
     public SgdBuilder setRegressor(String regressor) {
         this.regressor = regressor;
@@ -79,6 +88,10 @@ public class SgdBuilder extends ValuesSourceMetricsAggregationBuilder<SgdBuilder
         }
         if (display_thetas == true) {
             builder.field(SgdParser.DISPLAY_THETAS, display_thetas);
+        }
+
+        if (alphaWasSet) {
+            builder.field(SgdParser.ALPHA, alpha);
         }
     }
 }
