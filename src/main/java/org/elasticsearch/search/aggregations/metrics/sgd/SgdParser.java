@@ -42,6 +42,12 @@ import java.util.Map;
  */
 public class SgdParser implements Aggregator.Parser {
 
+    public static final String REGRESSOR = "regressor";
+    public static final String Y = "y";
+    public static final String XS = "xs";
+    public static final String PREDICT = "predict";
+    public static final String DISPLAY_THETAS = "display_thetas";
+
     @Override
     public String type() {
         return InternalSgd.TYPE.name();
@@ -75,9 +81,9 @@ public class SgdParser implements Aggregator.Parser {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
             } else if (token == XContentParser.Token.VALUE_STRING) {
-                if ("y".equals(currentFieldName)) {
+                if (Y.equals(currentFieldName)) {
                     y = parser.text();
-                } else if ("regressor".equals(currentFieldName)) {
+                } else if (REGRESSOR.equals(currentFieldName)) {
                     regressorType = RegressorType.resolve(parser.text(), context);
                 } else if ("script".equals(currentFieldName)) {
                     script = parser.text();
@@ -90,14 +96,14 @@ public class SgdParser implements Aggregator.Parser {
                     settings.put(currentFieldName, parser.text());
                 }
             } else if (token == XContentParser.Token.START_ARRAY) {
-                if ("xs".equals(currentFieldName)) {
+                if (XS.equals(currentFieldName)) {
                     ArrayList<String> values = new ArrayList<>();
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                         values.add(parser.text());
                     }
                     xs   = new String[values.size()];
                     xs = values.toArray(xs);
-                } else if ("predict".equals(currentFieldName)) {
+                } else if (PREDICT.equals(currentFieldName)) {
                     ArrayList<Double> values = new ArrayList<>();
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                         values.add(parser.doubleValue());
@@ -113,7 +119,7 @@ public class SgdParser implements Aggregator.Parser {
                     throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
                 }
             } else if (token == XContentParser.Token.VALUE_BOOLEAN) {
-                if ("display_thetas".equals(currentFieldName)) {
+                if (DISPLAY_THETAS.equals(currentFieldName)) {
                     displayThetas = parser.booleanValue();
                 } else {
                     if (settings == null) {
@@ -151,7 +157,7 @@ public class SgdParser implements Aggregator.Parser {
         }
 
         if (predictXs == null || predictXs.length == 0) {
-            throw new SearchParseException(context, "predict values must be supplied for regression for " + aggregationName + ".");
+            throw new SearchParseException(context, "Predict values must be supplied for regression for " + aggregationName + ".");
         }
 
         if (predictXs.length != xs.length) {
@@ -215,7 +221,7 @@ public class SgdParser implements Aggregator.Parser {
             } else if (name.equals("logistic")) {
                 return LOGISTIC;
             }
-            throw new SearchParseException(context, "Unknown regressor type [" + name + "]");
+            throw new SearchParseException(context, "Unknown " + REGRESSOR + " type [" + name + "]");
         }
 
     }

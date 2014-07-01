@@ -20,6 +20,7 @@ package org.elasticsearch.search.aggregations.metrics.sgd;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.ObjectArray;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
@@ -128,8 +129,7 @@ public abstract class SgdRegressor implements Releasable {
     }
 
     public boolean release() throws ElasticsearchException {
-        this.thetasBuckets.close();
-        this.scaleBuckets.close();
+        Releasables.close(thetasBuckets, scaleBuckets);
         return true;
     }
 

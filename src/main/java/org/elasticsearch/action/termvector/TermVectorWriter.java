@@ -35,7 +35,7 @@ final class TermVectorWriter {
     final List<String> fields = new ArrayList<>();
     final List<Long> fieldOffset = new ArrayList<>();
     final BytesStreamOutput output = new BytesStreamOutput(1); // can we somehow
-    // predict the
+    // PREDICT the
     // size here?
     private static final String HEADER = "TV";
     private static final int CURRENT_VERSION = -1;

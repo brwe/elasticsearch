@@ -19,6 +19,7 @@
 package org.elasticsearch.search.aggregations.metrics.sgd;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.index.fielddata.DoubleValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.InternalAggregation;
@@ -144,4 +145,8 @@ public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
         }
     }
 
+    @Override
+    public void doClose() {
+        regressor.release();
+    }
 }

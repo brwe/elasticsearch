@@ -28,7 +28,57 @@ import java.io.IOException;
  */
 public class SgdBuilder extends ValuesSourceMetricsAggregationBuilder<SgdBuilder> {
 
+    String regressor = null;
+    String y = null;
+    String[] xs = null;
+    float[] predict = null;
+    boolean display_thetas = false;
+
+    public SgdBuilder setRegressor(String regressor) {
+        this.regressor = regressor;
+        return this;
+    }
+
+    public SgdBuilder setY(String y) {
+        this.y = y;
+        return this;
+    }
+
+    public SgdBuilder setXs(String... xs) {
+        this.xs = xs;
+        return this;
+    }
+
+    public SgdBuilder setPredict(float... predict) {
+        this.predict = predict;
+        return this;
+    }
+
+    public SgdBuilder setDisplay_thetas(boolean display_thetas) {
+        this.display_thetas = display_thetas;
+        return this;
+    }
+
     public SgdBuilder(String name) {
         super(name, InternalSgd.TYPE.name());
+    }
+
+    @Override
+    protected void internalXContent(XContentBuilder builder, Params params) throws IOException {
+        if (regressor != null) {
+            builder.field(SgdParser.REGRESSOR, regressor);
+        }
+        if (y != null) {
+            builder.field(SgdParser.Y, y);
+        }
+        if (xs != null) {
+            builder.field(SgdParser.XS, xs);
+        }
+        if (predict != null) {
+            builder.field(SgdParser.PREDICT, predict);
+        }
+        if (display_thetas == true) {
+            builder.field(SgdParser.DISPLAY_THETAS, display_thetas);
+        }
     }
 }
