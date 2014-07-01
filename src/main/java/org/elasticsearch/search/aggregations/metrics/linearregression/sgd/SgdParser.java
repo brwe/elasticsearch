@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import com.google.common.primitives.Doubles;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -25,8 +25,8 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.metrics.sgd.lossfunctions.LogisticLoss;
-import org.elasticsearch.search.aggregations.metrics.sgd.lossfunctions.SquaredLoss;
+import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionAggregator;
 import org.elasticsearch.search.aggregations.support.FieldContext;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -51,7 +51,7 @@ public class SgdParser implements Aggregator.Parser {
 
     @Override
     public String type() {
-        return InternalSgd.TYPE.name();
+        return InternalRegression.TYPE.name();
     }
 
     /**
@@ -176,7 +176,7 @@ public class SgdParser implements Aggregator.Parser {
 
         //if (mapper == null) {
         //    config.unmapped(true);
-            //return new SgdAggregator.Factory(aggregationName, config, regressorFactory, keyed);
+            //return new RegressionAggregator.Factory(aggregationName, config, regressorFactory, keyed);
         //}
 
         IndexFieldData<?>[] indexFieldData = new IndexFieldData<?>[xs.length + 1];
@@ -194,7 +194,7 @@ public class SgdParser implements Aggregator.Parser {
             configs.add(config);
         }
 
-        return new SgdAggregator.Factory(aggregationName, configs, regressorFactory, displayThetas, predictXs);
+        return new RegressionAggregator.Factory(aggregationName, configs, regressorFactory, displayThetas, predictXs);
     }
 
     /**

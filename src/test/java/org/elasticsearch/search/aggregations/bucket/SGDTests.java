@@ -20,8 +20,8 @@ package org.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.search.aggregations.metrics.sgd.InternalSgd;
-import org.elasticsearch.search.aggregations.metrics.sgd.SgdBuilder;
+import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdBuilder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
@@ -71,10 +71,10 @@ public class SGDTests extends ElasticsearchIntegrationTest {
         indexNoisyLine(indexName, docType, x1field, type, yField, a, b);
 
         SearchResponse response = client().prepareSearch(indexName).setTypes(docType)
-                .addAggregation(new SgdBuilder("sgd").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field).setAlpha(0.1))
+                .addAggregation(new SgdBuilder("linearregression").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field).setAlpha(0.1))
                 .execute()
                 .actionGet();
-        double[] thetas = ((InternalSgd) (response.getAggregations().getAsMap().get("sgd"))).getThetas();
+        double[] thetas = ((InternalRegression) (response.getAggregations().getAsMap().get("linearregression"))).getThetas();
         assertNotNull(thetas);
         assertThat(Math.abs(thetas[0] - b), lessThan(0.3d));
         assertThat(Math.abs(thetas[1] - a), lessThan(0.3d));

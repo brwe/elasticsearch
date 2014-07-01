@@ -16,12 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
-
-import java.io.IOException;
 
 /**
  *

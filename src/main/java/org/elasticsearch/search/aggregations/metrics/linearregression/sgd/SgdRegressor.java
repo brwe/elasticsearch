@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.lease.Releasable;

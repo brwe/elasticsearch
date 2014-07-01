@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -24,6 +24,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.AggregationStreams;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.Sgd;
 import org.elasticsearch.search.aggregations.support.format.ValueFormatterStreams;
 
 import java.io.IOException;
@@ -32,14 +33,14 @@ import java.util.List;
 /**
 *
 */
-public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue implements Sgd {
+public class InternalRegression extends InternalNumericMetricsAggregation.SingleValue implements Sgd {
 
-    public final static Type TYPE = new Type("sgd");
+    public final static Type TYPE = new Type("linearregression");
 
     public final static AggregationStreams.Stream STREAM = new AggregationStreams.Stream() {
         @Override
-        public InternalSgd readResult(StreamInput in) throws IOException {
-            InternalSgd result = new InternalSgd();
+        public InternalRegression readResult(StreamInput in) throws IOException {
+            InternalRegression result = new InternalRegression();
             result.readFrom(in);
             return result;
         }
@@ -53,9 +54,9 @@ public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue i
     private double[] predictXs;
     private boolean displayThetas;
 
-    InternalSgd() {} // for serialization
+    InternalRegression() {} // for serialization
 
-    InternalSgd(String name, double[] thetas, double[] predictXs, boolean displayThetas) {
+    InternalRegression(String name, double[] thetas, double[] predictXs, boolean displayThetas) {
         super(name);
         this.thetas = thetas;
         this.predictXs = predictXs;
@@ -85,18 +86,18 @@ public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue i
     }
 
     @Override
-    public InternalSgd reduce(ReduceContext reduceContext) {
+    public InternalRegression reduce(ReduceContext reduceContext) {
         List<InternalAggregation> aggregations = reduceContext.aggregations();
         if (aggregations.size() == 1) {
-            return (InternalSgd) aggregations.get(0);
+            return (InternalRegression) aggregations.get(0);
         }
-        InternalSgd reduced = null;
+        InternalRegression reduced = null;
         for (InternalAggregation aggregation : aggregations) {
             if (reduced == null) {
-                reduced = (InternalSgd) aggregation;
+                reduced = (InternalRegression) aggregation;
             } else {
                 for (int i = 0; i < reduced.thetas.length; i++) {
-                    reduced.thetas[i] += ((InternalSgd) aggregation).thetas[i];
+                    reduced.thetas[i] += ((InternalRegression) aggregation).thetas[i];
                 }
             }
         }
@@ -106,7 +107,7 @@ public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue i
             }
             return reduced;
         }
-        return (InternalSgd) aggregations.get(0);
+        return (InternalRegression) aggregations.get(0);
     }
 
     @Override

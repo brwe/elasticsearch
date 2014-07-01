@@ -16,11 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd.lossfunctions;
+package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
-import org.elasticsearch.search.aggregations.metrics.sgd.SgdRegressor;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
 
 import java.util.Map;

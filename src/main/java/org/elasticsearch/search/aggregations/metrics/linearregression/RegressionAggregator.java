@@ -16,15 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.index.fielddata.DoubleValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.InternalAggregation;
-import org.elasticsearch.search.aggregations.metrics.MetricsAggregator;
 import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregator;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdRegressor;
 import org.elasticsearch.search.aggregations.support.*;
 
 import java.io.IOException;
@@ -35,7 +34,7 @@ import static java.lang.Math.min;
 /**
  *
  */
-public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
+public class RegressionAggregator extends NumericMetricsAggregator.SingleValue {
 
     private final ArrayList<ValuesSource.Numeric> valuesSources;
     private DoubleValues[] values;
@@ -45,8 +44,8 @@ public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
     private final double[] predictXs;
 
 
-    public SgdAggregator(String name, long estimatedBucketsCount, ArrayList<ValuesSource.Numeric> valuesSources, AggregationContext context,
-                         Aggregator parent, SgdRegressor regressor, boolean displayThetas, double[] predictXs) {
+    public RegressionAggregator(String name, long estimatedBucketsCount, ArrayList<ValuesSource.Numeric> valuesSources, AggregationContext context,
+                                Aggregator parent, SgdRegressor regressor, boolean displayThetas, double[] predictXs) {
         super(name, estimatedBucketsCount, context, parent);
         this.valuesSources = valuesSources;
         this.values = new DoubleValues[valuesSources.size()];
@@ -110,12 +109,12 @@ public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
             return new InternalSum(name, 0);
         }
         */
-        return new InternalSgd(name, regressor.thetas(owningBucketOrdinal), predictXs, displayThetas);
+        return new InternalRegression(name, regressor.thetas(owningBucketOrdinal), predictXs, displayThetas);
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalSgd(name, regressor.emptyResult(), predictXs, displayThetas);      //TODO don't really need to pass predictXs
+        return new InternalRegression(name, regressor.emptyResult(), predictXs, displayThetas);      //TODO don't really need to pass predictXs
     }
 
 
@@ -127,7 +126,7 @@ public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
         private final double[] predictXs;
 
         public Factory(String name, ArrayList<ValuesSourceConfig<ValuesSource.Numeric>> valuesSourceConfigs, SgdRegressor.Factory estimatorFactory, boolean keyed, double[] predictXs) {
-            super(name, InternalSgd.TYPE.name(), valuesSourceConfigs);
+            super(name, InternalRegression.TYPE.name(), valuesSourceConfigs);
             this.estimatorFactory = estimatorFactory;
             this.keyed = keyed;
             this.predictXs = predictXs;
@@ -135,13 +134,13 @@ public class SgdAggregator extends NumericMetricsAggregator.SingleValue {
 
         @Override
         protected Aggregator createUnmapped(AggregationContext aggregationContext, Aggregator parent) {
-            return new SgdAggregator(name, 0, null, aggregationContext, parent, estimatorFactory.create(0, aggregationContext), keyed, predictXs);
+            return new RegressionAggregator(name, 0, null, aggregationContext, parent, estimatorFactory.create(0, aggregationContext), keyed, predictXs);
         }
 
         @Override
         protected Aggregator create(ArrayList<ValuesSource.Numeric> valuesSources, long expectedBucketsCount, AggregationContext aggregationContext, Aggregator parent) {
             SgdRegressor estimator = estimatorFactory.create( expectedBucketsCount, aggregationContext);
-            return new SgdAggregator(name, expectedBucketsCount, valuesSources, aggregationContext, parent, estimator, keyed, predictXs);
+            return new RegressionAggregator(name, expectedBucketsCount, valuesSources, aggregationContext, parent, estimator, keyed, predictXs);
         }
     }
 

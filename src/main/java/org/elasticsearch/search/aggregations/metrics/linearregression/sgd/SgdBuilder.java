@@ -16,10 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.metrics.ValuesSourceMetricsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
 
 import java.io.IOException;
 
@@ -69,7 +70,7 @@ public class SgdBuilder extends ValuesSourceMetricsAggregationBuilder<SgdBuilder
     }
 
     public SgdBuilder(String name) {
-        super(name, InternalSgd.TYPE.name());
+        super(name, InternalRegression.TYPE.name());
     }
 
     @Override
