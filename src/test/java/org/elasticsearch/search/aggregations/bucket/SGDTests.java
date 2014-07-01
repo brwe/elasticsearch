@@ -46,7 +46,7 @@ public class SGDTests extends ElasticsearchIntegrationTest {
         List<IndexRequestBuilder> indexRequestBuilderList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             double x1 = randomDouble();
-            double randgauss = randomGaussian() * 0.3;
+            double randgauss = randomGaussian() * 0.1;
             double y = a * x1 + b + randgauss;
 
             indexRequestBuilderList.add(client().prepareIndex(indexName, docType, Integer.toString(i))
@@ -71,7 +71,7 @@ public class SGDTests extends ElasticsearchIntegrationTest {
         indexNoisyLine(indexName, docType, x1field, type, yField, a, b);
 
         SearchResponse response = client().prepareSearch(indexName).setTypes(docType)
-                .addAggregation(new SgdBuilder("linearregression").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field).setAlpha(0.1))
+                .addAggregation(new SgdBuilder("linearregression").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field).setAlpha(0.5))
                 .execute()
                 .actionGet();
         double[] thetas = ((InternalRegression) (response.getAggregations().getAsMap().get("linearregression"))).getThetas();
