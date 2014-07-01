@@ -23,6 +23,7 @@ import org.elasticsearch.common.lease.Releasable;
 import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.ObjectArray;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethod;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
 
 
@@ -31,7 +32,7 @@ import static java.lang.Math.*;
 /**
 *
 */
-public abstract class SgdRegressor implements Releasable {
+public abstract class SgdRegressor implements RegressionMethod {
 
     protected double alpha;
     protected double t = 1;
@@ -132,13 +133,6 @@ public abstract class SgdRegressor implements Releasable {
         Releasables.close(thetasBuckets, scaleBuckets);
         return true;
     }
-
-    public static interface Factory<E extends SgdRegressor> {
-
-        public abstract E create(long estimatedBucketCount, AggregationContext context);
-
-    }
-
 
 
 }

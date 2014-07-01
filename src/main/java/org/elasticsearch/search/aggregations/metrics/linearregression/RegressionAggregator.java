@@ -23,13 +23,11 @@ import org.elasticsearch.index.fielddata.DoubleValues;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregator;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdRegressor;
 import org.elasticsearch.search.aggregations.support.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
-import static java.lang.Math.min;
 
 /**
  *
@@ -39,13 +37,13 @@ public class RegressionAggregator extends NumericMetricsAggregator.SingleValue {
     private final ArrayList<ValuesSource.Numeric> valuesSources;
     private DoubleValues[] values;
 
-    private final SgdRegressor regressor;
+    private final RegressionMethod regressor;
     private final boolean displayThetas;
     private final double[] predictXs;
 
 
     public RegressionAggregator(String name, long estimatedBucketsCount, ArrayList<ValuesSource.Numeric> valuesSources, AggregationContext context,
-                                Aggregator parent, SgdRegressor regressor, boolean displayThetas, double[] predictXs) {
+                                Aggregator parent, RegressionMethod regressor, boolean displayThetas, double[] predictXs) {
         super(name, estimatedBucketsCount, context, parent);
         this.valuesSources = valuesSources;
         this.values = new DoubleValues[valuesSources.size()];
@@ -120,12 +118,12 @@ public class RegressionAggregator extends NumericMetricsAggregator.SingleValue {
 
     public static class Factory extends MultiValuesSourceAggregatorFactory.LeafOnly<ValuesSource.Numeric> {
 
-        private final SgdRegressor.Factory estimatorFactory;
+        private final RegressionMethod.Factory estimatorFactory;
 
         private final boolean keyed;
         private final double[] predictXs;
 
-        public Factory(String name, ArrayList<ValuesSourceConfig<ValuesSource.Numeric>> valuesSourceConfigs, SgdRegressor.Factory estimatorFactory, boolean keyed, double[] predictXs) {
+        public Factory(String name, ArrayList<ValuesSourceConfig<ValuesSource.Numeric>> valuesSourceConfigs, RegressionMethod.Factory estimatorFactory, boolean keyed, double[] predictXs) {
             super(name, InternalRegression.TYPE.name(), valuesSourceConfigs);
             this.estimatorFactory = estimatorFactory;
             this.keyed = keyed;
@@ -139,7 +137,7 @@ public class RegressionAggregator extends NumericMetricsAggregator.SingleValue {
 
         @Override
         protected Aggregator create(ArrayList<ValuesSource.Numeric> valuesSources, long expectedBucketsCount, AggregationContext aggregationContext, Aggregator parent) {
-            SgdRegressor estimator = estimatorFactory.create( expectedBucketsCount, aggregationContext);
+            RegressionMethod estimator = estimatorFactory.create( expectedBucketsCount, aggregationContext);
             return new RegressionAggregator(name, expectedBucketsCount, valuesSources, aggregationContext, parent, estimator, keyed, predictXs);
         }
     }

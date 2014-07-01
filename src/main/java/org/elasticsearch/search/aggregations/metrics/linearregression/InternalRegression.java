@@ -24,7 +24,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.AggregationStreams;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.metrics.InternalNumericMetricsAggregation;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.Sgd;
 import org.elasticsearch.search.aggregations.support.format.ValueFormatterStreams;
 
 import java.io.IOException;
@@ -33,7 +32,7 @@ import java.util.List;
 /**
 *
 */
-public class InternalRegression extends InternalNumericMetricsAggregation.SingleValue implements Sgd {
+public class InternalRegression extends InternalNumericMetricsAggregation.SingleValue implements RegressionFunction {
 
     public final static Type TYPE = new Type("linearregression");
 

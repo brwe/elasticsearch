@@ -16,15 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
-import org.elasticsearch.search.aggregations.Aggregation;
+package org.elasticsearch.search.aggregations.metrics.linearregression;
 
-/**
- *
- */
-public interface Sgd extends Aggregation {
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.search.aggregations.support.AggregationContext;
 
-    double getValue();
 
+public interface RegressionMethod extends Releasable {
+    public void step(double[] xs, double y, long bucketOrd);
+
+    public boolean release() throws ElasticsearchException;
+
+    public double[] thetas(long bucketOrd);
+
+    public double[] emptyResult();
+
+    interface Factory<E extends RegressionMethod> {
+
+        public abstract E create(long estimatedBucketCount, AggregationContext context);
+
+    }
 }
