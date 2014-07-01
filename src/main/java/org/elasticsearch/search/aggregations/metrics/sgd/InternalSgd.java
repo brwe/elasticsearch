@@ -80,6 +80,10 @@ public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue i
         return TYPE;
     }
 
+    public double[] getThetas() {
+        return thetas;
+    }
+
     @Override
     public InternalSgd reduce(ReduceContext reduceContext) {
         List<InternalAggregation> aggregations = reduceContext.aggregations();
@@ -109,14 +113,14 @@ public class InternalSgd extends InternalNumericMetricsAggregation.SingleValue i
     public void readFrom(StreamInput in) throws IOException {
         name = in.readString();
         valueFormatter = ValueFormatterStreams.readOptional(in);
-        //sum = in.readDouble();
+        thetas = in.readDoubleArray();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(name);
         ValueFormatterStreams.writeOptional(valueFormatter, out);
-        //out.writeDouble(sum);
+        out.writeDoubleArray(thetas);
     }
 
     @Override

@@ -20,6 +20,7 @@ package org.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.search.aggregations.metrics.sgd.InternalSgd;
 import org.elasticsearch.search.aggregations.metrics.sgd.SgdBuilder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
@@ -30,7 +31,6 @@ import java.util.concurrent.ExecutionException;
 import static org.elasticsearch.cluster.metadata.IndexMetaData.SETTING_NUMBER_OF_REPLICAS;
 import static org.elasticsearch.cluster.metadata.IndexMetaData.SETTING_NUMBER_OF_SHARDS;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
-import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 
 /**
  *
@@ -46,10 +46,10 @@ public class SGDTests extends ElasticsearchIntegrationTest {
         double a = 2;
         double b = 3;
         List<IndexRequestBuilder> indexRequestBuilderList = new ArrayList<>();
-        for (int i = 0; i< 100; i++) {
+        for (int i = 0; i < 100; i++) {
             double x1 = randomIntBetween(0, 100);
             indexRequestBuilderList.add(client().prepareIndex(indexName, docType, Integer.toString(i))
-                    .setSource(x1field, x1, yField, a*x1+b+randomGaussian()*20));
+                    .setSource(x1field, x1, yField, a * x1 + b + randomGaussian() * 2.0));
         }
         indexRandom(true, indexRequestBuilderList);
     }
@@ -67,5 +67,8 @@ public class SGDTests extends ElasticsearchIntegrationTest {
                 .addAggregation(new SgdBuilder("sgd").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field))
                 .execute()
                 .actionGet();
+        double[] thetas = ((InternalSgd) (response.getAggregations().getAsMap().get("sgd"))).getThetas();
+        assertNotNull(thetas);
+        logger.info("Thetas are {} and expected {} {}", thetas, 2, 3);
     }
 }
