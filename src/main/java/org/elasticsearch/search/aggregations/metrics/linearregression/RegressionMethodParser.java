@@ -28,6 +28,7 @@ import java.io.IOException;
 public interface RegressionMethodParser {
 
     public String getName();
+
     public RegressionMethod.Factory parse(XContentParser parser, SearchContext context) throws IOException;
-    public String type();
+
 }

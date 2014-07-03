@@ -54,21 +54,11 @@ public abstract class SgdParser implements RegressionMethodParser {
     public static class LogisticRegressionParser extends SgdParser {
 
         @Override
-        public String type() {
-            return "logistic";
-        }
-
-        @Override
         public String getName() {
             return "logistic";
         }
     }
     public static class SquaredRegressionParser extends SgdParser {
-
-        @Override
-        public String type() {
-            return "squared";
-        }
 
         @Override
         public String getName() {

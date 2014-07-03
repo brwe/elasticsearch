@@ -46,7 +46,7 @@ public class LinearRegressionParser implements Aggregator.Parser {
     public static final String XS = "xs";
     public static final String PREDICT = "predict";
     public static final String DISPLAY_THETAS = "display_thetas";
-    private final Map<String, RegressionMethodParser> functionParsers = new HashMap<>();
+    private final Map<String, RegressionMethodParser> regressionMethodParsers = new HashMap<>();
 
     @Override
     public String type() {
@@ -58,9 +58,9 @@ public class LinearRegressionParser implements Aggregator.Parser {
     // TODO: inject
     LinearRegressionParser() {
         SquaredRegressionParser sgdParser = new SquaredRegressionParser();
-        functionParsers.put(sgdParser.getName(), sgdParser);
+        regressionMethodParsers.put(sgdParser.getName(), sgdParser);
         LogisticRegressionParser logParser = new LogisticRegressionParser();
-        functionParsers.put(logParser.getName(), logParser);
+        regressionMethodParsers.put(logParser.getName(), logParser);
     }
 
     /**
@@ -120,9 +120,9 @@ public class LinearRegressionParser implements Aggregator.Parser {
                 if ("params".equals(currentFieldName)) {
                     scriptParams = parser.map();
                 } else {
-                    RegressionMethodParser functionParser = functionParsers.get(currentFieldName);
-                    if (functionParser != null) {
-                        regressionMethodFactory = functionParser.parse(parser, context);
+                    RegressionMethodParser regressionMethodParser = regressionMethodParsers.get(currentFieldName);
+                    if (regressionMethodParser != null) {
+                        regressionMethodFactory = regressionMethodParser.parse(parser, context);
                     } else {
                         throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
                     }
@@ -164,7 +164,6 @@ public class LinearRegressionParser implements Aggregator.Parser {
             throw new SearchParseException(context, "Must define a regression method for " + aggregationName + ".");
         }
 
-
         configs = new ArrayList<>(xs.length + 1);
 
         FieldMapper<?>[] mappers = new FieldMapper<?>[xs.length + 1];
@@ -195,6 +194,4 @@ public class LinearRegressionParser implements Aggregator.Parser {
 
         return new RegressionAggregator.Factory(aggregationName, configs, regressionMethodFactory, displayThetas, predictXs);
     }
-
-
 }

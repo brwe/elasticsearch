@@ -24,6 +24,7 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.ObjectArray;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
 import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethod;
@@ -189,6 +190,11 @@ public abstract class SgdRegressor implements RegressionMethod {
         public void writeTo(StreamOutput out) throws IOException {
             out.writeString(STREAM.getName());
             out.writeDouble(alpha);
+        }
+
+        @Override
+        public void resultToXContent(XContentBuilder builder) {
+            // nothing to build, maybe output error or something later?
         }
     }
 

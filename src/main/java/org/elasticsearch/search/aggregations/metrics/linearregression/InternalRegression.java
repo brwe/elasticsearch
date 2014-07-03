@@ -44,6 +44,7 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
             return result;
         }
     };
+
     private RegressionReducer regressionReducer;
 
     public static void registerStreams() {
@@ -106,8 +107,6 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         valueFormatter = ValueFormatterStreams.readOptional(in);
         thetas = in.readDoubleArray();
         regressionReducer = RegressionMethodStreams.read(in);
-
-        //TODO: Here also stream the method, must know how to reduce!
     }
 
     @Override
@@ -116,8 +115,6 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         ValueFormatterStreams.writeOptional(valueFormatter, out);
         out.writeDoubleArray(thetas);
         regressionReducer.writeTo(out);
-
-        //TODO: Here also stream the method, must know how to reduce!
     }
 
     @Override
@@ -136,6 +133,7 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
             builder.endArray();
         }
 
+        regressionReducer.resultToXContent(builder);
         builder.endObject();
         return builder;
     }

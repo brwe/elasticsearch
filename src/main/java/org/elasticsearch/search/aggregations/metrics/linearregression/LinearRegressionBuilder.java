@@ -34,7 +34,7 @@ public class LinearRegressionBuilder extends ValuesSourceMetricsAggregationBuild
     boolean display_thetas = false;
     RegressionMethodBuilder methodBuilder;
 
-    public LinearRegressionBuilder setRegressor(RegressionMethodBuilder methodBuilder) {
+    public LinearRegressionBuilder setRegressionMethod(RegressionMethodBuilder methodBuilder) {
         this.methodBuilder = methodBuilder;
         return this;
     }
@@ -54,7 +54,7 @@ public class LinearRegressionBuilder extends ValuesSourceMetricsAggregationBuild
         return this;
     }
 
-    public LinearRegressionBuilder setDisplay_thetas(boolean display_thetas) {
+    public LinearRegressionBuilder setDisplayThetas(boolean display_thetas) {
         this.display_thetas = display_thetas;
         return this;
     }

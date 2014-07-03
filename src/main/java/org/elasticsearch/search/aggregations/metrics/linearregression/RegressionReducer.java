@@ -20,6 +20,7 @@
 package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 
 import java.io.IOException;
@@ -30,4 +31,6 @@ public interface RegressionReducer {
     public InternalRegression reduce(List<InternalAggregation> aggregations);
 
     public void writeTo(StreamOutput out) throws IOException;
+
+    public void resultToXContent(XContentBuilder builder);
 }
