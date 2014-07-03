@@ -42,7 +42,7 @@ public class SGDTests extends ElasticsearchIntegrationTest {
     private void indexNoisyLine(String indexName, String docType, String x1field, String type, String yField, double a, double b) throws ExecutionException, InterruptedException {
 
         String mappings = "{\"doc\": {\"properties\":{\"x1\": {\"type\":\"" + type + "\"}, \"x2\": {\"type\":\"" + type + "\"}}}}";
-        assertAcked(prepareCreate(indexName).setSettings(SETTING_NUMBER_OF_SHARDS, 1, SETTING_NUMBER_OF_REPLICAS, 0).addMapping("doc", mappings));
+        assertAcked(prepareCreate(indexName).setSettings(SETTING_NUMBER_OF_SHARDS, 2, SETTING_NUMBER_OF_REPLICAS, 0).addMapping("doc", mappings));
         String[] gb = {"0", "1"};
         List<IndexRequestBuilder> indexRequestBuilderList = new ArrayList<>();
         for (int i = 0; i < 100; i++) {

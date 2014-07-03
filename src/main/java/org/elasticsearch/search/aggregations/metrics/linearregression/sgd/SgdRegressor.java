@@ -19,15 +19,23 @@
 package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.ObjectArray;
+import org.elasticsearch.search.aggregations.InternalAggregation;
+import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
 import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethod;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethodStreams;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionReducer;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
 
+import java.io.IOException;
+import java.util.List;
 
-import static java.lang.Math.*;
+import static java.lang.Math.abs;
+import static java.lang.Math.pow;
 
 /**
 *
@@ -46,6 +54,18 @@ public abstract class SgdRegressor implements RegressionMethod {
     protected final BigArrays bigArrays;
     protected ObjectArray<double[]> scaleBuckets;
     protected ObjectArray<double[]> thetasBuckets;
+
+    public static final RegressionMethodStreams.Stream STREAM = new RegressionMethodStreams.Stream() {
+        @Override
+        public RegressionReducer readResult(StreamInput in) throws IOException {
+            return new StochasticRegressionReducer(in.readDouble());
+        }
+
+        @Override
+        public String getName() {
+            return "stochastic";
+        }
+    };
 
     public SgdRegressor(AggregationContext context, long estimatedBucketsCount, double alpha) {
         this.alpha = alpha;
@@ -134,5 +154,46 @@ public abstract class SgdRegressor implements RegressionMethod {
         return true;
     }
 
+    private static class StochasticRegressionReducer implements RegressionReducer {
+        double alpha;
+        public StochasticRegressionReducer(double alpha) {
+            this.alpha = alpha;
+        }
 
+        @Override
+        public InternalRegression reduce(List<InternalAggregation> aggregations) {
+            InternalRegression reduced = null;
+            for (InternalAggregation aggregation : aggregations) {
+                if (reduced == null) {
+                    reduced = (InternalRegression) aggregation;
+                } else {
+                    double[] thetas = reduced.getThetas();
+                    for (int i = 0; i < reduced.getThetas().length; i++) {
+                        thetas[i] += ((InternalRegression) aggregation).getThetas()[i];
+                    }
+                    reduced.setThetas(thetas);
+                }
+            }
+            if (reduced != null) {
+                double[] thetas = reduced.getThetas();
+                for (int i = 0; i < thetas.length; i++) {
+                    thetas[i] /= aggregations.size();
+                }
+                reduced.setThetas(thetas);
+                return reduced;
+            }
+            return null;
+        }
+
+        @Override
+        public void writeTo(StreamOutput out) throws IOException {
+            out.writeString(STREAM.getName());
+            out.writeDouble(alpha);
+        }
+    }
+
+    @Override
+    public RegressionReducer getReducer() {
+        return new StochasticRegressionReducer(alpha);
+    }
 }

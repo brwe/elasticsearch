@@ -44,6 +44,7 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
             return result;
         }
     };
+    private RegressionReducer regressionReducer;
 
     public static void registerStreams() {
         AggregationStreams.registerStream(STREAM, TYPE.stream());
@@ -55,11 +56,12 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
 
     InternalRegression() {} // for serialization
 
-    InternalRegression(String name, double[] thetas, double[] predictXs, boolean displayThetas) {
+    InternalRegression(String name, RegressionReducer regressionReducer, double[] thetas, double[] predictXs, boolean displayThetas) {
         super(name);
         this.thetas = thetas;
         this.predictXs = predictXs;
         this.displayThetas = displayThetas;
+        this.regressionReducer = regressionReducer;
     }
 
     @Override
@@ -90,23 +92,12 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         if (aggregations.size() == 1) {
             return (InternalRegression) aggregations.get(0);
         }
-        InternalRegression reduced = null;
-        for (InternalAggregation aggregation : aggregations) {
-            if (reduced == null) {
-                reduced = (InternalRegression) aggregation;
-            } else {
-                for (int i = 0; i < reduced.thetas.length; i++) {
-                    reduced.thetas[i] += ((InternalRegression) aggregation).thetas[i];
-                }
-            }
-        }
-        if (reduced != null) {
-            for (int i = 0; i < reduced.thetas.length; i++) {
-                reduced.thetas[i] /= aggregations.size();
-            }
+        InternalRegression reduced = regressionReducer.reduce(aggregations);
+        if (reduced == null) {
+            return (InternalRegression) aggregations.get(0);
+        } else {
             return reduced;
         }
-        return (InternalRegression) aggregations.get(0);
     }
 
     @Override
@@ -114,6 +105,8 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         name = in.readString();
         valueFormatter = ValueFormatterStreams.readOptional(in);
         thetas = in.readDoubleArray();
+        regressionReducer = RegressionMethodStreams.read(in);
+
         //TODO: Here also stream the method, must know how to reduce!
     }
 
@@ -122,6 +115,8 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         out.writeString(name);
         ValueFormatterStreams.writeOptional(valueFormatter, out);
         out.writeDoubleArray(thetas);
+        regressionReducer.writeTo(out);
+
         //TODO: Here also stream the method, must know how to reduce!
     }
 
@@ -145,4 +140,7 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         return builder;
     }
 
+    public void setThetas(double[] thetas) {
+        this.thetas = thetas;
+    }
 }

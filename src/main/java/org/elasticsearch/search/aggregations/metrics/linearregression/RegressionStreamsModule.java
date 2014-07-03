@@ -20,12 +20,29 @@
 
 package org.elasticsearch.search.aggregations.metrics.linearregression;
 
+import com.google.common.collect.Lists;
+import org.elasticsearch.common.inject.AbstractModule;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdRegressor;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
+import java.util.List;
 
-import java.io.IOException;
 
-public interface RegressionMethodBuilder {
+public class RegressionStreamsModule extends AbstractModule {
 
-    void toXContent(XContentBuilder builder) throws IOException;
+    private List<RegressionMethodStreams.Stream> streams = Lists.newArrayList();
+
+    public RegressionStreamsModule() {
+        stream(SgdRegressor.STREAM);
+    }
+
+    public void stream(RegressionMethodStreams.Stream stream) {
+        streams.add(stream);
+    }
+
+    @Override
+    protected void configure() {
+        for (RegressionMethodStreams.Stream stream : streams) {
+            RegressionMethodStreams.registerStream(stream, stream.getName());
+        }
+    }
 }

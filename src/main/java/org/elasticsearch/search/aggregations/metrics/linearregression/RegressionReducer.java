@@ -17,15 +17,17 @@
  * under the License.
  */
 
-
 package org.elasticsearch.search.aggregations.metrics.linearregression;
 
-
-import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.search.aggregations.InternalAggregation;
 
 import java.io.IOException;
+import java.util.List;
 
-public interface RegressionMethodBuilder {
+public interface RegressionReducer {
 
-    void toXContent(XContentBuilder builder) throws IOException;
+    public InternalRegression reduce(List<InternalAggregation> aggregations);
+
+    public void writeTo(StreamOutput out) throws IOException;
 }

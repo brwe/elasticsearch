@@ -107,12 +107,12 @@ public class RegressionAggregator extends NumericMetricsAggregator.SingleValue {
             return new InternalSum(name, 0);
         }
         */
-        return new InternalRegression(name, regressor.thetas(owningBucketOrdinal), predictXs, displayThetas);
+        return new InternalRegression(name, regressor.getReducer(), regressor.thetas(owningBucketOrdinal), predictXs, displayThetas);
     }
 
     @Override
     public InternalAggregation buildEmptyAggregation() {
-        return new InternalRegression(name, regressor.emptyResult(), predictXs, displayThetas);      //TODO don't really need to pass predictXs
+        return new InternalRegression(name, regressor.getReducer(), regressor.emptyResult(), predictXs, displayThetas);      //TODO don't really need to pass predictXs
     }
 
 

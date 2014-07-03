@@ -25,8 +25,10 @@ import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.inject.SpawnModules;
 import org.elasticsearch.index.query.functionscore.FunctionScoreModule;
 import org.elasticsearch.index.search.morelikethis.MoreLikeThisFetchService;
+import org.elasticsearch.repositories.RepositoriesModule;
 import org.elasticsearch.search.action.SearchServiceTransportAction;
 import org.elasticsearch.search.aggregations.AggregationModule;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionStreamsModule;
 import org.elasticsearch.search.controller.SearchPhaseController;
 import org.elasticsearch.search.dfs.DfsPhase;
 import org.elasticsearch.search.facet.FacetModule;
@@ -50,7 +52,7 @@ public class SearchModule extends AbstractModule implements SpawnModules {
 
     @Override
     public Iterable<? extends Module> spawnModules() {
-        return ImmutableList.of(new TransportSearchModule(), new FacetModule(), new HighlightModule(), new SuggestModule(), new FunctionScoreModule(), new AggregationModule());
+        return ImmutableList.of(new TransportSearchModule(), new FacetModule(), new HighlightModule(), new SuggestModule(), new FunctionScoreModule(), new AggregationModule(), new RegressionStreamsModule());
     }
 
     @Override

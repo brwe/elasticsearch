@@ -33,6 +33,8 @@ public interface RegressionMethod extends Releasable {
 
     public double[] emptyResult();
 
+    RegressionReducer getReducer();
+
     interface Factory<E extends RegressionMethod> {
 
         public abstract E create(long estimatedBucketCount, AggregationContext context);

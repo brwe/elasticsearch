@@ -19,14 +19,11 @@
 package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.ElasticsearchIllegalArgumentException;
-import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethodBuilder;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 public class SquaredLoss extends SgdRegressor {
