@@ -114,6 +114,7 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         name = in.readString();
         valueFormatter = ValueFormatterStreams.readOptional(in);
         thetas = in.readDoubleArray();
+        //TODO: Here also stream the method, must know how to reduce!
     }
 
     @Override
@@ -121,6 +122,7 @@ public class InternalRegression extends InternalNumericMetricsAggregation.Single
         out.writeString(name);
         ValueFormatterStreams.writeOptional(valueFormatter, out);
         out.writeDoubleArray(thetas);
+        //TODO: Here also stream the method, must know how to reduce!
     }
 
     @Override
