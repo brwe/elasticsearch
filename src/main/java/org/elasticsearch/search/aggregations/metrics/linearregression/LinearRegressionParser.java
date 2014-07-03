@@ -24,6 +24,7 @@ import org.elasticsearch.index.fielddata.IndexFieldData;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.Aggregator;
+import org.elasticsearch.search.aggregations.AggregatorFactory;
 import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.LogisticLoss;
 import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdParser;
 import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredLoss;
@@ -55,7 +56,9 @@ public class LinearRegressionParser implements Aggregator.Parser {
         return InternalRegression.TYPE.name();
     }
 
-    // todo: make nicer
+
+
+    // TODO: make nicer
     LinearRegressionParser() {
         SgdParser sgdParser = new SgdParser();
         functionParsers.put(sgdParser.getName(), sgdParser);
@@ -66,7 +69,7 @@ public class LinearRegressionParser implements Aggregator.Parser {
      * (execution_hint, etc) which is not possible otherwise
      */
     @Override
-    public RegressionMethod parse(XContentParser parser) throws IOException {
+    public AggregatorFactory parse(String aggregationName, XContentParser parser, SearchContext context) throws IOException {
 
         ArrayList<ValuesSourceConfig<ValuesSource.Numeric>> configs; // new ValuesSourceConfig<>(ValuesSource.Numeric.class);
 
@@ -74,14 +77,13 @@ public class LinearRegressionParser implements Aggregator.Parser {
         String script = null;
         String scriptLang = null;
 
-        RegressionMethod.Factory regressorFactory = null;
-        RegressorType regressorType = null;
-
         String[] xs = null;
         double[] predictXs = null;
         Map<String, Object> scriptParams = null;
         boolean displayThetas = false;
         Map<String, Object> settings = null;
+
+        RegressionMethod.Factory regressionMethodFactory = null;
 
         XContentParser.Token token;
         String currentFieldName = null;
@@ -91,18 +93,12 @@ public class LinearRegressionParser implements Aggregator.Parser {
             } else if (token == XContentParser.Token.VALUE_STRING) {
                 if (Y.equals(currentFieldName)) {
                     y = parser.text();
-                } else if (REGRESSOR.equals(currentFieldName)) {
-                    regressorType = RegressorType.resolve(parser.text(), context);
-                    // leave script in - this could be the transformation of the xs later
                 } else if ("script".equals(currentFieldName)) {
                     script = parser.text();
                 } else if ("lang".equals(currentFieldName)) {
                     scriptLang = parser.text();
                 } else {
-                    if (settings == null) {
-                        settings = new HashMap<>();
-                    }
-                    settings.put(currentFieldName, parser.text());
+                    throw new SearchParseException(context, "Field " + currentFieldName + " unknown for " + aggregationName + ".");
                 }
             } else if (token == XContentParser.Token.START_ARRAY) {
                 if (XS.equals(currentFieldName)) {
@@ -127,7 +123,7 @@ public class LinearRegressionParser implements Aggregator.Parser {
                 } else {
                     RegressionMethodParser functionParser = functionParsers.get(currentFieldName);
                     if (functionParser != null) {
-                        RegressionMethod regressionMethod = functionParser.parse(parser);
+                        regressionMethodFactory = functionParser.parse(parser, context);
                     } else {
                         throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
                     }
@@ -136,21 +132,14 @@ public class LinearRegressionParser implements Aggregator.Parser {
                 if (DISPLAY_THETAS.equals(currentFieldName)) {
                     displayThetas = parser.booleanValue();
                 } else {
-                    if (settings == null) {
-                        settings = new HashMap<>();
-                    }
-                    settings.put(currentFieldName, parser.booleanValue());
+                    throw  new SearchParseException(context, "Field "+ currentFieldName+ "unknown for "+ aggregationName+".");
                 }
             } else {
                 throw new SearchParseException(context, "Unexpected token " + token + " in [" + aggregationName + "].");
             }
         }
 
-        if (regressorType == null) {
-           regressorFactory = RegressorType.SQUARED.regressorFactory(settings);
-        } else {
-            regressorFactory = regressorType.regressorFactory(settings);
-        }
+
 
 
         if (script != null) {
@@ -171,6 +160,9 @@ public class LinearRegressionParser implements Aggregator.Parser {
 
         if (predictXs.length != xs.length) {
             throw new SearchParseException(context, "Must have same number of inputs as prediction values for " + aggregationName + ".");
+        }
+        if (regressionMethodFactory == null) {
+            throw new SearchParseException(context, "Must define a regression method for " + aggregationName + ".");
         }
 
 
@@ -202,36 +194,8 @@ public class LinearRegressionParser implements Aggregator.Parser {
             configs.add(config);
         }
 
-        return new RegressionAggregator.Factory(aggregationName, configs, regressorFactory, displayThetas, predictXs);
+        return new RegressionAggregator.Factory(aggregationName, configs, regressionMethodFactory, displayThetas, predictXs);
     }
 
-    /**
-     *
-     */
-    public static enum RegressorType {
-        SQUARED() {
-            @Override
-            public RegressionMethod.Factory regressorFactory(Map<String, Object> settings) {
-                return new SquaredLoss.Factory(settings);
-            }
-        },
-        LOGISTIC() {
-            @Override
-            public RegressionMethod.Factory regressorFactory(Map<String, Object> settings) {
-                return new LogisticLoss.Factory(settings);
-            }
-        };
 
-        public abstract RegressionMethod.Factory regressorFactory(Map<String, Object> settings);
-
-        public static RegressorType resolve(String name, SearchContext context) {
-            if (name.equals("squared")) {
-                return SQUARED;
-            } else if (name.equals("logistic")) {
-                return LOGISTIC;
-            }
-            throw new SearchParseException(context, "Unknown " + REGRESSOR + " type [" + name + "]");
-        }
-
-    }
 }

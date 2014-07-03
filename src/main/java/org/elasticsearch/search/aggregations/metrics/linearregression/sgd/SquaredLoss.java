@@ -49,17 +49,8 @@ public class SquaredLoss extends SgdRegressor {
 
         private double alpha = 0.5;
 
-        public Factory(Map<String, Object> settings) {
-            if (settings != null) {
-                Object alphaObject = settings.get("alpha");
-                if (alphaObject != null) {
-                    if (!(alphaObject instanceof Number)) {
-                        throw new ElasticsearchIllegalArgumentException("alpha must be number, got a " + alphaObject.getClass());
-                    }
-                    alpha = ((Number) alphaObject).doubleValue();
-                }
-
-            }
+        public Factory(double alpha) {
+            this.alpha = alpha;
         }
 
         public SquaredLoss create(long estimatedBucketCount, AggregationContext context) {

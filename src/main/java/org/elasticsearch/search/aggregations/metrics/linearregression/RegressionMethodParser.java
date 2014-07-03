@@ -21,12 +21,13 @@ package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 
 public interface RegressionMethodParser {
 
     public String getName();
-    public RegressionMethod parse(XContentParser parser) throws IOException;
+    public RegressionMethod.Factory parse(XContentParser parser, SearchContext context) throws IOException;
     public String type();
 }
