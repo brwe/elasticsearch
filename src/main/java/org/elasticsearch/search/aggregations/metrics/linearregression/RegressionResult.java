@@ -23,7 +23,7 @@ import org.elasticsearch.search.aggregations.Aggregation;
 /**
  *
  */
-public interface RegressionFunction extends Aggregation {
+public interface RegressionResult extends Aggregation {
 
     double getValue();
 

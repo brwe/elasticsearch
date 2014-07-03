@@ -32,7 +32,7 @@ import java.util.List;
 /**
 *
 */
-public class InternalRegression extends InternalNumericMetricsAggregation.SingleValue implements RegressionFunction {
+public class InternalRegression extends InternalNumericMetricsAggregation.SingleValue implements RegressionResult {
 
     public final static Type TYPE = new Type("linearregression");
 

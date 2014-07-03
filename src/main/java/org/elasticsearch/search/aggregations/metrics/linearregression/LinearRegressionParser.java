@@ -16,18 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import com.google.common.primitives.Doubles;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.fielddata.IndexFieldData;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.search.SearchParseException;
-import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
-import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionAggregator;
-import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethod;
-import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethodParser;
+import org.elasticsearch.search.aggregations.Aggregator;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.LogisticLoss;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdParser;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredLoss;
 import org.elasticsearch.search.aggregations.support.FieldContext;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -41,7 +40,7 @@ import java.util.Map;
 /**
  *
  */
-public class SgdParser implements RegressionMethodParser {
+public class LinearRegressionParser implements Aggregator.Parser {
 
     public static final String REGRESSOR = "regressor";
     public static final String Y = "y";
@@ -49,12 +48,24 @@ public class SgdParser implements RegressionMethodParser {
     public static final String PREDICT = "predict";
     public static final String DISPLAY_THETAS = "display_thetas";
     public static final String ALPHA = "alpha";
+    private final Map<String, RegressionMethodParser> functionParsers = new HashMap<>();
 
     @Override
     public String type() {
         return InternalRegression.TYPE.name();
     }
 
+    // todo: make nicer
+    LinearRegressionParser() {
+        SgdParser sgdParser = new SgdParser();
+        functionParsers.put(sgdParser.getName(), sgdParser);
+    }
+
+    /**
+     * We must override the parse method because we need to allow custom parameters
+     * (execution_hint, etc) which is not possible otherwise
+     */
+    @Override
     public RegressionMethod parse(XContentParser parser) throws IOException {
 
         ArrayList<ValuesSourceConfig<ValuesSource.Numeric>> configs; // new ValuesSourceConfig<>(ValuesSource.Numeric.class);
@@ -63,7 +74,7 @@ public class SgdParser implements RegressionMethodParser {
         String script = null;
         String scriptLang = null;
 
-        SgdRegressor.Factory regressorFactory = null;
+        RegressionMethod.Factory regressorFactory = null;
         RegressorType regressorType = null;
 
         String[] xs = null;
@@ -82,6 +93,7 @@ public class SgdParser implements RegressionMethodParser {
                     y = parser.text();
                 } else if (REGRESSOR.equals(currentFieldName)) {
                     regressorType = RegressorType.resolve(parser.text(), context);
+                    // leave script in - this could be the transformation of the xs later
                 } else if ("script".equals(currentFieldName)) {
                     script = parser.text();
                 } else if ("lang".equals(currentFieldName)) {
@@ -113,7 +125,12 @@ public class SgdParser implements RegressionMethodParser {
                 if ("params".equals(currentFieldName)) {
                     scriptParams = parser.map();
                 } else {
-                    throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
+                    RegressionMethodParser functionParser = functionParsers.get(currentFieldName);
+                    if (functionParser != null) {
+                        RegressionMethod regressionMethod = functionParser.parse(parser);
+                    } else {
+                        throw new SearchParseException(context, "Unknown key for a " + token + " in [" + aggregationName + "]: [" + currentFieldName + "].");
+                    }
                 }
             } else if (token == XContentParser.Token.VALUE_BOOLEAN) {
                 if (DISPLAY_THETAS.equals(currentFieldName)) {
@@ -124,11 +141,6 @@ public class SgdParser implements RegressionMethodParser {
                     }
                     settings.put(currentFieldName, parser.booleanValue());
                 }
-            } else if (token == XContentParser.Token.VALUE_NUMBER) {
-                if (settings == null) {
-                    settings = new HashMap<>();
-                }
-                settings.put(currentFieldName, parser.numberValue());
             } else {
                 throw new SearchParseException(context, "Unexpected token " + token + " in [" + aggregationName + "].");
             }
@@ -193,30 +205,24 @@ public class SgdParser implements RegressionMethodParser {
         return new RegressionAggregator.Factory(aggregationName, configs, regressorFactory, displayThetas, predictXs);
     }
 
-    @Override
-    public String getName() {
-        return "sgd";
-    }
-
-
     /**
      *
      */
     public static enum RegressorType {
         SQUARED() {
             @Override
-            public SgdRegressor.Factory regressorFactory(Map<String, Object> settings) {
+            public RegressionMethod.Factory regressorFactory(Map<String, Object> settings) {
                 return new SquaredLoss.Factory(settings);
             }
         },
         LOGISTIC() {
             @Override
-            public SgdRegressor.Factory regressorFactory(Map<String, Object> settings) {
+            public RegressionMethod.Factory regressorFactory(Map<String, Object> settings) {
                 return new LogisticLoss.Factory(settings);
             }
         };
 
-        public abstract SgdRegressor.Factory regressorFactory(Map<String, Object> settings);
+        public abstract RegressionMethod.Factory regressorFactory(Map<String, Object> settings);
 
         public static RegressorType resolve(String name, SearchContext context) {
             if (name.equals("squared")) {
