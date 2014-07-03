@@ -25,8 +25,7 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.LogisticRegressionParser;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredRegressionParser;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdParser;
 import org.elasticsearch.search.aggregations.support.FieldContext;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -36,6 +35,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdParser.*;
 
 /**
  *
@@ -55,7 +56,7 @@ public class LinearRegressionParser implements Aggregator.Parser {
 
 
 
-    // TODO: make nicer
+    // TODO: inject
     LinearRegressionParser() {
         SquaredRegressionParser sgdParser = new SquaredRegressionParser();
         functionParsers.put(sgdParser.getName(), sgdParser);

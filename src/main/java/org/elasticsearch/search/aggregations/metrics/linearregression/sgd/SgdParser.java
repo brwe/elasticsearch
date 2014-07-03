@@ -19,27 +19,19 @@
 package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.search.SearchParseException;
-import org.elasticsearch.search.aggregations.metrics.linearregression.*;
-import org.elasticsearch.search.aggregations.support.ValuesSource;
-import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethod;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethodParser;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map;
 
 /**
  *
  */
-public class SquaredRegressionParser implements RegressionMethodParser {
+public abstract class SgdParser implements RegressionMethodParser {
 
     public static final String ALPHA = "alpha";
 
-    @Override
-    public String type() {
-        return "squared";
-    }
 
     public RegressionMethod.Factory parse(XContentParser parser, SearchContext context) throws IOException {
 
@@ -59,8 +51,28 @@ public class SquaredRegressionParser implements RegressionMethodParser {
         return new SquaredLoss.Factory(alpha);
     }
 
-    @Override
-    public String getName() {
-        return "squared";
+    public static class LogisticRegressionParser extends SgdParser {
+
+        @Override
+        public String type() {
+            return "logistic";
+        }
+
+        @Override
+        public String getName() {
+            return "logistic";
+        }
+    }
+    public static class SquaredRegressionParser extends SgdParser {
+
+        @Override
+        public String type() {
+            return "squared";
+        }
+
+        @Override
+        public String getName() {
+            return "squared";
+        }
     }
 }

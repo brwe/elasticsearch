@@ -20,7 +20,6 @@ package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.metrics.ValuesSourceMetricsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredRegressionParser;
 
 import java.io.IOException;
 
