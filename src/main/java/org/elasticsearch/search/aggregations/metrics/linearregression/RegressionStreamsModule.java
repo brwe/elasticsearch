@@ -22,6 +22,7 @@ package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.inject.AbstractModule;
+import org.elasticsearch.search.aggregations.metrics.linearregression.bayes.BayesRegressor;
 import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdRegressor;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class RegressionStreamsModule extends AbstractModule {
 
     public RegressionStreamsModule() {
         stream(SgdRegressor.STREAM);
+        stream(BayesRegressor.STREAM);
     }
 
     public void stream(RegressionMethodStreams.Stream stream) {

@@ -25,6 +25,8 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
+import org.elasticsearch.search.aggregations.metrics.linearregression.bayes.BayesParser;
+import org.elasticsearch.search.aggregations.metrics.linearregression.bayes.BayesRegressor;
 import org.elasticsearch.search.aggregations.support.FieldContext;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -61,6 +63,8 @@ public class LinearRegressionParser implements Aggregator.Parser {
         regressionMethodParsers.put(sgdParser.getName(), sgdParser);
         LogisticRegressionParser logParser = new LogisticRegressionParser();
         regressionMethodParsers.put(logParser.getName(), logParser);
+        BayesParser bayesParser = new BayesParser();
+        regressionMethodParsers.put(bayesParser.getName(), bayesParser);
     }
 
     /**
