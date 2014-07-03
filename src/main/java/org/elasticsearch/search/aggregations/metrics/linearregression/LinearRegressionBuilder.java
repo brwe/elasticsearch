@@ -16,83 +16,69 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
+package org.elasticsearch.search.aggregations.metrics.linearregression;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.metrics.ValuesSourceMetricsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredRegressionParser;
 
 import java.io.IOException;
 
 /**
  *
  */
-public class SgdBuilder extends ValuesSourceMetricsAggregationBuilder<SgdBuilder> {
+public class LinearRegressionBuilder extends ValuesSourceMetricsAggregationBuilder<LinearRegressionBuilder> {
 
-    String regressor = null;
     String y = null;
     String[] xs = null;
     float[] predict = null;
     boolean display_thetas = false;
-    private boolean alphaWasSet = false;
+    RegressionMethodBuilder methodBuilder;
 
-    public SgdBuilder setAlpha(double alpha) {
-        this.alpha = alpha;
-        alphaWasSet = true;
+    public LinearRegressionBuilder setRegressor(RegressionMethodBuilder methodBuilder) {
+        this.methodBuilder = methodBuilder;
         return this;
     }
 
-    double alpha;
-
-    public SgdBuilder setRegressor(String regressor) {
-        this.regressor = regressor;
-        return this;
-    }
-
-    public SgdBuilder setY(String y) {
+    public LinearRegressionBuilder setY(String y) {
         this.y = y;
         return this;
     }
 
-    public SgdBuilder setXs(String... xs) {
+    public LinearRegressionBuilder setXs(String... xs) {
         this.xs = xs;
         return this;
     }
 
-    public SgdBuilder setPredict(float... predict) {
+    public LinearRegressionBuilder setPredict(float... predict) {
         this.predict = predict;
         return this;
     }
 
-    public SgdBuilder setDisplay_thetas(boolean display_thetas) {
+    public LinearRegressionBuilder setDisplay_thetas(boolean display_thetas) {
         this.display_thetas = display_thetas;
         return this;
     }
 
-    public SgdBuilder(String name) {
+    public LinearRegressionBuilder(String name) {
         super(name, InternalRegression.TYPE.name());
     }
 
     @Override
     protected void internalXContent(XContentBuilder builder, Params params) throws IOException {
-        if (regressor != null) {
-            builder.field(SgdParser.REGRESSOR, regressor);
-        }
+
         if (y != null) {
-            builder.field(SgdParser.Y, y);
+            builder.field(LinearRegressionParser.Y, y);
         }
         if (xs != null) {
-            builder.field(SgdParser.XS, xs);
+            builder.field(LinearRegressionParser.XS, xs);
         }
         if (predict != null) {
-            builder.field(SgdParser.PREDICT, predict);
+            builder.field(LinearRegressionParser.PREDICT, predict);
         }
         if (display_thetas == true) {
-            builder.field(SgdParser.DISPLAY_THETAS, display_thetas);
+            builder.field(LinearRegressionParser.DISPLAY_THETAS, display_thetas);
         }
-
-        if (alphaWasSet) {
-            builder.field(SgdParser.ALPHA, alpha);
-        }
+        methodBuilder.toXContent(builder);
     }
 }

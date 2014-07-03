@@ -21,7 +21,8 @@ package org.elasticsearch.search.aggregations.bucket;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.aggregations.metrics.linearregression.InternalRegression;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdBuilder;
+import org.elasticsearch.search.aggregations.metrics.linearregression.LinearRegressionBuilder;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredLoss;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
@@ -71,7 +72,7 @@ public class SGDTests extends ElasticsearchIntegrationTest {
         indexNoisyLine(indexName, docType, x1field, type, yField, a, b);
 
         SearchResponse response = client().prepareSearch(indexName).setTypes(docType)
-                .addAggregation(new SgdBuilder("linearregression").setY(yField).setDisplay_thetas(true).setRegressor("squared").setPredict(1.0f).setXs(x1field).setAlpha(0.5))
+                .addAggregation(new LinearRegressionBuilder("linearregression").setY(yField).setDisplay_thetas(true).setRegressor(new SquaredLoss.Builder(0.5d)).setPredict(1.0f).setXs(x1field))
                 .execute()
                 .actionGet();
         double[] thetas = ((InternalRegression) (response.getAggregations().getAsMap().get("linearregression"))).getThetas();

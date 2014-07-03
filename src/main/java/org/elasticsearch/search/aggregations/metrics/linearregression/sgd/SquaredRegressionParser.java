@@ -32,77 +32,35 @@ import java.util.Map;
 /**
  *
  */
-public class SgdParser implements RegressionMethodParser {
+public class SquaredRegressionParser implements RegressionMethodParser {
 
-    public static final String REGRESSOR = "regressor";
-    public static final String Y = "y";
-    public static final String XS = "xs";
-    public static final String PREDICT = "predict";
-    public static final String DISPLAY_THETAS = "display_thetas";
     public static final String ALPHA = "alpha";
 
     @Override
     public String type() {
-        return InternalRegression.TYPE.name();
+        return "squared";
     }
 
     public RegressionMethod.Factory parse(XContentParser parser, SearchContext context) throws IOException {
 
         double alpha = 0.5;
-        String lossFunction = "squared";
         XContentParser.Token token;
         String currentFieldName = null;
         while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
             if (token == XContentParser.Token.FIELD_NAME) {
                 currentFieldName = parser.currentName();
             }
-            if(currentFieldName.equals("alpha")) {
+            if(currentFieldName.equals(ALPHA)) {
                 parser.nextToken();
                 alpha = parser.doubleValue();
 
             }
-            if(currentFieldName.equals("loss_function")) {
-                parser.nextToken();
-                lossFunction = parser.text();
-            }
         }
-        if (lossFunction == null) {
-            lossFunction = "squared";
-        }
-        return  RegressorType.resolve(lossFunction, context).regressorFactory(alpha);
-    }
-
-    /**
-     *
-     */
-    public static enum RegressorType {
-        SQUARED() {
-            @Override
-            public RegressionMethod.Factory regressorFactory(double alpha) {
-                return new SquaredLoss.Factory(alpha);
-            }
-        },
-        LOGISTIC() {
-            @Override
-            public RegressionMethod.Factory regressorFactory(double alpha) {
-                return new LogisticLoss.Factory(alpha);
-            }
-        };
-
-        public abstract RegressionMethod.Factory regressorFactory(double alpha);
-
-        public static RegressorType resolve(String name, SearchContext context) {
-            if (name.equals("squared")) {
-                return SQUARED;
-            } else if (name.equals("logistic")) {
-                return LOGISTIC;
-            }
-            throw new SearchParseException(context, "Unknown " + REGRESSOR + " type [" + name + "]");
-        }
+        return new SquaredLoss.Factory(alpha);
     }
 
     @Override
     public String getName() {
-        return "sgd";
+        return "squared";
     }
 }

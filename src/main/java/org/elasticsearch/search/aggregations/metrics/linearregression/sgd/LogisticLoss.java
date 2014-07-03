@@ -20,8 +20,12 @@ package org.elasticsearch.search.aggregations.metrics.linearregression.sgd;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
+import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.search.aggregations.metrics.linearregression.RegressionMethodBuilder;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
 
+import java.io.IOException;
 import java.util.Map;
 
 
@@ -55,6 +59,20 @@ public class LogisticLoss extends SgdRegressor {
 
         public LogisticLoss create(long estimatedBucketCount, AggregationContext context) {
             return new LogisticLoss(estimatedBucketCount, context, alpha);
+        }
+    }
+
+    public class Builder implements RegressionMethodBuilder{
+        double alpha = 0.5;
+        public Builder(double alpha) {
+            this.alpha = alpha;
+        }
+
+        @Override
+        public void toXContent(XContentBuilder builder) throws IOException {
+            builder.startObject("logistic");
+            builder.field("alpha", alpha);
+            builder.endObject();
         }
     }
 

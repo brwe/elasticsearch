@@ -25,9 +25,8 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.LogisticLoss;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SgdParser;
-import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredLoss;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.LogisticRegressionParser;
+import org.elasticsearch.search.aggregations.metrics.linearregression.sgd.SquaredRegressionParser;
 import org.elasticsearch.search.aggregations.support.FieldContext;
 import org.elasticsearch.search.aggregations.support.ValuesSource;
 import org.elasticsearch.search.aggregations.support.ValuesSourceConfig;
@@ -43,12 +42,10 @@ import java.util.Map;
  */
 public class LinearRegressionParser implements Aggregator.Parser {
 
-    public static final String REGRESSOR = "regressor";
     public static final String Y = "y";
     public static final String XS = "xs";
     public static final String PREDICT = "predict";
     public static final String DISPLAY_THETAS = "display_thetas";
-    public static final String ALPHA = "alpha";
     private final Map<String, RegressionMethodParser> functionParsers = new HashMap<>();
 
     @Override
@@ -60,8 +57,10 @@ public class LinearRegressionParser implements Aggregator.Parser {
 
     // TODO: make nicer
     LinearRegressionParser() {
-        SgdParser sgdParser = new SgdParser();
+        SquaredRegressionParser sgdParser = new SquaredRegressionParser();
         functionParsers.put(sgdParser.getName(), sgdParser);
+        LogisticRegressionParser logParser = new LogisticRegressionParser();
+        functionParsers.put(logParser.getName(), logParser);
     }
 
     /**
