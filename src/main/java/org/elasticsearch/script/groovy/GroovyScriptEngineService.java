@@ -146,7 +146,9 @@ public class GroovyScriptEngineService extends AbstractComponent implements Scri
     public SearchScript search(Object compiledScript, SearchLookup lookup, @Nullable Map<String, Object> vars) {
         try {
             Map<String, Object> allVars = new HashMap<>();
-            allVars.putAll(lookup.asMap());
+            if (lookup != null) {
+                allVars.putAll(lookup.asMap());
+            }
             if (vars != null) {
                 allVars.putAll(vars);
             }

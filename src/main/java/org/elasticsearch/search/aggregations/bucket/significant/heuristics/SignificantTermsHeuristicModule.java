@@ -37,6 +37,7 @@ public class SignificantTermsHeuristicModule extends AbstractModule {
         registerHeuristic(MutualInformation.MutualInformationParser.class, MutualInformation.STREAM);
         registerHeuristic(GND.GNDParser.class, GND.STREAM);
         registerHeuristic(ChiSquare.ChiSquareParser.class, ChiSquare.STREAM);
+        registerHeuristic(ScriptHeuristic.ScriptHeuristicParser.class, ScriptHeuristic.STREAM);
     }
 
     public void registerHeuristic(Class<? extends SignificanceHeuristicParser> parser, SignificanceHeuristicStreams.Stream stream) {

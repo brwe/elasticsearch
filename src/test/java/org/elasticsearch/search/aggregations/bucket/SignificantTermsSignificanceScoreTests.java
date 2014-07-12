@@ -411,4 +411,44 @@ public class SignificantTermsSignificanceScoreTests extends ElasticsearchIntegra
         }
         indexRandom(true, indexRequestBuilders);
     }
+
+    @Test
+    public void testScriptScore() throws ExecutionException, InterruptedException {
+        indexRandomFrequencies01(randomBoolean() ? "string" : "long");
+        String script="return _subset_freq + _subset_size + _superset_freq + _superset_size";
+        SearchResponse response = client().prepareSearch(INDEX_NAME)
+                .addAggregation(new TermsBuilder("class").field(CLASS_FIELD).subAggregation(new SignificantTermsBuilder("mySignificantTerms")
+                        .field(TEXT_FIELD)
+                        .executionHint(randomExecutionHint())
+                        .significanceHeuristic(new ScriptHeuristic.ScriptHeuristicBuilder(script))
+                        .minDocCount(1).shardSize(1000).size(1000)))
+                .execute()
+                .actionGet();
+        assertSearchResponse(response);
+        for (Terms.Bucket classBucket : ((StringTerms) response.getAggregations().get("class")).getBuckets()) {
+            for (SignificantTerms.Bucket bucket : ((SignificantTerms) classBucket.getAggregations().get("mySignificantTerms")).getBuckets()) {
+                assertThat(bucket.getSignificanceScore(), closeTo(bucket.getSubsetDf()+bucket.getSubsetSize()+bucket.getSupersetDf()+bucket.getSupersetSize(), 1.e-7));
+            }
+        }
+    }
+
+
+    private void indexRandomFrequencies01(String type) throws ExecutionException, InterruptedException {
+        String mappings = "{\""+DOC_TYPE+"\": {\"properties\":{\""+TEXT_FIELD+"\": {\"type\":\"" + type + "\"}}}}";
+        assertAcked(prepareCreate(INDEX_NAME).addMapping(DOC_TYPE, mappings));
+        String[] gb = {"0", "1"};
+        List<IndexRequestBuilder> indexRequestBuilderList = new ArrayList<>();
+        for (int i=0; i<randomInt(20); i++) {
+            int randNum = randomInt(2);
+            String[] text = new String[1];
+            if (randNum == 2) {
+                text = gb;
+            } else {
+                text[0] = gb[randNum];
+            }
+            indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE)
+                    .setSource(TEXT_FIELD, "1", CLASS_FIELD, randomBoolean()? "1":"0"));
+        }
+        indexRandom(true, indexRequestBuilderList);
+    }
 }

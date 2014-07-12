@@ -21,9 +21,13 @@
 package org.elasticsearch.search.aggregations.bucket.significant.heuristics;
 
 import com.google.common.collect.ImmutableMap;
+import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.script.SearchScript;
 
+import java.util.Map;
 import java.util.Set;
 
 public class SignificanceHeuristicParserMapper {
