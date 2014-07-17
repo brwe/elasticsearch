@@ -96,12 +96,12 @@ public class ShardGetService extends AbstractIndexShardComponent {
         return this;
     }
 
-    public GetResult get(String type, String id, String[] gFields, boolean realtime, long version, VersionType versionType, FetchSourceContext fetchSourceContext)
+    public GetResult get(String type, String id, String[] gFields, boolean realtime, boolean ignoreErrorsOnGeneratedFields, long version, VersionType versionType, FetchSourceContext fetchSourceContext)
             throws ElasticsearchException {
         currentMetric.inc();
         try {
             long now = System.nanoTime();
-            GetResult getResult = innerGet(type, id, gFields, realtime, version, versionType, fetchSourceContext);
+            GetResult getResult = innerGet(type, id, gFields, realtime, ignoreErrorsOnGeneratedFields, version, versionType, fetchSourceContext);
 
             if (getResult.isExists()) {
                 existsMetric.inc(System.nanoTime() - now);
@@ -165,7 +165,7 @@ public class ShardGetService extends AbstractIndexShardComponent {
         return FetchSourceContext.DO_NOT_FETCH_SOURCE;
     }
 
-    public GetResult innerGet(String type, String id, String[] gFields, boolean realtime, long version, VersionType versionType, FetchSourceContext fetchSourceContext) throws ElasticsearchException {
+    public GetResult innerGet(String type, String id, String[] gFields, boolean realtime, boolean ignoreErrorsOnGeneratedFields, long version, VersionType versionType, FetchSourceContext fetchSourceContext) throws ElasticsearchException {
         fetchSourceContext = normalizeFetchSourceContent(fetchSourceContext, gFields);
 
         boolean loadSource = (gFields != null && gFields.length > 0) || fetchSourceContext.fetchSource();
@@ -248,12 +248,18 @@ public class ShardGetService extends AbstractIndexShardComponent {
                                     throw new ElasticsearchIllegalArgumentException("field [" + field + "] isn't a leaf field");
                                 }
                             } else if (docMapper.sourceMapper().enabled() || x.fieldType().stored()) {
-                                List<Object> values = searchLookup.source().extractRawValues(field);
-                                if (!values.isEmpty()) {
-                                    for (int i = 0; i < values.size(); i++) {
-                                        values.set(i, x.valueForSearch(values.get(i)));
+                                try {
+                                    if (!x.isGenerated() || !ignoreErrorsOnGeneratedFields) {
+                                        List<Object> values = searchLookup.source().extractRawValues(field);
+                                        if (!values.isEmpty()) {
+                                            for (int i = 0; i < values.size(); i++) {
+                                                values.set(i, x.valueForSearch(values.get(i)));
+                                            }
+                                            value = values;
+                                        }
                                     }
-                                    value = values;
+                                } catch (Throwable t) {
+                                    throw new ElasticsearchException("Cannot access field " + field + " from transaction log. You can only get this field after refresh() has been called.", t);
                                 }
                             }
                         }

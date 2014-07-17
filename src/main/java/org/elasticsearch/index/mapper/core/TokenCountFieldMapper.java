@@ -197,4 +197,9 @@ public class TokenCountFieldMapper extends IntegerFieldMapper {
 
         builder.field("analyzer", analyzer());
     }
+
+    @Override
+    public boolean isGenerated() {
+        return true;
+    }
 }

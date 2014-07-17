@@ -1115,4 +1115,12 @@ public abstract class AbstractFieldMapper<T> implements FieldMapper<T> {
 
     }
 
+    /**
+     * Returns if this field is only generated when indexing. For example, the field of type token_count
+     */
+    @Override
+    public boolean isGenerated() {
+        return false;
+    }
+
 }
