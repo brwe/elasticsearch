@@ -41,6 +41,7 @@ import org.elasticsearch.index.codec.postingsformat.PostingsFormatProvider;
 import org.elasticsearch.index.fielddata.FieldDataType;
 import org.elasticsearch.index.mapper.*;
 import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
+import org.elasticsearch.index.mapper.object.RootObjectMapper;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.similarity.SimilarityLookupService;
 import org.elasticsearch.index.similarity.SimilarityProvider;
@@ -344,7 +345,10 @@ public class AllFieldMapper extends AbstractFieldMapper<String> implements Inter
 
     @Override
     public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
-        // do nothing here, no merging, but also no exception
+        if (((AllFieldMapper)mergeWith).enabled() != this.enabled()) {
+            mergeContext.addConflict("cannot merge _all: enabled is " + this.enabled() + " now encountering "+ ((AllFieldMapper)mergeWith).enabled());
+        }
+        super.merge(mergeWith, mergeContext);
     }
 
     @Override

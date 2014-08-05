@@ -235,9 +235,4 @@ public class RoutingFieldMapper extends AbstractFieldMapper<String> implements I
         builder.endObject();
         return builder;
     }
-
-    @Override
-    public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
-        // do nothing here, no merging, but also no exception
-    }
 }

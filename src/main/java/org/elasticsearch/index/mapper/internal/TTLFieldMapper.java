@@ -91,6 +91,10 @@ public class TTLFieldMapper extends LongFieldMapper implements InternalMapper, R
         public TTLFieldMapper build(BuilderContext context) {
             return new TTLFieldMapper(fieldType, enabledState, defaultTTL, ignoreMalformed(context),coerce(context), postingsProvider, docValuesProvider, fieldDataSettings, context.indexSettings());
         }
+
+        public boolean store() {
+            return fieldType.stored();
+        }
     }
 
     public static class TypeParser implements Mapper.TypeParser {
@@ -98,6 +102,7 @@ public class TTLFieldMapper extends LongFieldMapper implements InternalMapper, R
         public Mapper.Builder parse(String name, Map<String, Object> node, ParserContext parserContext) throws MapperParsingException {
             TTLFieldMapper.Builder builder = ttl();
             parseField(builder, builder.name, node, parserContext);
+
             for (Map.Entry<String, Object> entry : node.entrySet()) {
                 String fieldName = Strings.toUnderscoreCase(entry.getKey());
                 Object fieldNode = entry.getValue();
@@ -110,6 +115,7 @@ public class TTLFieldMapper extends LongFieldMapper implements InternalMapper, R
                         builder.defaultTTL(ttlTimeValue.millis());
                     }
                 }
+
             }
             return builder;
         }
@@ -246,5 +252,6 @@ public class TTLFieldMapper extends LongFieldMapper implements InternalMapper, R
                 this.enabledState = ttlMergeWith.enabledState;
             }
         }
+        super.merge(mergeWith, mergeContext);
     }
 }

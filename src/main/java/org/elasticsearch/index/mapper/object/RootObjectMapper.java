@@ -253,7 +253,12 @@ public class RootObjectMapper extends ObjectMapper {
 
     @Override
     protected void doMerge(ObjectMapper mergeWith, MergeContext mergeContext) {
+
+
         RootObjectMapper mergeWithObject = (RootObjectMapper) mergeWith;
+        if (mergeWithObject.numericDetection() != numericDetection) {
+            mergeContext.addConflict("Conflict while merging numeric_detection for type " + mergeWith.name() + " was " + numericDetection + " now encountering " + mergeWithObject.numericDetection() + ".");
+        }
         if (!mergeContext.mergeFlags().simulate()) {
             // merge them
             List<DynamicTemplate> mergedTemplates = Lists.newArrayList(Arrays.asList(this.dynamicTemplates));

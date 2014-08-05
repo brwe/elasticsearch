@@ -284,5 +284,6 @@ public class TimestampFieldMapper extends DateFieldMapper implements InternalMap
                 this.enabledState = timestampFieldMapperMergeWith.enabledState;
             }
         }
+        super.merge(mergeWith, mergeContext);
     }
 }

@@ -311,9 +311,4 @@ public class BoostFieldMapper extends NumberFieldMapper<Float> implements Intern
         builder.endObject();
         return builder;
     }
-
-    @Override
-    public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
-        // do nothing here, no merging, but also no exception
-    }
 }

@@ -223,6 +223,7 @@ public class IndexFieldMapper extends AbstractFieldMapper<String> implements Int
                 this.enabledState = indexFieldMapperMergeWith.enabledState;
             }
         }
+        super.merge(mergeWith, mergeContext);
     }
 
 }

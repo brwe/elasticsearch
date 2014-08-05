@@ -179,5 +179,6 @@ public class SizeFieldMapper extends IntegerFieldMapper implements RootMapper {
                 this.enabledState = sizeFieldMapperMergeWith.enabledState;
             }
         }
+        super.merge(mergeWith, mergeContext);
     }
 }
