@@ -374,6 +374,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             }
             if (typesToRefresh != null) {
                 if (sendRefreshMapping) {
+                    logger.debug("dev-issue-195 IndicesClusterStateService: in applyMappings call nodeMappingRefreshAction.nodeMappingRefresh index [{}], uuid[{}], types[{}] and localNodeId[{}], ", index, indexMetaData.uuid(),
+                            typesToRefresh.toArray(new String[typesToRefresh.size()]), event.state().nodes().localNodeId());
                     nodeMappingRefreshAction.nodeMappingRefresh(event.state(),
                             new NodeMappingRefreshAction.NodeMappingRefreshRequest(index, indexMetaData.uuid(),
                                     typesToRefresh.toArray(new String[typesToRefresh.size()]), event.state().nodes().localNodeId())
@@ -726,6 +728,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
                 store.incRef();
                 try {
                     store.failIfCorrupted();
+                    //why is the mapping from store passed? Is relocating?
+                    // logger.debug("dev-issue-195 IndicesClusterStateService: in applyInitializingShard call StartRecoveryRequest... because shard is relocating? {} replica? {}  With meta [{}] on index [{}], uuid is [Xk4wUc9BRTeI6uBq_yagPQ]", shardRouting.relocatingNodeId(), !shardRouting.primary(), store.getMetadata().asMap(), indexShard.indexService().index(), indexShard.indexService().indexUUID(), indexShard.shardId());
                     request = new StartRecoveryRequest(indexShard.shardId(), sourceNode, nodes.localNode(),
                             false, store.getMetadata().asMap(), type, recoveryIdGenerator.incrementAndGet());
                 } finally {

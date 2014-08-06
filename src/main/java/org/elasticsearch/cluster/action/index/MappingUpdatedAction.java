@@ -135,6 +135,11 @@ public class MappingUpdatedAction extends TransportMasterNodeOperationAction<Map
 
     @Override
     protected void masterOperation(final MappingUpdatedRequest request, final ClusterState state, final ActionListener<MappingUpdatedResponse> listener) throws ElasticsearchException {
+        try {
+            logger.debug("dev-issue-195 MappingUpdatedAction: in masterOperation call metaDataMappingService.updateMapping with mapping [{}] on index [{}], uuid is [{}], order [{}], nodeid [{}]", request.mappingSource().string(), request.indexUUID(), request.index(), request.order(), request.nodeId());
+        } catch (IOException ex) {
+            logger.debug("dev-issue-195 MappingUpdatedAction: in masterOperation IO ex");
+        }
         metaDataMappingService.updateMapping(request.index(), request.indexUUID(), request.type(), request.mappingSource(), request.order, request.nodeId, new ActionListener<ClusterStateUpdateResponse>() {
             @Override
             public void onResponse(ClusterStateUpdateResponse response) {

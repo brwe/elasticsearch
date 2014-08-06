@@ -57,6 +57,7 @@ public class NodeMappingRefreshAction extends AbstractComponent {
     public void nodeMappingRefresh(final ClusterState state, final NodeMappingRefreshRequest request) throws ElasticsearchException {
         DiscoveryNodes nodes = state.nodes();
         if (nodes.localNodeMaster()) {
+            logger.debug("dev-issue-195 NodeMappingRefreshAction: in nodeMappingRefresh call innerMappingRefresh on index [{}], uuid is [{}], type [{}]", request.index(), request.indexUUID(), request.types());
             innerMappingRefresh(request);
         } else {
             transportService.sendRequest(state.nodes().masterNode(),
@@ -65,6 +66,7 @@ public class NodeMappingRefreshAction extends AbstractComponent {
     }
 
     private void innerMappingRefresh(NodeMappingRefreshRequest request) {
+        logger.debug("dev-issue-195 NodeMappingRefreshAction: in innerMappingRefresh call metaDataMappingService.refreshMapping on index [{}], uuid is [{}], type [{}]", request.index(), request.indexUUID(), request.types());
         metaDataMappingService.refreshMapping(request.index(), request.indexUUID(), request.types());
     }
 
@@ -77,6 +79,7 @@ public class NodeMappingRefreshAction extends AbstractComponent {
 
         @Override
         public void messageReceived(NodeMappingRefreshRequest request, TransportChannel channel) throws Exception {
+            logger.debug("dev-issue-195 NodeMappingRefreshAction: in messageReceived call innerMappingRefresh on index [{}], uuid is [{}], type [{}]", request.index(), request.indexUUID(), request.types());
             innerMappingRefresh(request);
             channel.sendResponse(TransportResponse.Empty.INSTANCE);
         }

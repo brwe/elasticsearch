@@ -12,7 +12,9 @@ logger:
   #index.gateway: DEBUG
 
   # peer shard recovery
-  #indices.recovery: DEBUG
+  # indices.recovery: TRACE
+  # cluster.metadata: TRACE
+  # cluster.action.index: TRACE
 
   # discovery
   #discovery: TRACE

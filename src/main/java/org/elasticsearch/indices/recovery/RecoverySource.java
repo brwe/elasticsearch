@@ -29,6 +29,7 @@ import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
@@ -58,6 +59,7 @@ import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -295,11 +297,14 @@ public class RecoverySource extends AbstractComponent {
 
 
                 logger.trace("{} recovery [phase2] to {}: updating current mapping to master", request.shardId(), request.targetNode());
+                logger.debug("dev-issue-195 RecoverySource: in phase2 before updateMappingOnMaster. translog length [{}],for index [{}] and shard [{}]", snapshot.length(), request.shardId().index(), request.shardId());
                 updateMappingOnMaster();
 
                 logger.trace("{} recovery [phase2] to {}: sending transaction log operations", request.shardId(), request.targetNode());
+                logger.debug("dev-issue-195 RecoverySource: in phase2 after updateMappingOnMaster. translog length [{}], for index [{}] and shard [{}]", snapshot.length(), request.shardId().index(), request.shardId());
                 stopWatch = new StopWatch().start();
                 int totalOperations = sendSnapshot(snapshot);
+                logger.debug("dev-issue-195 RecoverySource: total snapshot ops were [{}] for index [{}] and shard [{}]", totalOperations, request.shardId().index(), request.shardId());
                 stopWatch.stop();
                 logger.trace("{} recovery [phase2] to {}: took [{}]", request.shardId(), request.targetNode(), stopWatch.totalTime());
                 response.phase2Time = stopWatch.totalTime().millis();
@@ -307,6 +312,8 @@ public class RecoverySource extends AbstractComponent {
             }
 
             private void updateMappingOnMaster() {
+                // hier wird das falsche mapping geschickt. sollte leer sein, ist aber nicht
+
                 IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
                 ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
                 if (indexMetaData != null) {
@@ -315,11 +322,31 @@ public class RecoverySource extends AbstractComponent {
                 List<DocumentMapper> documentMappersToUpdate = Lists.newArrayList();
                 // default mapping should not be sent back, it can only be updated by put mapping API, and its
                 // a full in place replace, we don't want to override a potential update coming it
+
+                // in dev-issue-195 this indexService should not have any more mappings because they were deleted
                 for (DocumentMapper documentMapper : indexService.mapperService().docMappers(false)) {
 
                     MappingMetaData mappingMetaData = metaDataMappings == null ? null : metaDataMappings.get(documentMapper.type());
                     if (mappingMetaData == null || !documentMapper.refreshSource().equals(mappingMetaData.source())) {
                         // not on master yet in the right form
+                        if (mappingMetaData== null) {
+                            ClusterState clusterState = clusterService.state();
+
+                            if (clusterState.status() == ClusterState.ClusterStateStatus.BEING_APPLIED) {
+                                logger.debug("dev-issue-195 RecoverySource: Cluster state {} is still being applied.", clusterState);
+                            }
+                            try {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData == null", documentMapper.mappingSource().string());
+                            } catch (IOException e) {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper IO ex");
+                            }
+                        } else {
+                            try {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData is [{}]", documentMapper.mappingSource().string(), mappingMetaData.source().string());
+                            } catch (IOException e) {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper IO ex");
+                            }
+                        }
                         documentMappersToUpdate.add(documentMapper);
                     }
                 }
@@ -340,6 +367,11 @@ public class RecoverySource extends AbstractComponent {
                     }
                 };
                 for (DocumentMapper documentMapper : documentMappersToUpdate) {
+                    try {
+                        logger.debug("dev-issue-195 RecoverySource: in recover call updateMappingOnMaster with mapping [{}] on index [{}], uuid is [{}]", documentMapper.mappingSource().string(), indexService.index(), indexService.indexUUID());
+                    } catch (IOException e) {
+                        logger.debug("dev-issue-195 RecoverySource: IO ex documentMapper.mappingSource().string()");
+                    }
                     mappingUpdatedAction.updateMappingOnMaster(indexService.index().getName(), documentMapper, indexService.indexUUID(), listener);
                 }
                 try {

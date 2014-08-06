@@ -280,6 +280,7 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
 
             for (final String type : typesToUpdate) {
                 final CountDownLatch latch = new CountDownLatch(1);
+                logger.debug("dev-issue-195 LocalIndexShardGateway: in recover [{}] [{}] call updateMappingOnMaster with mapping [{}] on index [{}], shardId is [{}]", indexShouldExists, recoveryState.getStage(), indexService.mapperService().documentMapper(type).mappingSource().string(), indexService.index().name(), indexShard.shardId());
                 mappingUpdatedAction.updateMappingOnMaster(indexService.index().name(), indexService.mapperService().documentMapper(type), indexService.indexUUID(), new MappingUpdatedAction.MappingUpdateListener() {
                     @Override
                     public void onMappingUpdate() {
@@ -302,6 +303,8 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                     logger.debug("interrupted while waiting for mapping update");
                 }
             }
+        } catch (IOException e) {
+            logger.debug("hmpf. could not get mapping source...");
         } finally {
             indexShard.store().decRef();
         }

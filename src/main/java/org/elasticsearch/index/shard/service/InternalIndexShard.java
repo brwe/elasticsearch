@@ -770,6 +770,7 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
         try {
             switch (operation.opType()) {
                 case CREATE:
+                    logger.debug("dev-issue-195 InternalIndexShard: in performRecoveryOperation, optype is [{}]", "CREATE");
                     Translog.Create create = (Translog.Create) operation;
                     Engine.Create engineCreate = prepareCreate(
                             source(create.source()).type(create.type()).id(create.id())
@@ -779,6 +780,7 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
                     indexOperation = engineCreate;
                     break;
                 case SAVE:
+                    logger.debug("dev-issue-195 InternalIndexShard: in performRecoveryOperation, optype is [{}]", "SAVE");
                     Translog.Index index = (Translog.Index) operation;
                     Engine.Index engineIndex = prepareIndex(source(index.source()).type(index.type()).id(index.id())
                                     .routing(index.routing()).parent(index.parent()).timestamp(index.timestamp()).ttl(index.ttl()),
@@ -787,12 +789,14 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
                     indexOperation = engineIndex;
                     break;
                 case DELETE:
+                    logger.debug("dev-issue-195 InternalIndexShard: in performRecoveryOperation, optype is [{}]", "DELETE");
                     Translog.Delete delete = (Translog.Delete) operation;
                     Uid uid = Uid.createUid(delete.uid().text());
                     engine.delete(new Engine.Delete(uid.type(), uid.id(), delete.uid(), delete.version(),
                             delete.versionType().versionTypeForReplicationAndRecovery(), Engine.Operation.Origin.RECOVERY, System.nanoTime(), false));
                     break;
                 case DELETE_BY_QUERY:
+                    logger.debug("dev-issue-195 InternalIndexShard: in performRecoveryOperation, optype is [{}]", "DELETE_BY_QUERY");
                     Translog.DeleteByQuery deleteByQuery = (Translog.DeleteByQuery) operation;
                     engine.delete(prepareDeleteByQuery(deleteByQuery.source(), deleteByQuery.filteringAliases(), Engine.Operation.Origin.RECOVERY, deleteByQuery.types()));
                     break;
