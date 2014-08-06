@@ -57,6 +57,7 @@ import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -342,6 +343,11 @@ public class RecoverySource extends AbstractComponent {
                     }
                 };
                 for (DocumentMapper documentMapper : documentMappersToUpdate) {
+                    try {
+                        logger.debug("dev-issue-195 RecoverySource: in recover call updateMappingOnMaster with mapping [{}] on index [{}], uuid is [{}]", documentMapper.mappingSource().string(), indexService.index(), indexService.indexUUID());
+                    } catch (IOException e) {
+                        logger.debug("dev-issue-195 RecoverySource: IO ex documentMapper.mappingSource().string()");
+                    }
                     mappingUpdatedAction.updateMappingOnMaster(indexService.index().getName(), documentMapper, indexService.indexUUID(), listener);
                 }
                 try {

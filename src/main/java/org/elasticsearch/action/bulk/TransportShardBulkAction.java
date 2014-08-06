@@ -64,6 +64,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportRequestOptions;
 import org.elasticsearch.transport.TransportService;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
@@ -184,6 +185,11 @@ public class TransportShardBulkAction extends TransportShardReplicationOperation
                         for (String mappingTypeToUpdate : mappingTypesToUpdate) {
                             DocumentMapper docMapper = indexService.mapperService().documentMapper(mappingTypeToUpdate);
                             if (docMapper != null) {
+                                try {
+                                    logger.debug("dev-issue-195 TransportShardBulkAction: in shardOperationOnPrimary 189 call updateMappingOnMaster with mapping [{}] on index [{}], uuid is [{}], request index [{}]", docMapper.mappingSource().string(), indexService.index(), indexService.indexUUID(), request.index());
+                                } catch (IOException ex) {
+                                    logger.debug("dev-issue-195 TransportShardBulkAction: in shardOperationOnPrimary 189 IO ex");
+                                }
                                 mappingUpdatedAction.updateMappingOnMaster(indexService.index().name(), docMapper, indexService.indexUUID());
                             }
                         }
@@ -347,6 +353,11 @@ public class TransportShardBulkAction extends TransportShardReplicationOperation
         for (String mappingTypToUpdate : mappingTypesToUpdate) {
             DocumentMapper docMapper = indexService.mapperService().documentMapper(mappingTypToUpdate);
             if (docMapper != null) {
+                try {
+                    logger.debug("dev-issue-195 TransportShardBulkAction: in shardOperationOnPrimary 357 call updateMappingOnMaster with mapping [{}] on index [{}], uuid is [{}], request index [{}]", docMapper.mappingSource().string(), indexService.index(), indexService.indexUUID(), request.index());
+                } catch (IOException ex) {
+                    logger.debug("dev-issue-195 TransportShardBulkAction: in shardOperationOnPrimary 357 IO ex");
+                }
                 mappingUpdatedAction.updateMappingOnMaster(indexService.index().name(), docMapper, indexService.indexUUID());
             }
         }

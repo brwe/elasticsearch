@@ -178,6 +178,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             cleanFailedShards(event);
             cleanMismatchedIndexUUIDs(event);
             applyNewIndices(event);
+            logger.debug("dev-issue-195 IndicesClusterStateService: in clusterChanged call applyMappings");
             applyMappings(event);
             applyAliases(event);
             applyNewOrUpdatedShards(event);
@@ -369,6 +370,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             }
             if (typesToRefresh != null) {
                 if (sendRefreshMapping) {
+                    logger.debug("dev-issue-195 IndicesClusterStateService: in applyMappings call nodeMappingRefreshAction.nodeMappingRefresh index [{}], uuid[{}], types[{}] and localNodeId[{}], ", index, indexMetaData.uuid(),
+                            typesToRefresh.toArray(new String[typesToRefresh.size()]), event.state().nodes().localNodeId());
                     nodeMappingRefreshAction.nodeMappingRefresh(event.state(),
                             new NodeMappingRefreshAction.NodeMappingRefreshRequest(index, indexMetaData.uuid(),
                                     typesToRefresh.toArray(new String[typesToRefresh.size()]), event.state().nodes().localNodeId())
