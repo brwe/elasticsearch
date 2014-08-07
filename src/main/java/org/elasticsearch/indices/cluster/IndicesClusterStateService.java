@@ -178,7 +178,6 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             cleanFailedShards(event);
             cleanMismatchedIndexUUIDs(event);
             applyNewIndices(event);
-            logger.debug("dev-issue-195 IndicesClusterStateService: in clusterChanged call applyMappings");
             applyMappings(event);
             applyAliases(event);
             applyNewOrUpdatedShards(event);
@@ -724,6 +723,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
                 store.incRef();
                 try {
                     store.failIfCorrupted();
+                    //why is the mapping from store passed? Is relocating?
+                    // logger.debug("dev-issue-195 IndicesClusterStateService: in applyInitializingShard call StartRecoveryRequest... because shard is relocating? {} replica? {}  With meta [{}] on index [{}], uuid is [Xk4wUc9BRTeI6uBq_yagPQ]", shardRouting.relocatingNodeId(), !shardRouting.primary(), store.getMetadata().asMap(), indexShard.indexService().index(), indexShard.indexService().indexUUID(), indexShard.shardId());
                     request = new StartRecoveryRequest(indexShard.shardId(), sourceNode, nodes.localNode(),
                             false, store.getMetadata().asMap(), type, recoveryIdGenerator.incrementAndGet());
                 } finally {

@@ -325,7 +325,6 @@ public class InternalClusterService extends AbstractLifecycleComponent<ClusterSe
             ClusterState previousClusterState = clusterState;
             ClusterState newClusterState;
             try {
-                logger.debug("dev-issue-195 UpdateTask: in run call updateTask.execute");
                 newClusterState = updateTask.execute(previousClusterState);
             } catch (Throwable e) {
                 if (logger.isTraceEnabled()) {

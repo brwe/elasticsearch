@@ -298,6 +298,7 @@ public class RecoverySource extends AbstractComponent {
 
 
                 logger.trace("{} recovery [phase2] to {}: updating current mapping to master", request.shardId(), request.targetNode());
+                logger.debug("dev-issue-195 RecoverySource: in phase2 before updateMappingOnMaster. translog length [{}], hasNext [{}]",snapshot.length(), snapshot.hasNext());
                 updateMappingOnMaster();
 
                 logger.trace("{} recovery [phase2] to {}: sending transaction log operations", request.shardId(), request.targetNode());
@@ -310,6 +311,7 @@ public class RecoverySource extends AbstractComponent {
             }
 
             private void updateMappingOnMaster() {
+                // hier wird das falsche mapping geschickt. sollte leer sein, ist aber nicht
                 IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
                 ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
                 if (indexMetaData != null) {
@@ -318,12 +320,27 @@ public class RecoverySource extends AbstractComponent {
                 List<DocumentMapper> documentMappersToUpdate = Lists.newArrayList();
                 // default mapping should not be sent back, it can only be updated by put mapping API, and its
                 // a full in place replace, we don't want to override a potential update coming it
+
+                // in dev-issue-195 this indexService should not have any more mappings because they were deleted
                 for (DocumentMapper documentMapper : indexService.mapperService().docMappers(false)) {
 
                     MappingMetaData mappingMetaData = metaDataMappings == null ? null : metaDataMappings.get(documentMapper.type());
                     if (mappingMetaData == null || !documentMapper.refreshSource().equals(mappingMetaData.source())) {
                         // not on master yet in the right form
-                        documentMappersToUpdate.add(documentMapper);
+                        if (mappingMetaData== null) {
+                            try {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData == null", documentMapper.refreshSource().string());
+                            } catch (IOException e) {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper IO ex");
+                            }
+                        } else {
+                            try {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData is [{}]", documentMapper.refreshSource().string(), mappingMetaData.source().string());
+                            } catch (IOException e) {
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper IO ex");
+                            }
+                        }
+                            documentMappersToUpdate.add(documentMapper);
                     }
                 }
                 if (documentMappersToUpdate.isEmpty()) {
