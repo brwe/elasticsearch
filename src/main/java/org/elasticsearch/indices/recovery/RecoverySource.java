@@ -298,12 +298,13 @@ public class RecoverySource extends AbstractComponent {
 
 
                 logger.trace("{} recovery [phase2] to {}: updating current mapping to master", request.shardId(), request.targetNode());
-                logger.debug("dev-issue-195 RecoverySource: in phase2 before updateMappingOnMaster. translog length [{}], hasNext [{}]",snapshot.length(), snapshot.hasNext());
+                logger.debug("dev-issue-195 RecoverySource: in phase2 before updateMappingOnMaster. translog length [{}], hasNext [{}] for index [{}] and shard [{}]", snapshot.length(), snapshot.hasNext(), request.shardId().index(), request.shardId());
                 updateMappingOnMaster();
 
                 logger.trace("{} recovery [phase2] to {}: sending transaction log operations", request.shardId(), request.targetNode());
                 stopWatch = new StopWatch().start();
                 int totalOperations = sendSnapshot(snapshot);
+                logger.debug("dev-issue-195 RecoverySource: total snapshot ops were [{}] for index [{}] and shard [{}]", totalOperations, request.shardId().index(), request.shardId());
                 stopWatch.stop();
                 logger.trace("{} recovery [phase2] to {}: took [{}]", request.shardId(), request.targetNode(), stopWatch.totalTime());
                 response.phase2Time = stopWatch.totalTime().millis();
