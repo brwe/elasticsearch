@@ -1156,6 +1156,10 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
         indexRandom(forceRefresh, forceRefresh, builders);
     }
 
+    public void indexRandom(boolean forceRefresh, boolean dummyDocuments, List<IndexRequestBuilder> builders) throws InterruptedException, ExecutionException {
+        indexRandom(forceRefresh, dummyDocuments, builders, false);
+    }
+
     /**
      * Indexes the given {@link IndexRequestBuilder} instances randomly. It shuffles the given builders and either
      * indexes they in a blocking or async fashion. This is very useful to catch problems that relate to internal document
@@ -1167,8 +1171,9 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
      * @param dummyDocuments if <tt>true</tt> some empty dummy documents may be randomly inserted into the document list and deleted once
      *                       all documents are indexed. This is useful to produce deleted documents on the server side.
      * @param builders       the documents to index.
+     * @param ignoreErrors   should indexing errors be ignored?
      */
-    public void indexRandom(boolean forceRefresh, boolean dummyDocuments, List<IndexRequestBuilder> builders) throws InterruptedException, ExecutionException {
+    public void indexRandom(boolean forceRefresh, boolean dummyDocuments, List<IndexRequestBuilder> builders, boolean ignoreErrors) throws InterruptedException, ExecutionException {
         Random random = getRandom();
         Set<String> indicesSet = new HashSet<>();
         for (IndexRequestBuilder builder : builders) {
@@ -1197,14 +1202,26 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
             if (frequently()) {
                 logger.info("Index [{}] docs async: [{}] bulk: [{}]", builders.size(), true, false);
                 for (IndexRequestBuilder indexRequestBuilder : builders) {
-                    indexRequestBuilder.execute(new PayloadLatchedActionListener<IndexResponse, IndexRequestBuilder>(indexRequestBuilder, newLatch(inFlightAsyncOperations), errors));
-                    postIndexAsyncActions(indices, inFlightAsyncOperations);
+
+                    try {
+                        indexRequestBuilder.execute(new PayloadLatchedActionListener<IndexResponse, IndexRequestBuilder>(indexRequestBuilder, newLatch(inFlightAsyncOperations), errors));
+                        postIndexAsyncActions(indices, inFlightAsyncOperations);
+                    } catch (Throwable e) {
+                        Tuple<IndexRequestBuilder, Throwable> t = new Tuple(indexRequestBuilder,e);
+                        errors.add(t);
+                    }
+
                 }
             } else {
                 logger.info("Index [{}] docs async: [{}] bulk: [{}]", builders.size(), false, false);
                 for (IndexRequestBuilder indexRequestBuilder : builders) {
-                    indexRequestBuilder.execute().actionGet();
-                    postIndexAsyncActions(indices, inFlightAsyncOperations);
+                    try {
+                        indexRequestBuilder.execute().actionGet();
+                        postIndexAsyncActions(indices, inFlightAsyncOperations);
+                    } catch (Throwable e) {
+                        Tuple<IndexRequestBuilder, Throwable> t = new Tuple(indexRequestBuilder, e);
+                        errors.add(t);
+                    }
                 }
             }
         } else {
@@ -1217,7 +1234,9 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
                     bulkBuilder.add(indexRequestBuilder);
                 }
                 BulkResponse actionGet = bulkBuilder.execute().actionGet();
-                assertThat(actionGet.hasFailures() ? actionGet.buildFailureMessage() : "", actionGet.hasFailures(), equalTo(false));
+                if (!ignoreErrors) {
+                    assertThat(actionGet.hasFailures() ? actionGet.buildFailureMessage() : "", actionGet.hasFailures(), equalTo(false));
+                }
             }
         }
         for (CountDownLatch operation : inFlightAsyncOperations) {
@@ -1231,7 +1250,9 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
                 actualErrors.add(tuple.v2());
             }
         }
-        assertThat(actualErrors, emptyIterable());
+        if (!ignoreErrors) {
+            assertThat(actualErrors, emptyIterable());
+        }
         if (!bogusIds.isEmpty()) {
             // delete the bogus types again - it might trigger merges or at least holes in the segments and enforces deleted docs!
             for (Tuple<String, String> doc : bogusIds) {
