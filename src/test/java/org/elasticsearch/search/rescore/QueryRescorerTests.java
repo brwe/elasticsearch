@@ -39,6 +39,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.rescore.RescoreBuilder.QueryRescorer;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.elasticsearch.cluster.metadata.IndexMetaData.SETTING_NUMBER_OF_SHARDS;
@@ -52,6 +53,7 @@ import static org.hamcrest.Matchers.*;
 public class QueryRescorerTests extends ElasticsearchIntegrationTest {
 
     @Test
+    @Ignore
     public void testEnforceWindowSize() {
         createIndex("test");
         // this
@@ -84,6 +86,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @Ignore
     public void testRescorePhrase() throws Exception {
         assertAcked(prepareCreate("test")
                 .addMapping(
@@ -131,6 +134,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @Ignore
     public void testMoreDocs() throws Exception {
         Builder builder = ImmutableSettings.builder();
         builder.put("index.analysis.analyzer.synonym.tokenizer", "whitespace");
@@ -208,7 +212,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
             if (hits[i].getScore() == hits[hits.length-1].getScore()) {
                 return; // we need to cut off here since this is the tail of the queue and we might not have fetched enough docs
             }
-            assertThat("query: " + query,hits[i].getId(), equalTo(rHits[i].getId()));
+            assertThat("query: " + query, hits[i].getId(), equalTo(rHits[i].getId()));
         }
     }
 
@@ -236,12 +240,12 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     public void testEquivalence() throws Exception {
         int numDocs = indexRandomNumbers("whitespace");
 
-        final int iters = scaledRandomIntBetween(50, 100);
+        final int iters = 1; //scaledRandomIntBetween(50, 100);
         for (int i = 0; i < iters; i++) {
-            int resultSize = between(5, 30);
+            int resultSize = numDocs;
             int rescoreWindow = between(1, 3) * resultSize;
             String intToEnglish = English.intToEnglish(between(0, numDocs-1));
-            String query = intToEnglish.split(" ")[0];
+            String query = "one";// intToEnglish.split(" ")[0];
             SearchResponse rescored = client()
                     .prepareSearch()
                     .setSearchType(SearchType.QUERY_THEN_FETCH)
@@ -263,7 +267,8 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
                     .setPreference("test") // ensure we hit the same shards for tie-breaking
                     .setQuery(QueryBuilders.matchQuery("field1", query).operator(MatchQueryBuilder.Operator.OR)).setFrom(0).setSize(resultSize)
                     .execute().actionGet();
-            
+
+            client().admin().indices().prepareOptimize("test").get();
             // check equivalence
             assertEquivalent(query, plain, rescored);
 
@@ -303,6 +308,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @Ignore
     public void testExplain() throws Exception {
         assertAcked(prepareCreate("test")
                 .addMapping(
@@ -403,6 +409,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @Ignore
     public void testScoring() throws Exception {
         int numDocs = indexRandomNumbers("keyword");
 
@@ -490,6 +497,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @Ignore
     public void testMultipleRescores() throws Exception {
         int numDocs = indexRandomNumbers("keyword", 1);
         QueryRescorer eightIsGreat = RescoreBuilder.queryRescorer(
@@ -542,7 +550,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
                         jsonBuilder().startObject().startObject("type1").startObject("properties").startObject("field1")
                                 .field("analyzer", analyzer).field("type", "string").endObject().endObject().endObject().endObject())
                 .setSettings(builder));
-        int numDocs = randomIntBetween(100, 150);
+        int numDocs = randomIntBetween(128, 150);
         IndexRequestBuilder[] docs = new IndexRequestBuilder[numDocs];
         for (int i = 0; i < numDocs; i++) {
             docs[i] = client().prepareIndex("test", "type1", String.valueOf(i)).setSource("field1", English.intToEnglish(i));
