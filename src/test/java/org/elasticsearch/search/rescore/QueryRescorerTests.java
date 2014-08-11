@@ -239,6 +239,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
     // forces QUERY_THEN_FETCH because of https://github.com/elasticsearch/elasticsearch/issues/4829
     public void testEquivalence() throws Exception {
         int numDocs = indexRandomNumbers("whitespace");
+        client().admin().indices().prepareOptimize("test").setMaxNumSegments(1).get();
 
         final int iters = 1; //scaledRandomIntBetween(50, 100);
         for (int i = 0; i < iters; i++) {
@@ -268,7 +269,7 @@ public class QueryRescorerTests extends ElasticsearchIntegrationTest {
                     .setQuery(QueryBuilders.matchQuery("field1", query).operator(MatchQueryBuilder.Operator.OR)).setFrom(0).setSize(resultSize)
                     .execute().actionGet();
 
-            client().admin().indices().prepareOptimize("test").get();
+
             // check equivalence
             assertEquivalent(query, plain, rescored);
 
