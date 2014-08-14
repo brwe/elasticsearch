@@ -28,6 +28,7 @@ import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
@@ -314,6 +315,15 @@ public class RecoverySource extends AbstractComponent {
 
             private void updateMappingOnMaster() {
                 // hier wird das falsche mapping geschickt. sollte leer sein, ist aber nicht
+                ClusterState clusterState= clusterService.state();
+                boolean log = true;
+                while (clusterState.status() == ClusterState.ClusterStateStatus.BEING_APPLIED) {
+                    if (log) {
+                        logger.debug("dev-issue-195 RecoverySource: Cluster state is still being applied.");
+                        log = false;
+                    }
+                    clusterState= clusterService.state();
+                }
                 IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
                 ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
                 if (indexMetaData != null) {
