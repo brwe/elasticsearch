@@ -315,15 +315,7 @@ public class RecoverySource extends AbstractComponent {
 
             private void updateMappingOnMaster() {
                 // hier wird das falsche mapping geschickt. sollte leer sein, ist aber nicht
-                ClusterState clusterState= clusterService.state();
-                boolean log = true;
-                while (clusterState.status() == ClusterState.ClusterStateStatus.BEING_APPLIED) {
-                    if (log) {
-                        logger.debug("dev-issue-195 RecoverySource: Cluster state is still being applied.");
-                        log = false;
-                    }
-                    clusterState= clusterService.state();
-                }
+
                 IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
                 ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
                 if (indexMetaData != null) {
@@ -340,19 +332,24 @@ public class RecoverySource extends AbstractComponent {
                     if (mappingMetaData == null || !documentMapper.refreshSource().equals(mappingMetaData.source())) {
                         // not on master yet in the right form
                         if (mappingMetaData== null) {
+                            ClusterState clusterState = clusterService.state();
+
+                            if (clusterState.status() == ClusterState.ClusterStateStatus.BEING_APPLIED) {
+                                logger.debug("dev-issue-195 RecoverySource: Cluster state {} is still being applied.", clusterState);
+                            }
                             try {
-                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData == null", documentMapper.refreshSource().string());
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData == null", documentMapper.mappingSource().string());
                             } catch (IOException e) {
                                 logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper IO ex");
                             }
                         } else {
                             try {
-                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData is [{}]", documentMapper.refreshSource().string(), mappingMetaData.source().string());
+                                logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper with mapping [{}] because mappingMetaData is [{}]", documentMapper.mappingSource().string(), mappingMetaData.source().string());
                             } catch (IOException e) {
                                 logger.debug("dev-issue-195 RecoverySource: in recover before add docMapper IO ex");
                             }
                         }
-                            documentMappersToUpdate.add(documentMapper);
+                        documentMappersToUpdate.add(documentMapper);
                     }
                 }
                 if (documentMappersToUpdate.isEmpty()) {
