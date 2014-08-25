@@ -52,10 +52,7 @@ import org.elasticsearch.index.mapper.object.ArrayValueMapperParser;
 import org.elasticsearch.index.similarity.SimilarityProvider;
 
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 import static org.elasticsearch.index.mapper.MapperBuilders.*;
 import static org.elasticsearch.index.mapper.core.TypeParsers.*;
@@ -73,6 +70,25 @@ import static org.elasticsearch.index.mapper.core.TypeParsers.*;
 public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implements ArrayValueMapperParser {
 
     public static final String CONTENT_TYPE = "geo_point";
+
+    public static class GeoPointAndHash {
+        GeoPoint geoPoint = new GeoPoint();
+        String geoHash = null;
+
+        public GeoPointAndHash(GeoPoint geoPoint, String geoHash) {
+            this.geoPoint = geoPoint;
+            this.geoHash = geoHash;
+        }
+
+        public GeoPointAndHash() {
+            geoPoint = new GeoPoint();
+        }
+
+        @Override
+        public String toString() {
+            return geoPoint.getLat() + "," + geoPoint.getLon();
+        }
+    }
 
     public static class Names {
         public static final String LAT = "lat";
@@ -477,7 +493,7 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
     }
 
     @Override
-    protected void parseCreateField(ParseContext context, List<Field> fields) throws IOException {
+    protected ValueAndBoost parseCreateField(ParseContext context, List<Field> fields) throws IOException {
         throw new UnsupportedOperationException("Parsing is implemented in parse(), this method should NEVER be called");
     }
 
@@ -486,47 +502,48 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
         ContentPath.Type origPathType = context.path().pathType();
         context.path().pathType(pathType);
         context.path().add(name());
-
-        GeoPoint sparse = context.parseExternalValue(GeoPoint.class);
-        
-        if (sparse != null) {
-            parse(context, sparse, null);
-        } else {
-            sparse = new GeoPoint();
-            XContentParser.Token token = context.parser().currentToken();
+        List<GeoPointAndHash> geoPointAndHashs = new ArrayList<>();
+        XContentParser.Token token = context.parser().currentToken();
+        if (token == XContentParser.Token.START_ARRAY) {
+            token = context.parser().nextToken();
             if (token == XContentParser.Token.START_ARRAY) {
-                token = context.parser().nextToken();
-                if (token == XContentParser.Token.START_ARRAY) {
-                    // its an array of array of lon/lat [ [1.2, 1.3], [1.4, 1.5] ]
-                    while (token != XContentParser.Token.END_ARRAY) {
-                        parse(context, GeoUtils.parseGeoPoint(context.parser(), sparse), null);
-                        token = context.parser().nextToken();
-                    }
-                } else {
-                    // its an array of other possible values
-                    if (token == XContentParser.Token.VALUE_NUMBER) {
-                        double lon = context.parser().doubleValue();
-                        token = context.parser().nextToken();
-                        double lat = context.parser().doubleValue();
-                        while ((token = context.parser().nextToken()) != XContentParser.Token.END_ARRAY) {
+                // its an array of array of lon/lat [ [1.2, 1.3], [1.4, 1.5] ]
+                while (token != XContentParser.Token.END_ARRAY) {
+                    geoPointAndHashs.add(new GeoPointAndHash(GeoUtils.parseGeoPoint(context.parser(), new GeoPoint()), null));
+                    token = context.parser().nextToken();
+                }
+            } else {
+                // its an array of other possible values
+                if (token == XContentParser.Token.VALUE_NUMBER) {
+                    double lon = context.parser().doubleValue();
+                    token = context.parser().nextToken();
+                    double lat = context.parser().doubleValue();
+                    while ((token = context.parser().nextToken()) != XContentParser.Token.END_ARRAY) {
 
+                    }
+                    geoPointAndHashs.add(new GeoPointAndHash(new GeoPoint().reset(lat, lon), null));
+                } else {
+                    while (token != XContentParser.Token.END_ARRAY) {
+                        if (token == XContentParser.Token.VALUE_STRING) {
+                            geoPointAndHashs.add(parsePointFromString(context.parser().text()));
+                        } else {
+                            geoPointAndHashs.add(new GeoPointAndHash(GeoUtils.parseGeoPoint(context.parser(), new GeoPoint()), null));
                         }
-                        parse(context, sparse.reset(lat, lon), null);
-                    } else {
-                        while (token != XContentParser.Token.END_ARRAY) {
-                            if (token == XContentParser.Token.VALUE_STRING) {
-                                parsePointFromString(context, sparse, context.parser().text());
-                            } else {
-                                parse(context, GeoUtils.parseGeoPoint(context.parser(), sparse), null);
-                            }
-                            token = context.parser().nextToken();
-                        }
+                        token = context.parser().nextToken();
                     }
                 }
-            } else if (token == XContentParser.Token.VALUE_STRING) {
-                parsePointFromString(context, sparse, context.parser().text());
-            } else if (token != XContentParser.Token.VALUE_NULL) {
-                parse(context, GeoUtils.parseGeoPoint(context.parser(), sparse), null);
+            }
+        } else if (token == XContentParser.Token.VALUE_STRING) {
+            geoPointAndHashs.add(parsePointFromString(context.parser().text()));
+        } else if (token != XContentParser.Token.VALUE_NULL) {
+            geoPointAndHashs.add(new GeoPointAndHash(GeoUtils.parseGeoPoint(context.parser(), new GeoPoint()), null));
+        }
+        for (GeoPointAndHash geoPointAndHash : geoPointAndHashs) {
+            ValueAndBoost valueAndBoost = new ValueAndBoost(geoPointAndHash, 1.0f);
+            addValue(context, valueAndBoost);
+            multiFields.addValue(this, context, valueAndBoost);
+            if (copyTo != null) {
+                copyTo.parse(context);
             }
         }
 
@@ -534,25 +551,43 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
         context.path().pathType(origPathType);
     }
 
-    private void parseGeohashField(ParseContext context, String geohash) throws IOException {
+    private void addGeohashField(ParseContext context, String geohash) throws IOException {
         int len = Math.min(geoHashPrecision, geohash.length());
         int min = enableGeohashPrefix ? 1 : geohash.length();
 
         for (int i = len; i >= min; i--) {
-            // side effect of this call is adding the field
-            geohashMapper.parse(context.createExternalValueContext(geohash.substring(0, i)));
+            geohashMapper.addValue(context, new StringFieldMapper.ValueAndBoost(geohash.substring(0, i), 1.0f));
         }
     }
 
-    private void parsePointFromString(ParseContext context, GeoPoint sparse, String point) throws IOException {
+    private GeoPointAndHash parsePointFromString(String point) throws IOException {
+        GeoPointAndHash geoPointAndHash = new GeoPointAndHash();
         if (point.indexOf(',') < 0) {
-            parse(context, sparse.resetFromGeoHash(point), point);
+            geoPointAndHash.geoPoint.resetFromGeoHash(point);
+            geoPointAndHash.geoHash = point;
         } else {
-            parse(context, sparse.resetFromString(point), null);
+            geoPointAndHash.geoPoint.resetFromString(point);
         }
+        return geoPointAndHash;
     }
 
-    private void parse(ParseContext context, GeoPoint point, String geohash) throws IOException {
+    @Override
+    protected void createField(ParseContext context, List<Field> fields, ValueAndBoost valueAndBoost) throws IOException {
+        GeoPoint point = null;
+        String geohash = null;
+        if (valueAndBoost.value instanceof GeoPointAndHash) {
+            point = ((GeoPointAndHash)valueAndBoost.value).geoPoint;
+            geohash = ((GeoPointAndHash)valueAndBoost.value).geoHash;
+        } else if (valueAndBoost.value instanceof GeoPoint) {
+           point = (GeoPoint)valueAndBoost.value;
+        } else if (valueAndBoost.value instanceof String) {
+            geohash = (String)valueAndBoost.value;
+            point = parsePointFromString(geohash).geoPoint;
+        }
+        if (point == null) {
+            return;
+        }
+
         if (normalizeLat || normalizeLon) {
             GeoUtils.normalizePoint(point, normalizeLat, normalizeLon);
         }
@@ -576,11 +611,11 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
             if (geohash == null) {
                 geohash = GeoHashUtils.encode(point.lat(), point.lon());
             }
-            parseGeohashField(context, geohash);
+            addGeohashField(context, geohash);
         }
         if (enableLatLon) {
-            latMapper.parse(context.createExternalValueContext(point.lat()));
-            lonMapper.parse(context.createExternalValueContext(point.lon()));
+            latMapper.addValue(context, new NumberFieldMapper.ValueAndBoost(point.lat(), 1.0f));
+            lonMapper.addValue(context, new NumberFieldMapper.ValueAndBoost(point.lon(), 1.0f));
         }
         if (hasDocValues()) {
             CustomGeoPointDocValuesField field = (CustomGeoPointDocValuesField) context.doc().getByKey(names().indexName());
@@ -591,7 +626,7 @@ public class GeoPointFieldMapper extends AbstractFieldMapper<GeoPoint> implement
                 field.add(point.lat(), point.lon());
             }
         }
-        multiFields.parse(this, context);
+
     }
 
     @Override

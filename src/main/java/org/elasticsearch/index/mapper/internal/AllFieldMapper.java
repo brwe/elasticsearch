@@ -205,9 +205,9 @@ public class AllFieldMapper extends AbstractFieldMapper<String> implements Inter
     }
 
     @Override
-    protected void parseCreateField(ParseContext context, List<Field> fields) throws IOException {
+    protected ValueAndBoost parseCreateField(ParseContext context, List<Field> fields) throws IOException {
         if (!enabled) {
-            return;
+            return null;
         }
         // reset the entries
         context.allEntries().reset();
@@ -221,6 +221,7 @@ public class AllFieldMapper extends AbstractFieldMapper<String> implements Inter
 
         Analyzer analyzer = findAnalyzer(context);
         fields.add(new AllField(names.indexName(), context.allEntries(), analyzer, fieldType));
+        return null;
     }
 
     private Analyzer findAnalyzer(ParseContext context) {
@@ -356,4 +357,5 @@ public class AllFieldMapper extends AbstractFieldMapper<String> implements Inter
     public boolean isGenerated() {
         return true;
     }
+
 }

@@ -128,7 +128,7 @@ public class MultiFieldsIntegrationTests extends ElasticsearchIntegrationTest {
                 .setQuery(constantScoreQuery(geoDistanceFilter("a").point(51, 19).distance(50, DistanceUnit.KILOMETERS)))
                 .get();
         assertThat(countResponse.getCount(), equalTo(1l));
-        countResponse = client().prepareCount("my-index").setQuery(matchQuery("a.b", "51,19")).get();
+        countResponse = client().prepareCount("my-index").setQuery(matchQuery("a.b", "51.0,19.0")).get();
         assertThat(countResponse.getCount(), equalTo(1l));
     }
 
