@@ -20,11 +20,16 @@
 package org.elasticsearch.index.mapper.boost;
 
 import org.apache.lucene.index.IndexableField;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.compress.CompressedString;
+import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.ParsedDocument;
 import org.elasticsearch.index.mapper.internal.BoostFieldMapper;
+import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.test.ElasticsearchSingleNodeTest;
@@ -98,5 +103,26 @@ public class BoostMappingTests extends ElasticsearchSingleNodeTest {
         docMapper = indexServices.mapperService().documentMapperParser().parse("type", docMapper.mappingSource().string());
         assertThat(docMapper.boostFieldMapper().fieldType().stored(), equalTo(true));
         assertThat(docMapper.boostFieldMapper().fieldType().indexed(), equalTo(true));
+    }
+
+
+    @Test
+    public void testIndexName() throws Exception {
+        XContentBuilder mapping = XContentFactory.jsonBuilder().startObject().startObject("type")
+                .startObject("_boost")
+                .field("index_name", "custom_index_name").field("name", "custom_name").field("index", "analyzed")
+                .endObject()
+                .endObject().endObject();
+        createIndex("test", ImmutableSettings.EMPTY, "type", mapping);
+
+        XContentBuilder doc = XContentFactory.jsonBuilder().startObject().field("custom_name", "5").field("text", "foo").endObject();
+        client().prepareIndex().setSource(doc).setType("type").setIndex("test").get();
+        client().admin().indices().prepareRefresh("test").get();
+        SearchResponse response = client().prepareSearch("test").setQuery(QueryBuilders.matchAllQuery()).get();
+        assertThat(response.getHits().totalHits(), equalTo(1l));
+         response = client().prepareSearch("test").setPostFilter(FilterBuilders.rangeFilter("custom_name").from(4.0).to(6.0)).get();
+        assertThat(response.getHits().totalHits(), equalTo(1l));
+        response = client().prepareSearch("test").setPostFilter(FilterBuilders.rangeFilter("custom_index_name").from(4.0).to(6.0)).get();
+        assertThat(response.getHits().totalHits(), equalTo(1l));
     }
 }
