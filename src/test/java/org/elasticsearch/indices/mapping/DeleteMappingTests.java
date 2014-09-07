@@ -45,6 +45,8 @@ public class DeleteMappingTests extends ElasticsearchIntegrationTest {
         createIndices();
         client().admin().indices().prepareDeleteMapping("_all").setType("test_type2").get();
 
+        ensureGreen();
+        
         TypesExistsResponse response = client().admin().indices().prepareTypesExists("test_index1").setTypes("test_type1").get();
         assertTrue(response.isExists());
 
@@ -61,6 +63,8 @@ public class DeleteMappingTests extends ElasticsearchIntegrationTest {
         createIndices();
         client().admin().indices().prepareDeleteMapping("*").setType("test_type2").get();
 
+        ensureGreen();
+
         TypesExistsResponse response = client().admin().indices().prepareTypesExists("test_index1").setTypes("test_type1").get();
         assertTrue(response.isExists());
 
@@ -76,6 +80,8 @@ public class DeleteMappingTests extends ElasticsearchIntegrationTest {
         createIndices();
         client().admin().indices().prepareDeleteMapping("test_index1", "test_index2").setType("_all").get();
 
+        ensureGreen();
+
         TypesExistsResponse response = client().admin().indices().prepareTypesExists("test_index1").setTypes("test_type1").get();
         assertFalse(response.isExists());
 
@@ -90,6 +96,8 @@ public class DeleteMappingTests extends ElasticsearchIntegrationTest {
     public void testDeleteTypeWithListOfIndices() throws Exception {
         createIndices();
         client().admin().indices().prepareDeleteMapping("test_index2", "foo").setType("test_type2").get();
+
+        ensureGreen();
 
         TypesExistsResponse response = client().admin().indices().prepareTypesExists("test_index1").setTypes("test_type1").get();
         assertTrue(response.isExists());
