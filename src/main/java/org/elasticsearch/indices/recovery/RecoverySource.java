@@ -313,8 +313,8 @@ public class RecoverySource extends AbstractComponent {
 
             private void updateMappingOnMaster() {
                 // hier wird das falsche mapping geschickt. sollte leer sein, ist aber nicht
-
-                IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
+                ClusterState clusterState = clusterService.state();
+                IndexMetaData indexMetaData = clusterState.metaData().getIndices().get(indexService.index().getName());
                 ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
                 if (indexMetaData != null) {
                     metaDataMappings = indexMetaData.getMappings();
@@ -330,8 +330,6 @@ public class RecoverySource extends AbstractComponent {
                     if (mappingMetaData == null || !documentMapper.refreshSource().equals(mappingMetaData.source())) {
                         // not on master yet in the right form
                         if (mappingMetaData== null) {
-                            ClusterState clusterState = clusterService.state();
-
                             if (clusterState.status() == ClusterState.ClusterStateStatus.BEING_APPLIED) {
                                 logger.debug("dev-issue-195 RecoverySource: Cluster state {} is still being applied.", clusterState);
                             }
