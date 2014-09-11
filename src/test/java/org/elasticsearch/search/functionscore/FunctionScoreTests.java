@@ -240,7 +240,13 @@ public class FunctionScoreTests extends ElasticsearchIntegrationTest {
         ).actionGet();
 
         double expectedScore = computeExpectedScore(weights, scores, scoreMode);
-        assertThat(expectedScore / responseWithWeights.getHits().getAt(0).getScore(), closeTo(1.0, 1.e-6));
+        logger.debug("weights are: {}", weights);
+        logger.debug("scores are: {}", scores);
+        logger.debug("expected score: {}", expectedScore);
+        logger.debug("score mode: {}", scoreMode);
+        logger.debug("double expected/ score: {}", expectedScore / (double)responseWithWeights.getHits().getAt(0).getScore());
+        logger.debug("float expected/ score: {}", (float)expectedScore / responseWithWeights.getHits().getAt(0).getScore());
+        assertThat(expectedScore / responseWithWeights.getHits().getAt(0).getScore(), closeTo(1.0, 1.e-2));
 
     }
 

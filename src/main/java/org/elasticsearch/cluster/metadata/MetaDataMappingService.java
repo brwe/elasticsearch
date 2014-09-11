@@ -48,6 +48,7 @@ import org.elasticsearch.indices.TypeMissingException;
 import org.elasticsearch.percolator.PercolatorService;
 import org.elasticsearch.threadpool.ThreadPool;
 
+import java.io.IOException;
 import java.util.*;
 
 import static com.google.common.collect.Maps.newHashMap;
@@ -58,7 +59,6 @@ import static org.elasticsearch.index.mapper.DocumentMapper.MergeFlags.mergeFlag
  */
 public class MetaDataMappingService extends AbstractComponent {
 
-    private final ThreadPool threadPool;
     private final ClusterService clusterService;
     private final IndicesService indicesService;
 
@@ -69,9 +69,8 @@ public class MetaDataMappingService extends AbstractComponent {
     private long refreshOrUpdateProcessedInsertOrder;
 
     @Inject
-    public MetaDataMappingService(Settings settings, ThreadPool threadPool, ClusterService clusterService, IndicesService indicesService) {
+    public MetaDataMappingService(Settings settings, ClusterService clusterService, IndicesService indicesService) {
         super(settings);
-        this.threadPool = threadPool;
         this.clusterService = clusterService;
         this.indicesService = indicesService;
     }
@@ -234,6 +233,7 @@ public class MetaDataMappingService extends AbstractComponent {
 
             IndexMetaData.Builder builder = IndexMetaData.builder(indexMetaData);
             try {
+                logger.debug("dev-issue-195 MappingDataMappingService: in executeRefreshOrUpdate 234 call processIndexMappingTasks on index [{}], uuid [{}]", indexService.index(), indexService.indexUUID());
                 boolean indexDirty = processIndexMappingTasks(tasks, indexService, builder);
                 if (indexDirty) {
                     mdBuilder.put(builder);
@@ -309,6 +309,7 @@ public class MetaDataMappingService extends AbstractComponent {
 
                     // build the updated mapping source
                     if (logger.isDebugEnabled()) {
+                        // 0 this is the entry that we only have in failed
                         logger.debug("[{}] update_mapping [{}] (dynamic) with source [{}]", index, type, updatedMapper.mappingSource());
                     } else if (logger.isInfoEnabled()) {
                         logger.info("[{}] update_mapping [{}] (dynamic)", index, type);
@@ -345,6 +346,7 @@ public class MetaDataMappingService extends AbstractComponent {
 
             @Override
             public ClusterState execute(ClusterState currentState) throws Exception {
+                logger.debug("dev-issue-195 MappingDataMappingService: in refreshMapping 346 call executeRefreshOrUpdate on index [{}], uuid [{}], insertOrder[{}]", index, indexUUID, insertOrder);
                 Tuple<ClusterState, List<MappingTask>> tuple = executeRefreshOrUpdate(currentState, insertOrder);
                 this.allTasks = tuple.v2();
                 return tuple.v1();
@@ -381,6 +383,7 @@ public class MetaDataMappingService extends AbstractComponent {
 
             @Override
             public ClusterState execute(final ClusterState currentState) throws Exception {
+                logger.debug("dev-issue-195 MappingDataMappingService: in updateMapping 346 call executeRefreshOrUpdate on index [{}], uuid [{}], insertOrder[{}]", index, indexUUID, insertOrder);
                 Tuple<ClusterState, List<MappingTask>> tuple = executeRefreshOrUpdate(currentState, insertOrder);
                 this.allTasks = tuple.v2();
                 return tuple.v1();

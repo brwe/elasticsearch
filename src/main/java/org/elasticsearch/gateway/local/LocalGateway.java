@@ -204,6 +204,7 @@ public class LocalGateway extends AbstractLifecycleComponent<Gateway> implements
     public void clusterChanged(final ClusterChangedEvent event) {
         // order is important, first metaState, and then shardsState
         // so dangling indices will be recorded
+        logger.debug("dev-issue-195 LocalGateway: in clusterChanged call shardsState.clusterChanged");
         metaState.clusterChanged(event);
         shardsState.clusterChanged(event);
     }
