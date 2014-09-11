@@ -292,11 +292,10 @@ public class RecoverySource extends AbstractComponent {
                 stopWatch.stop();
                 response.startTime = stopWatch.totalTime().millis();
                 logger.trace("{} recovery [phase2] to {}: start took [{}]", request.shardId(), request.targetNode(), request.targetNode(), stopWatch.totalTime());
-
-
                 logger.trace("{} recovery [phase2] to {}: updating current mapping to master", request.shardId(), request.targetNode());
-                updateMappingOnMaster();
-
+                if (request.recoveryType() != RecoveryState.Type.REPLICA) { // if it is not the primary no need to do anything because the primary will take care of mapping changes
+                    updateMappingOnMaster();
+                }
                 logger.trace("{} recovery [phase2] to {}: sending transaction log operations", request.shardId(), request.targetNode());
                 stopWatch = new StopWatch().start();
                 int totalOperations = sendSnapshot(snapshot);
