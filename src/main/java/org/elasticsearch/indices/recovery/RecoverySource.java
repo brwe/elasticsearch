@@ -29,11 +29,14 @@ import org.apache.lucene.util.IOUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.ProcessedClusterStateNonMasterUpdateTask;
 import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.cluster.routing.RoutingNode;
 import org.elasticsearch.cluster.routing.ShardRouting;
+import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.StopWatch;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
@@ -292,10 +295,11 @@ public class RecoverySource extends AbstractComponent {
                 stopWatch.stop();
                 response.startTime = stopWatch.totalTime().millis();
                 logger.trace("{} recovery [phase2] to {}: start took [{}]", request.shardId(), request.targetNode(), request.targetNode(), stopWatch.totalTime());
+
+
                 logger.trace("{} recovery [phase2] to {}: updating current mapping to master", request.shardId(), request.targetNode());
-                if (request.recoveryType() != RecoveryState.Type.REPLICA) { // if it is not the primary no need to do anything because the primary will take care of mapping changes
-                    updateMappingOnMaster();
-                }
+                updateMappingOnMaster();
+
                 logger.trace("{} recovery [phase2] to {}: sending transaction log operations", request.shardId(), request.targetNode());
                 stopWatch = new StopWatch().start();
                 int totalOperations = sendSnapshot(snapshot);
@@ -306,26 +310,50 @@ public class RecoverySource extends AbstractComponent {
             }
 
             private void updateMappingOnMaster() {
-                IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
-                ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
-                if (indexMetaData != null) {
-                    metaDataMappings = indexMetaData.getMappings();
-                }
-                List<DocumentMapper> documentMappersToUpdate = Lists.newArrayList();
-                // default mapping should not be sent back, it can only be updated by put mapping API, and its
-                // a full in place replace, we don't want to override a potential update coming it
-                for (DocumentMapper documentMapper : indexService.mapperService().docMappers(false)) {
+                final AtomicReference<List<DocumentMapper>> documentMappersToUpdate = new AtomicReference<List<DocumentMapper>>();
+                final CountDownLatch mappingCheck = new CountDownLatch(1);
+                clusterService.submitStateUpdateTask("recover_mapping_check", new ProcessedClusterStateNonMasterUpdateTask() {
+                    @Override
+                    public ClusterState execute(ClusterState currentState) throws Exception {
+                        IndexMetaData indexMetaData = clusterService.state().metaData().getIndices().get(indexService.index().getName());
+                        ImmutableOpenMap<String, MappingMetaData> metaDataMappings = null;
+                        if (indexMetaData != null) {
+                            metaDataMappings = indexMetaData.getMappings();
+                        }
+                        List<DocumentMapper> tempDocMappersToUpdate = Lists.newArrayList();
+                        // default mapping should not be sent back, it can only be updated by put mapping API, and its
+                        // a full in place replace, we don't want to override a potential update coming it
+                        for (DocumentMapper documentMapper : indexService.mapperService().docMappers(false)) {
 
-                    MappingMetaData mappingMetaData = metaDataMappings == null ? null : metaDataMappings.get(documentMapper.type());
-                    if (mappingMetaData == null || !documentMapper.refreshSource().equals(mappingMetaData.source())) {
-                        // not on master yet in the right form
-                        documentMappersToUpdate.add(documentMapper);
+                            MappingMetaData mappingMetaData = metaDataMappings == null ? null : metaDataMappings.get(documentMapper.type());
+                            if (mappingMetaData == null || !documentMapper.refreshSource().equals(mappingMetaData.source())) {
+                                // not on master yet in the right form
+                                tempDocMappersToUpdate.add(documentMapper);
+                            }
+                        }
+                        documentMappersToUpdate.set(tempDocMappersToUpdate);
+                        return currentState;
                     }
+
+                    @Override
+                    public void onFailure(String source, @Nullable Throwable t) {
+                        mappingCheck.countDown();
+                    }
+
+                    @Override
+                    public void clusterStateProcessed(String source, ClusterState oldState, ClusterState newState) {
+                        mappingCheck.countDown();
+                    }
+                });
+                try {
+                    mappingCheck.await();
+                } catch (InterruptedException e) {
+                    //
                 }
-                if (documentMappersToUpdate.isEmpty()) {
+                if (documentMappersToUpdate.get() == null || documentMappersToUpdate.get().isEmpty()) {
                     return;
                 }
-                final CountDownLatch countDownLatch = new CountDownLatch(documentMappersToUpdate.size());
+                final CountDownLatch countDownLatch = new CountDownLatch(documentMappersToUpdate.get().size());
                 MappingUpdatedAction.MappingUpdateListener listener = new MappingUpdatedAction.MappingUpdateListener() {
                     @Override
                     public void onMappingUpdate() {
@@ -338,7 +366,7 @@ public class RecoverySource extends AbstractComponent {
                         countDownLatch.countDown();
                     }
                 };
-                for (DocumentMapper documentMapper : documentMappersToUpdate) {
+                for (DocumentMapper documentMapper : documentMappersToUpdate.get()) {
                     mappingUpdatedAction.updateMappingOnMaster(indexService.index().getName(), documentMapper, indexService.indexUUID(), listener);
                 }
                 try {
