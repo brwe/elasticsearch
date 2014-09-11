@@ -298,7 +298,9 @@ public class RecoverySource extends AbstractComponent {
                 logger.trace("{} recovery [phase2] to {}: updating current mapping to master", request.shardId(), request.targetNode());
                 logger.debug("dev-issue-195 RecoverySource: in phase2 before updateMappingOnMaster. translog length [{}],for index [{}] and shard [{}]", snapshot.length(), request.shardId().index(), request.shardId());
 
-                updateMappingOnMaster();
+                if (request.recoveryType() != RecoveryState.Type.REPLICA) { // if it is not the primary no need to do anything because the primary will take care of mapping changes
+                    updateMappingOnMaster();
+                }
                 
                 logger.trace("{} recovery [phase2] to {}: sending transaction log operations", request.shardId(), request.targetNode());
                 logger.debug("dev-issue-195 RecoverySource: in phase2 after updateMappingOnMaster. translog length [{}], for index [{}] and shard [{}]", snapshot.length(), request.shardId().index(), request.shardId());
