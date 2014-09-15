@@ -538,6 +538,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                 logger.info("[{}][{}] DONE performing on primary", shard.shardId().index().name(), shard.shardId().id());
                 performReplicas(response);
             } catch (Throwable e) {
+                internalRequest.request.setCanHaveDuplicates();
                 logger.info("[{}][{}] failed to perform primary", e, shard.shardId().index().name(), shard.shardId().id());
                 // shard has not been allocated yet, retry it here
                 if (retryPrimaryException(e)) {
