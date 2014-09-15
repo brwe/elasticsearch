@@ -533,9 +533,12 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
 
         void performOnPrimary(int primaryShardId, final ShardRouting shard, ClusterState clusterState) {
             try {
+                logger.info("[{}][{}] START performing on primary", shard.shardId().index().name(), shard.shardId().id());
                 PrimaryResponse<Response, ReplicaRequest> response = shardOperationOnPrimary(clusterState, new PrimaryOperationRequest(primaryShardId, internalRequest.concreteIndex(), internalRequest.request()));
+                logger.info("[{}][{}] DONE performing on primary", shard.shardId().index().name(), shard.shardId().id());
                 performReplicas(response);
             } catch (Throwable e) {
+                logger.info("[{}][{}] failed to perform primary", e, shard.shardId().index().name(), shard.shardId().id());
                 // shard has not been allocated yet, retry it here
                 if (retryPrimaryException(e)) {
                     primaryOperationStarted.set(false);
