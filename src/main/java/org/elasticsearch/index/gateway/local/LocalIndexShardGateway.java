@@ -117,7 +117,10 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
         indexShard.store().incRef();
         try {
             try {
+                logger.trace("recover shard with potentially missing docs...");
                 indexShard.store().failIfCorrupted();
+                logger.trace("...was not corrupted");
+                logger.trace("");
                 SegmentInfos si = null;
                 try {
                     si = Lucene.readSegmentInfos(indexShard.store().directory());
@@ -132,8 +135,11 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                         throw new IndexShardGatewayRecoveryException(shardId(), "shard allocated for local recovery (post api), should exist, but doesn't, current files: " + files, e);
                     }
                 }
+                logger.trace("...segment info read success");
                 if (si != null) {
+                    logger.trace("...and not null");
                     if (indexShouldExists) {
+                        logger.trace("... index should exists");
                         version = si.getVersion();
                         /**
                          * We generate the translog ID before each lucene commit to ensure that
@@ -147,6 +153,7 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                         }
                         logger.trace("using existing shard data, translog id [{}]", translogId);
                     } else {
+                        logger.trace("...but indexShouldExists exists is false");
                         // it exists on the directory, but shouldn't exist on the FS, its a leftover (possibly dangling)
                         // its a "new index create" API, we have to do something, so better to clean it than use same data
                         logger.trace("cleaning existing shard, shouldn't exists");
@@ -243,7 +250,7 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                     in = stream.openInput(recoveringTranslogFile);
                 } catch (TruncatedTranslogException e) {
                     // file is empty or header has been half-written and should be ignored
-                    logger.trace("ignoring truncation exception, the translog is either empty or half-written ([{}])", e.getMessage());
+                    logger.trace("ignoring truncation exception, the translog is either empty or half-written ([{}][{}])", e.getMessage(), e.getCause().getMessage());
                 }
                 while (true) {
                     if (in == null) {

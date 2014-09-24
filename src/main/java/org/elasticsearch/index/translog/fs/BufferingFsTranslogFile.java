@@ -21,6 +21,7 @@ package org.elasticsearch.index.translog.fs;
 
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.Channels;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.translog.TranslogStream;
 import org.elasticsearch.index.translog.TranslogStreams;
@@ -65,6 +66,7 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
         raf.raf().setLength(0);
         this.translogStream = TranslogStreams.translogStreamFor(this.raf.file());
         this.headerSize = this.translogStream.writeHeader(raf.channel());
+        ESLoggerFactory.getRootLogger().debug("header size: {}", headerSize);
         this.lastPosition += headerSize;
         this.lastWrittenPosition += headerSize;
         this.lastSyncPosition += headerSize;

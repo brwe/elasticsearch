@@ -23,6 +23,7 @@ import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.store.InputStreamDataInput;
 import org.apache.lucene.store.OutputStreamDataOutput;
 import org.elasticsearch.common.io.stream.*;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 
 import java.io.EOFException;
 import java.io.File;
@@ -111,8 +112,10 @@ public class ChecksummedTranslogStream implements TranslogStream {
             CodecUtil.checkHeader(new InputStreamDataInput(in), TranslogStreams.TRANSLOG_CODEC, VERSION, VERSION);
             return in;
         } catch (EOFException e) {
+            ESLoggerFactory.getLogger("translog header").warn("{}",e.getStackTrace());
             throw new TruncatedTranslogException("translog header truncated", e);
         } catch (IOException e) {
+            ESLoggerFactory.getLogger("translog header").warn("{}",e.getStackTrace());
             throw new TranslogCorruptedException("translog header corrupted", e);
         }
     }

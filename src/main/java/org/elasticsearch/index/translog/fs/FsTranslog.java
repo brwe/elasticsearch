@@ -237,19 +237,25 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
                 }
             }
             try {
+                logger.debug("creating translog id {}", id);
                 newFile = type.create(shardId, id, new RafReference(new File(location, "translog-" + id)), bufferSize);
             } catch (IOException e) {
                 throw new TranslogException(shardId, "failed to create new translog file", e);
             }
             FsTranslogFile old = current;
             current = newFile;
+
             if (old != null) {
+                logger.debug("old {}", old.id());
                 // we might create a new translog overriding the current translog id
                 boolean delete = true;
                 if (old.id() == id) {
+                    logger.debug("ids equal {} {}", id, old.id());
                     delete = false;
                 }
                 old.close(delete);
+            } else {
+                logger.debug("old is null");
             }
         } finally {
             rwl.writeLock().unlock();
@@ -272,6 +278,7 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
                     location = file;
                 }
             }
+            logger.debug("creating transient translog with id {}", id);
             this.trans = type.create(shardId, id, new RafReference(new File(location, "translog-" + id)), transientBufferSize);
         } catch (IOException e) {
             throw new TranslogException(shardId, "failed to create new translog file", e);

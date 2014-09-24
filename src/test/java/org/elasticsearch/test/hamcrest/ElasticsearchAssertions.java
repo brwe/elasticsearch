@@ -61,6 +61,7 @@ import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.Streamable;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.suggest.Suggest;
@@ -143,13 +144,19 @@ public class ElasticsearchAssertions {
 
     public static void assertSearchHits(SearchResponse searchResponse, String... ids) {
         String shardStatus = formatShardStatus(searchResponse);
-        assertThat("Expected different hit count. " + shardStatus, searchResponse.getHits().hits().length, equalTo(ids.length));
 
         Set<String> idsSet = new HashSet<>(Arrays.asList(ids));
         for (SearchHit hit : searchResponse.getHits()) {
-            assertThat("Expected id: " + hit.getId() + " in the result but wasn't." + shardStatus, idsSet.remove(hit.getId()),
-                    equalTo(true));
+            boolean removeHit = idsSet.remove(hit.getId());
+            if (!removeHit) {
+                ESLoggerFactory.getLogger("missing-docs").debug("Expected id: " + hit.getId() + " in the result but wasn't." + shardStatus, hit.getId());
+            }
         }
+        for (String missingId : idsSet) {
+
+            ESLoggerFactory.getLogger("missing-docs").warn("doc was missing from result: " + missingId);
+        }
+        assertThat("Expected different hit count. " + shardStatus, searchResponse.getHits().hits().length, equalTo(ids.length));
         assertThat("Expected ids: " + Arrays.toString(idsSet.toArray(new String[idsSet.size()])) + " in the result - result size differs."
                 + shardStatus, idsSet.size(), equalTo(0));
         assertVersionSerializable(searchResponse);

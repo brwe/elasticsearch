@@ -20,6 +20,7 @@
 package org.elasticsearch.search.functionscore;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.geo.GeoPoint;
@@ -29,9 +30,12 @@ import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilder;
 import org.elasticsearch.index.query.functionscore.weight.WeightBuilder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import static org.elasticsearch.client.Requests.searchRequest;
@@ -42,6 +46,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.*;
 import static org.elasticsearch.search.builder.SearchSourceBuilder.searchSource;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
+import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertOrderedSearchHits;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.Matchers.*;
 
@@ -387,5 +392,72 @@ public class FunctionScoreTests extends ElasticsearchIntegrationTest {
         ).actionGet();
         assertSearchResponse(response);
         assertThat(response.getHits().getAt(0).score(), equalTo(2.0f));
+    }
+
+    @Test
+    @TestLogging("action.search.type:TRACE,index.shard.service:TRACE,indices.recovery:TRACE")
+    public void testSimpleFunctionScoreParsingWorks() throws IOException, ExecutionException, InterruptedException {
+
+        assertAcked(prepareCreate("test").addMapping(
+                "type1",
+                jsonBuilder().startObject()
+                        .startObject("type1")
+                        .startObject("properties")
+                        .startObject("text")
+                        .field("type", "string")
+                        .endObject()
+                        .startObject("loc")
+                        .field("type", "geo_point")
+                        .endObject()
+                        .endObject()
+                        .endObject()
+                        .endObject()));
+        ensureYellow();
+
+        int numDocs = 10;
+        String[] ids = new String[numDocs];
+        List<IndexRequestBuilder> indexBuilders = new ArrayList<>();
+        for (int i = 0; i < numDocs; i++) {
+            String id = Integer.toString(i);
+            indexBuilders.add(client().prepareIndex()
+                    .setType("type1").setId(id).setIndex("test")
+                    .setSource(
+                            jsonBuilder().startObject()
+                                    .field("text", "value " + (i < 5 ? "boosted" : ""))
+                                    .startObject("loc")
+                                    .field("lat", 10 + i)
+                                    .field("lon", 20)
+                                    .endObject()
+                                    .endObject()));
+            ids[i] = id;
+        }
+        indexRandom(true, indexBuilders);
+        checkFunctionScoreStillWorks(ids);
+        logClusterState();
+        boolean upgraded;
+        int upgradedNodesCounter = 1;
+        int counter = 0;
+        do {
+            logger.debug("function_score bwc: upgrading {}st node", upgradedNodesCounter++);
+            ensureYellow();
+            sleep(1000);
+            logClusterState();
+            checkFunctionScoreStillWorks(ids);
+            counter ++;
+        } while (counter < 30);
+        logger.debug("done function_score while upgrading");
+    }
+
+    private void checkFunctionScoreStillWorks(String... ids) throws ExecutionException, InterruptedException, IOException {
+        SearchResponse response = client().search(
+                searchRequest().source(
+                        searchSource().query(
+                                functionScoreQuery(termFilter("text", "value"))
+                                        .add(gaussDecayFunction("loc", new GeoPoint(10, 20), "1000km"))
+                                        .add(scriptFunction("_index['text']['value'].tf()"))
+                                        .add(termFilter("text", "boosted"), factorFunction(5))
+                        ))).actionGet();
+        assertSearchResponse(response);
+        assertOrderedSearchHits(response, ids);
     }
 }
