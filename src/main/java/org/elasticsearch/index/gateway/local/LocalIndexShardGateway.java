@@ -235,6 +235,7 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
             }
 
             // recover from the translog file
+            //here
             indexShard.performRecoveryPrepareForTranslog();
             recoveryState.getStart().time(System.currentTimeMillis() - recoveryState.getStart().startTime());
             recoveryState.getStart().checkIndexTime(indexShard.checkIndexTook());

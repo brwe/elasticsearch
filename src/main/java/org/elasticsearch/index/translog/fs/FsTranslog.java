@@ -238,7 +238,9 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
             }
             try {
                 logger.debug("creating translog id {}", id);
-                newFile = type.create(shardId, id, new RafReference(new File(location, "translog-" + id)), bufferSize);
+                RafReference ref = new RafReference(new File(location, "translog-" + id));
+                logger.debug("File {} exists {} and has length {}" , ref.file().getAbsolutePath()+ref.file().getName(), ref.file().exists(), ref.file().length());
+                newFile = type.create(shardId, id, ref, bufferSize);
             } catch (IOException e) {
                 throw new TranslogException(shardId, "failed to create new translog file", e);
             }

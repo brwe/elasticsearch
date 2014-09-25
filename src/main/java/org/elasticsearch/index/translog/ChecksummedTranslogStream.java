@@ -57,6 +57,7 @@ public class ChecksummedTranslogStream implements TranslogStream {
     public Translog.Operation read(StreamInput inStream) throws IOException {
         // TODO: validate size to prevent OOME
         int opSize = inStream.readInt();
+        ESLoggerFactory.getLogger(this.getClass().getCanonicalName()).debug("opsize is {}", opSize);
         // This BufferedChecksumStreamInput remains unclosed on purpose,
         // because closing it closes the underlying stream, which we don't
         // want to do here.
@@ -64,8 +65,13 @@ public class ChecksummedTranslogStream implements TranslogStream {
         Translog.Operation operation;
         try {
             Translog.Operation.Type type = Translog.Operation.Type.fromId(in.readByte());
+            ESLoggerFactory.getLogger(this.getClass().getCanonicalName()).debug("type is {}", type);
             operation = TranslogStreams.newOperationFromType(type);
+            ESLoggerFactory.getLogger(this.getClass().getCanonicalName()).debug("type is {}", operation);
             operation.readFrom(in);
+            if (operation.opType().equals(Translog.Operation.Type.SAVE)) {
+                ESLoggerFactory.getLogger(this.getClass().getCanonicalName()).debug("type is {}", operation.getSource().toString());
+            }
         } catch (AssertionError|Exception e) {
             throw new TranslogCorruptedException("translog corruption while reading from stream", e);
         }
@@ -108,6 +114,7 @@ public class ChecksummedTranslogStream implements TranslogStream {
     @Override
     public StreamInput openInput(File translogFile) throws IOException {
         try {
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("Input stream for file ", translogFile);
             InputStreamStreamInput in = new InputStreamStreamInput(new FileInputStream(translogFile));
             CodecUtil.checkHeader(new InputStreamDataInput(in), TranslogStreams.TRANSLOG_CODEC, VERSION, VERSION);
             return in;
