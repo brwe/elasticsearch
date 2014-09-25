@@ -79,6 +79,7 @@ public class SimpleFsTranslogFile implements FsTranslogFile {
     public Translog.Location add(BytesReference data) throws IOException {
         rwl.writeLock().lock();
         try {
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("add operation to translog (SimpleFsTranslogFile){}", this.id());
             long position = lastPosition;
             data.writeTo(raf.channel());
             lastPosition = lastPosition + data.length();
@@ -161,6 +162,7 @@ public class SimpleFsTranslogFile implements FsTranslogFile {
         rwl.writeLock().lock();
         try {
             lastSyncPosition = lastWrittenPosition;
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("channel force translog {}", this.id());
             raf.channel().force(false);
         } finally {
             rwl.writeLock().unlock();

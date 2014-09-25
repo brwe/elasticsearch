@@ -90,6 +90,7 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
     public Translog.Location add(BytesReference data) throws IOException {
         rwl.writeLock().lock();
         try {
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("add operation to translog {}", this.id());
             operationCounter++;
             long position = lastPosition;
             if (data.length() >= buffer.length) {
@@ -180,16 +181,20 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
     @Override
     public void sync() throws IOException {
         if (!syncNeeded()) {
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("sync not needed {}", this.id());
             return;
         }
         rwl.writeLock().lock();
         try {
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("syncing translog {}", this.id());
             flushBuffer();
             lastSyncPosition = lastPosition;
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("syncing translog flushBuffer seems successful {}", this.id());
         } finally {
             rwl.writeLock().unlock();
         }
         raf.channel().force(false);
+        ESLoggerFactory.getLogger(this.getClass().getName()).debug("syncing translog raf.channel().force(false) seems successful {}", this.id());
     }
 
     @Override
@@ -200,6 +205,7 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
         try {
             if (!delete) {
                 try {
+
                     sync();
                 } catch (Exception e) {
                     throw new TranslogException(shardId, "failed to sync on close", e);

@@ -27,6 +27,7 @@ import org.elasticsearch.common.io.FileSystemUtils;
 import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.io.stream.ReleasableBytesStreamOutput;
 import org.elasticsearch.common.lease.Releasables;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.util.BigArrays;
@@ -385,6 +386,7 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
             TranslogStreams.writeTranslogOperation(out, operation);
             ReleasableBytesReference bytes = out.bytes();
             Location location = current.add(bytes);
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("add operation {} to translog {}", operation.opType(), current.id());
             if (syncOnEachOperation) {
                 current.sync();
             }

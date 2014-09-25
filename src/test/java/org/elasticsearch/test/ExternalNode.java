@@ -216,6 +216,7 @@ final class ExternalNode implements Closeable {
             try {
                 if (forceKill == false && nodeInfo != null && random.nextBoolean()) {
                     // sometimes shut down gracefully
+                    logger.debug("shutting down node {} gracefully", this.nodeInfo.getNode().id());
                     getClient().admin().cluster().prepareNodesShutdown(this.nodeInfo.getNode().id()).setExit(random.nextBoolean()).setDelay("0s").get();
                 }
                 if (this.client != null) {
