@@ -1274,7 +1274,9 @@ public class InternalEngine extends AbstractIndexShardComponent implements Engin
 
     @Override
     public void close() throws ElasticsearchException {
+        logger.debug("missing-docs acquire write lock in Internal Engine.close(), shard {} ", this.shardId);
         try (InternalLock _ = writeLock.acquire()) {
+            logger.debug("missing-docs successfully acquired write lock in Internal Engine.close(), shard {} ", this.shardId);
             if (!closed) {
                 try {
                     closed = true;
@@ -1300,6 +1302,8 @@ public class InternalEngine extends AbstractIndexShardComponent implements Engin
                     indexWriter = null;
                     store.decRef();
                 }
+            } else {
+                logger.debug("missing-docs In InternalEngine.close(): engine already closed, shard {} ", this.shardId);
             }
         }
     }

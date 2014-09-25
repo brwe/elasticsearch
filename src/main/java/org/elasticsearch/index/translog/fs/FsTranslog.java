@@ -147,6 +147,7 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
         try {
             FsTranslogFile current1 = this.current;
             if (current1 != null) {
+                ESLoggerFactory.getLogger(this.getClass().getName()).debug("call translog close from close({}) on translog {}", delete, current1.id());
                 current1.close(delete);
             }
             current1 = this.trans;
@@ -256,6 +257,7 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
                     logger.debug("ids equal {} {}", id, old.id());
                     delete = false;
                 }
+                ESLoggerFactory.getLogger(this.getClass().getName()).debug("call translog close from newTranslog on translog {}", old.id());
                 old.close(delete);
             } else {
                 logger.debug("old is null");
@@ -302,6 +304,7 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
         } finally {
             rwl.writeLock().unlock();
         }
+        ESLoggerFactory.getLogger(this.getClass().getName()).debug("call translog close from makeTransientCurrent on translog {}", current.id());
         old.close(true);
         current.reuse(old);
     }

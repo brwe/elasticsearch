@@ -205,7 +205,7 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
         try {
             if (!delete) {
                 try {
-
+                    ESLoggerFactory.getLogger(this.getClass().getName()).debug("call translog sync from close() on translog {}", this.id());
                     sync();
                 } catch (Exception e) {
                     throw new TranslogException(shardId, "failed to sync on close", e);
@@ -223,6 +223,7 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
         }
         rwl.writeLock().lock();
         try {
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("call translog flushBuffer from reuse() on translog {}", this.id());
             flushBuffer();
             this.buffer = ((BufferingFsTranslogFile) other).buffer;
         } catch (IOException e) {

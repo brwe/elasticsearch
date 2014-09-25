@@ -265,10 +265,12 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
     }
 
     public void close(final String reason, @Nullable Executor executor) {
+
         synchronized (this) {
             closed = true;
         }
         Set<Integer> shardIds = shardIds();
+        logger.debug("missing-docs In InternalIndexService close({}) iterating over shards {}", reason, shardIds);
         final CountDownLatch latch = new CountDownLatch(shardIds.size());
         for (final int shardId : shardIds) {
             executor = executor == null ? threadPool.generic() : executor;
@@ -276,6 +278,7 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
                 @Override
                 public void run() {
                     try {
+                        logger.debug("missing-docs InternalIndexService calling removeShard({}) from close({})",shardId, reason);
                         removeShard(shardId, reason);
                     } catch (Throwable e) {
                         logger.warn("failed to close shard", e);
@@ -290,6 +293,9 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
         } catch (InterruptedException e) {
             logger.debug("Interrupted closing index [{}]", e, index().name());
             Thread.currentThread().interrupt();
+        } catch (Throwable t) {
+            logger.debug("caught {}", t);
+            throw t;
         }
     }
 
@@ -376,6 +382,8 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
 
     @Override
     public synchronized void removeShard(int shardId, String reason) throws ElasticsearchException {
+        logger.debug("missing-docs In removeShard({}) ...", shardId);
+        //between entry and call of shardInjector.getInstance(IndexShardGatewayService.class).close(); something goes wrong
         final Injector shardInjector;
         final IndexShard indexShard;
         final ShardId sId = new ShardId(index, shardId);
@@ -398,6 +406,7 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
         }
         try {
             // now we can close the translog service, we need to close it before the we close the shard
+            logger.debug("missing-docs close translog service... shard {}", shardId);
             shardInjector.getInstance(TranslogService.class).close();
         } catch (Throwable e) {
             logger.debug("failed to close translog service", e);
@@ -407,6 +416,7 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
         // and close the shard so no operations are allowed to it
         if (indexShard != null) {
             try {
+                logger.debug("missing-docs close InternalIndexShard...shard {}", shardId);
                 ((InternalIndexShard) indexShard).close(reason);
             } catch (Throwable e) {
                 logger.debug("failed to close index shard", e);
@@ -414,24 +424,28 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
             }
         }
         try {
+            logger.debug("missing-docs close Engine...shard {}", shardId);
             shardInjector.getInstance(Engine.class).close();
         } catch (Throwable e) {
             logger.debug("failed to close engine", e);
             // ignore
         }
         try {
+            logger.debug("missing-docs close MergeSchedulerProvider...shard {}", shardId);
             shardInjector.getInstance(MergeSchedulerProvider.class).close();
         } catch (Throwable e) {
             logger.debug("failed to close merge policy scheduler", e);
             // ignore
         }
         try {
+            logger.debug("missing-docs close MergePolicyProvider...shard {}", shardId);
             shardInjector.getInstance(MergePolicyProvider.class).close();
         } catch (Throwable e) {
             logger.debug("failed to close merge policy provider", e);
             // ignore
         }
         try {
+            logger.debug("missing-docs call IndexShardGatewayService.close() from  removeShard(shard {})", shardId);
             shardInjector.getInstance(IndexShardGatewayService.class).close();
         } catch (Throwable e) {
             logger.debug("failed to close index shard gateway", e);
@@ -439,6 +453,7 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
         }
         try {
             // now we can close the translog
+            logger.debug("missing-docs  call Translog.close() from  removeShard() ... shard {}", shardId);
             shardInjector.getInstance(Translog.class).close();
         } catch (Throwable e) {
             logger.debug("failed to close translog", e);
@@ -458,6 +473,7 @@ public class InternalIndexService extends AbstractIndexComponent implements Inde
         Store store = shardInjector.getInstance(Store.class);
         // and close it
         try {
+            logger.debug("call store.close() from  removeShard()");
             store.close();
         } catch (Throwable e) {
             logger.warn("failed to close store on shard deletion", e);

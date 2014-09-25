@@ -335,18 +335,18 @@ public class InternalIndicesService extends AbstractLifecycleComponent<IndicesSe
         for (Class<? extends CloseableIndexComponent> closeable : pluginsService.indexServices()) {
             indexInjector.getInstance(closeable).close();
         }
-
+        logger.debug("closing internal index service...");
         ((InternalIndexService) indexService).close(reason, executor);
 
         indexInjector.getInstance(IndexCache.class).close();
         indexInjector.getInstance(IndexFieldDataService.class).clear();
         indexInjector.getInstance(AnalysisService.class).close();
         indexInjector.getInstance(IndexEngine.class).close();
-
+        logger.debug("closing IndexGateway...");
         indexInjector.getInstance(IndexGateway.class).close();
         indexInjector.getInstance(MapperService.class).close();
         indexInjector.getInstance(IndexQueryParserService.class).close();
-
+        logger.debug("closing IndexStore...");
         indexInjector.getInstance(IndexStore.class).close();
 
         Injectors.close(injector);
