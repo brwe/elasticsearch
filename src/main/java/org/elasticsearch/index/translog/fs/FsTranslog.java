@@ -239,7 +239,7 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
             try {
                 logger.debug("creating translog id {}", id);
                 RafReference ref = new RafReference(new File(location, "translog-" + id));
-                logger.debug("File {} exists {} and has length {}" , ref.file().getAbsolutePath()+ref.file().getName(), ref.file().exists(), ref.file().length());
+                logger.debug("File {} exists {} and has length {}" , ref.file().getAbsolutePath(), ref.file().exists(), ref.file().length());
                 newFile = type.create(shardId, id, ref, bufferSize);
             } catch (IOException e) {
                 throw new TranslogException(shardId, "failed to create new translog file", e);
@@ -401,6 +401,12 @@ public class FsTranslog extends AbstractIndexShardComponent implements Translog 
             }
             Releasables.close(bytes);
             released = true;
+            logger.debug("size for current translog {} is {}", current.id(), current.translogSizeInBytes());
+            if (trans != null) {
+                logger.debug("size for trans translog {} is {}", trans.id(), trans.translogSizeInBytes());
+            } else {
+                logger.debug("trans translog is null");
+            }
             return location;
         } catch (Throwable e) {
             throw new TranslogException(shardId, "Failed to write operation [" + operation + "]", e);

@@ -210,10 +210,16 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                 File tmpRecoveringFile = new File(translogLocation, recoverTranslogName);
                 if (!tmpRecoveringFile.exists()) {
                     File tmpTranslogFile = new File(translogLocation, translogName);
+                    long tmpLength =tmpTranslogFile.length();
                     if (tmpTranslogFile.exists()) {
                         for (int i = 0; i < RECOVERY_TRANSLOG_RENAME_RETRIES; i++) {
+                            logger.debug("renaming {} to {}", tmpTranslogFile.getAbsolutePath() , tmpRecoveringFile.getAbsolutePath());
                             if (tmpTranslogFile.renameTo(tmpRecoveringFile)) {
+                                logger.debug("done renaming {} to {}", tmpTranslogFile.getAbsolutePath() , tmpRecoveringFile.getAbsolutePath());
+
                                 recoveringTranslogFile = tmpRecoveringFile;
+                                long recoveringLength =recoveringTranslogFile.length();
+                                logger.debug("length before rename and after {} {}", tmpLength, recoveringLength);
                                 break;
                             }
                         }
@@ -265,7 +271,7 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                         operation = stream.read(in);
                     } catch (EOFException e) {
                         // ignore, not properly written the last op
-                        logger.trace("ignoring translog EOF exception, the last operation was not properly written ([{}])", e.getMessage());
+                        logger.trace("ignoring translog EOF exception for {}, the last operation was not properly written ([{}])",recoveringTranslogFile.getAbsolutePath(), e.getMessage());
                         break;
                     } catch (IOException e) {
                         // ignore, not properly written last op

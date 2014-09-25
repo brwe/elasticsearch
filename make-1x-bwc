@@ -1,0 +1,12 @@
+#!/bin/bash          
+
+version="1.5.0"
+
+export JAVA_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,address=8765"
+rm -rf target/releases/elasticsearch-$version
+mvn clean  -DskipTests package
+rm -rf /home/britta/es/backwards/elasticsearch-$version
+#mkdir /home/britta/es/backwards/elasticsearch-1.5.0-SNAPSHOT
+unzip target/releases/elasticsearch-$version.zip -d /home/britta/es/backwards/
+
+

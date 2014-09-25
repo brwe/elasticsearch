@@ -114,7 +114,7 @@ public class ChecksummedTranslogStream implements TranslogStream {
     @Override
     public StreamInput openInput(File translogFile) throws IOException {
         try {
-            ESLoggerFactory.getLogger(this.getClass().getName()).debug("Input stream for file ", translogFile);
+            ESLoggerFactory.getLogger(this.getClass().getName()).debug("Input stream for file {}", translogFile);
             InputStreamStreamInput in = new InputStreamStreamInput(new FileInputStream(translogFile));
             CodecUtil.checkHeader(new InputStreamDataInput(in), TranslogStreams.TRANSLOG_CODEC, VERSION, VERSION);
             return in;

@@ -63,10 +63,12 @@ public class BufferingFsTranslogFile implements FsTranslogFile {
         this.id = id;
         this.raf = raf;
         this.buffer = new byte[bufferSize];
+        ESLoggerFactory.getRootLogger().debug("set length for {} to 0",raf.file().getAbsolutePath());
         raf.raf().setLength(0);
+        ESLoggerFactory.getRootLogger().debug("done set length for {} to 0",raf.file().getAbsolutePath());
         this.translogStream = TranslogStreams.translogStreamFor(this.raf.file());
         this.headerSize = this.translogStream.writeHeader(raf.channel());
-        ESLoggerFactory.getRootLogger().debug("header size: {}", headerSize);
+        ESLoggerFactory.getRootLogger().debug("header size for file : {} is {}",raf.file().getAbsolutePath(), headerSize);
         this.lastPosition += headerSize;
         this.lastWrittenPosition += headerSize;
         this.lastSyncPosition += headerSize;
