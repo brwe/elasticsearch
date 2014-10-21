@@ -22,6 +22,7 @@ package org.elasticsearch.search.reducers;
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
+import org.elasticsearch.search.reducers.bucket.linearregression.slidingwindow.LinearRegressionParser;
 import org.elasticsearch.search.reducers.bucket.slidingwindow.SlidingWindowParser;
 import org.elasticsearch.search.reducers.metric.delta.DeltaParser;
 
@@ -34,6 +35,7 @@ public class ReductionModule extends AbstractModule {
     public ReductionModule() {
         parsers.add(SlidingWindowParser.class);
         parsers.add(DeltaParser.class);
+        parsers.add(LinearRegressionParser.class);
     }
 
     /**

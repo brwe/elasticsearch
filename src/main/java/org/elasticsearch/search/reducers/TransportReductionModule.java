@@ -19,6 +19,8 @@
 package org.elasticsearch.search.reducers;
 
 import org.elasticsearch.common.inject.AbstractModule;
+import org.elasticsearch.search.reducers.bucket.linearregression.slidingwindow.InternalLinearRegression;
+import org.elasticsearch.search.reducers.bucket.linearregression.slidingwindow.LinearRegressionReducer;
 import org.elasticsearch.search.reducers.bucket.slidingwindow.InternalSlidingWindow;
 import org.elasticsearch.search.reducers.bucket.slidingwindow.SlidingWindowReducer;
 import org.elasticsearch.search.reducers.metric.delta.DeltaReducer;
@@ -36,9 +38,11 @@ public class TransportReductionModule extends AbstractModule {
 //        InternalMetricReduction.registerStreams();
         InternalSlidingWindow.registerStreams();
         InternalDelta.registerStreams();
+        InternalLinearRegression.registerStreams();
         
         // NOCOMMIT register reducerFactoryStreams
         SlidingWindowReducer.registerStreams();
         DeltaReducer.registerStreams();
+        LinearRegressionReducer.registerStreams();
     }
 }

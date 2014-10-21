@@ -17,19 +17,9 @@
  * under the License.
  */
 
-package org.elasticsearch.search.aggregations;
+package org.elasticsearch.search.reducers.bucket.linearregression.slidingwindow;
 
+import org.elasticsearch.search.reducers.bucket.BucketReducerAggregation;
 
-import org.elasticsearch.search.reducers.bucket.linearregression.slidingwindow.LinearRegressionBuilder;
-import org.elasticsearch.search.reducers.bucket.slidingwindow.SlidingWindowBuilder;
-
-public class ReducerBuilders {
-
-    public static SlidingWindowBuilder slidingWindowReducer(String name) {
-        return new SlidingWindowBuilder(name);
-    }
-
-    public static LinearRegressionBuilder linearRegressionReducer(String name) {
-        return new LinearRegressionBuilder(name);
-    }
+public interface LinearRegression extends BucketReducerAggregation {
 }
