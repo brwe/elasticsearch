@@ -19,6 +19,11 @@
 
 package org.elasticsearch.search.aggregations.bucket;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -29,16 +34,13 @@ import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.search.aggregations.AggregationBuilders.*;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.avg;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.filters;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.histogram;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -129,6 +131,9 @@ public class FiltersTests extends ElasticsearchIntegrationTest {
         assertThat(filters.getName(), equalTo("tags"));
 
         assertThat(filters.getBuckets().size(), equalTo(2));
+        Object[] propertiesKeys = (Object[]) filters.getProperty("_key");
+        Object[] propertiesDocCounts = (Object[]) filters.getProperty("_count");
+        Object[] propertiesCounts = (Object[]) filters.getProperty("avg_value");
 
         Filters.Bucket bucket = filters.getBucketByKey("tag1");
         assertThat(bucket, Matchers.notNullValue());
@@ -142,6 +147,9 @@ public class FiltersTests extends ElasticsearchIntegrationTest {
         assertThat(avgValue, notNullValue());
         assertThat(avgValue.getName(), equalTo("avg_value"));
         assertThat(avgValue.getValue(), equalTo((double) sum / numTag1Docs));
+        assertThat((String) propertiesKeys[0], equalTo("tag1"));
+        assertThat((long) propertiesDocCounts[0], equalTo((long) numTag1Docs));
+        assertThat((double) propertiesCounts[0], equalTo((double) sum / numTag1Docs));
 
         bucket = filters.getBucketByKey("tag2");
         assertThat(bucket, Matchers.notNullValue());
@@ -155,6 +163,9 @@ public class FiltersTests extends ElasticsearchIntegrationTest {
         assertThat(avgValue, notNullValue());
         assertThat(avgValue.getName(), equalTo("avg_value"));
         assertThat(avgValue.getValue(), equalTo((double) sum / numTag2Docs));
+        assertThat((String) propertiesKeys[1], equalTo("tag2"));
+        assertThat((long) propertiesDocCounts[1], equalTo((long) numTag2Docs));
+        assertThat((double) propertiesCounts[1], equalTo((double) sum / numTag2Docs));
     }
 
     @Test

@@ -19,6 +19,7 @@
 
 package org.elasticsearch.search.aggregations.metrics.scripted;
 
+import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -110,6 +111,14 @@ public class InternalScriptedMetric extends InternalMetricsAggregation implement
     @Override
     public Type type() {
         return TYPE;
+    }
+
+    public Object getProperty(List<String> path) {
+        if (path.isEmpty() || path.size() == 1 && "value".equals(path.get(0))) {
+            return aggregation;
+        } else {
+            throw new ElasticsearchIllegalArgumentException("path not supported for [" + getName() + "]: " + path);
+        }
     }
 
     @Override

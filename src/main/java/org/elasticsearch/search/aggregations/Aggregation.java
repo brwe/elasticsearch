@@ -30,6 +30,8 @@ public interface Aggregation {
      */
     String getName();
 
+    Object getProperty(String path);
+
     /**
      * Get the optional byte array metadata that was set on the aggregation
      */
