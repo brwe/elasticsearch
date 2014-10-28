@@ -19,11 +19,15 @@
 
 package org.elasticsearch.search.reducers.bucket.linearregression.slidingwindow;
 
+
+import org.apache.commons.math.linear.MatrixUtils;
+import org.apache.commons.math.linear.RealMatrix;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.text.StringText;
 import org.elasticsearch.common.text.Text;
+import org.elasticsearch.common.util.ArrayUtils;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.Aggregations;
@@ -39,9 +43,7 @@ import org.elasticsearch.search.reducers.bucket.InternalBucketReducerAggregation
 import org.elasticsearch.search.reducers.bucket.InternalBucketReducerAggregation.InternalSelection;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import Jama.Matrix;
 
@@ -94,48 +96,52 @@ public class LinearRegressionReducer extends BucketReducer {
         List<Bucket> resultBuckets = new ArrayList<>();
         int xDim = (xMetrics == null || xMetrics.size() == 0) ? 1 : xMetrics.size();
         int yDim = aggBuckets.size();
-        Matrix Theta = new Matrix(xDim + 1, yDim); // holds the xes, metric values or count of the buckets
-        Matrix t = new Matrix(yDim, 1); // holds the measured values (metric value that is to be predicted)
-        for (int i = 0; i < aggBuckets.size(); i++) {
-            for (int j = 0; j < xDim; j++) {
-                String metricName = xMetrics.get(j);
-                //NOCOMMIT we currently assume only average is allowed as metric. but there might be others, not sure how to get the values via java api
-                Avg value = aggBuckets.get(i).getAggregations().get(metricName);
-                Theta.set(j, i, value.getValue());
+        RealMatrix Theta = MatrixUtils.createRealMatrix(xDim + 1, yDim); // holds the xes, metric values or count of the buckets
+        Theta = Theta.scalarAdd(1.0);
+        RealMatrix t = MatrixUtils.createRealMatrix(yDim, 1); // holds the measured values (metric value that is to be predicted)
+        Queue<String> queue = new LinkedList<>();
+
+        for (int j = 0; j < xDim; j++) {
+            queue.clear();
+            queue.add(xMetrics.get(0));
+            Object[] values = (Object[]) aggregation.getProperty(queue);
+            for (int i = 0; i < values.length; i++) {
+                Theta.setEntry(j, i, ((Number) values[i]).doubleValue());
             }
-            Theta.set(xDim, i, 1);
-            Avg yValue = aggBuckets.get(i).getAggregations().get(yMetric);
-            t.set(i, 0, yValue.getValue());
-
         }
-
+        queue.clear();
+        queue.add(yMetric);
+        Object[] values = (Object[]) aggregation.getProperty(queue);
+        for (int i = 0; i < values.length; i++) {
+            t.setEntry(i, 0, ((Number) values[i]).doubleValue());
+        }
         //here do the regression. for now, just try and fit a line
-
-        Matrix S0 = Matrix.identity(xDim + 1, xDim + 1); // assume prior with 0 mean and 1 std
-        Matrix m0 = new Matrix(xDim + 1, 1);
         double alpha = 1;
         double beta = 1;
-        Matrix S_N = Matrix.identity(xDim + 1, xDim + 1).times(alpha).plus(Theta.times(Theta.transpose()).times(beta)).inverse();
+        RealMatrix S_N = MatrixUtils.createRealIdentityMatrix(xDim + 1);
+        S_N = S_N.scalarMultiply(alpha);
+        S_N = S_N.add(Theta.multiply(Theta.transpose()).scalarMultiply(beta));
+        S_N = S_N.inverse();
 
-        Matrix mN = S_N.times(Theta).times(t).times(beta);
+        RealMatrix mN = S_N.multiply(Theta).multiply(t).scalarMultiply(beta);
 
         double predictedY = 0.0;
         for (int i = 0; i < xDim; i++) {
-            predictedY += mN.get(i, 0) * predictXs.get(i);
+            predictedY += mN.getEntry(i, 0) * predictXs.get(i);
         }
-        predictedY += mN.get(xDim, 0);
+        predictedY += mN.getEntry(xDim, 0);
         //create result buckets
         for (int i = 0; i < aggBuckets.size(); i++) {
             double[] xs = new double[xDim];
             for (int j = 0; j < xDim; j++) {
-                xs[j] = Theta.get(j, i);
+                xs[j] = Theta.getEntry(j, i);
             }
-            double y = t.get(i, 0);
+            double y = t.getEntry(i, 0);
             double bucketPredictedY = 0;
             for (int j = 0; j < xDim; j++) {
-                bucketPredictedY += mN.get(j, 0) * xs[j];
+                bucketPredictedY += mN.getEntry(j, 0) * xs[j];
             }
-            bucketPredictedY += mN.get(xDim, 0);
+            bucketPredictedY += mN.getEntry(xDim, 0);
             resultBuckets.add(new LRBucket(Integer.toString(i), xs, y, bucketPredictedY));
         }
         double[] pxs = new double[predictXs.size()];
@@ -147,7 +153,7 @@ public class LinearRegressionReducer extends BucketReducer {
         selections.add(selection);
         double[] finalParameters = new double[xDim + 1];
         for (int i = 0; i <= xDim; i++) {
-            finalParameters[i] = mN.get(i,0);
+            finalParameters[i] = mN.getEntry(i, 0);
         }
         return new InternalLinearRegression(name(), selections, finalParameters);
     }
@@ -187,6 +193,12 @@ public class LinearRegressionReducer extends BucketReducer {
         @Override
         public Aggregations getAggregations() {
             return null;
+        }
+
+        @Override
+        public Object getProperty(String containingAggName, Queue<String> path) {
+            throw new UnsupportedOperationException("getProperty not implemented yet by LinReg");
+
         }
 
         @Override
