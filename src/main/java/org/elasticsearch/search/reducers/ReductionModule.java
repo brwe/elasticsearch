@@ -22,6 +22,7 @@ package org.elasticsearch.search.reducers;
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
+import org.elasticsearch.search.reducers.bucket.correlation.CorrelationReorderParser;
 import org.elasticsearch.search.reducers.bucket.range.RangeParser;
 import org.elasticsearch.search.reducers.bucket.slidingwindow.SlidingWindowParser;
 import org.elasticsearch.search.reducers.metric.avg.AvgParser;
@@ -46,6 +47,7 @@ public class ReductionModule extends AbstractModule {
         parsers.add(SumParser.class);
         parsers.add(StatsParser.class);
         parsers.add(RangeParser.class);
+        parsers.add(CorrelationReorderParser.class);
     }
 
     /**

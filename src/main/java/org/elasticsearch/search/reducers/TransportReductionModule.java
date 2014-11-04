@@ -23,6 +23,8 @@ import org.elasticsearch.search.aggregations.metrics.max.InternalMax;
 import org.elasticsearch.search.aggregations.metrics.min.InternalMin;
 import org.elasticsearch.search.aggregations.metrics.stats.InternalStats;
 import org.elasticsearch.search.aggregations.metrics.sum.InternalSum;
+import org.elasticsearch.search.reducers.bucket.correlation.CorrelationReorderReducer;
+import org.elasticsearch.search.reducers.bucket.correlation.InternalCorrelationReorder;
 import org.elasticsearch.search.reducers.bucket.range.InternalRange;
 import org.elasticsearch.search.reducers.bucket.range.RangeReducer;
 import org.elasticsearch.search.reducers.bucket.slidingwindow.InternalSlidingWindow;
@@ -52,6 +54,7 @@ public class TransportReductionModule extends AbstractModule {
         InternalSum.registerStreams();
         InternalStats.registerStreams();
         InternalRange.registerStreams();
+        InternalCorrelationReorder.registerStreams();
         
         SlidingWindowReducer.registerStreams();
         DeltaReducer.registerStreams();
@@ -61,5 +64,6 @@ public class TransportReductionModule extends AbstractModule {
         SumReducer.registerStreams();
         StatsReducer.registerStreams();
         RangeReducer.registerStreams();
+        CorrelationReorderReducer.registerStreams();
     }
 }

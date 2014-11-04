@@ -42,8 +42,8 @@ import java.util.Map;
 
 public abstract class InternalBucketReducerAggregation extends InternalMultiBucketAggregation implements BucketReducerAggregation {
 
-    private List<InternalSelection> selections;
-    private Map<String, Selection> selectionMap;
+    protected List<InternalSelection> selections;
+    protected Map<String, Selection> selectionMap;
 
     public static class InternalSelection extends InternalMultiBucketAggregation.InternalBucket implements Selection {
 
