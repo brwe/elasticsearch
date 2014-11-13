@@ -19,11 +19,11 @@
 
 package org.elasticsearch.search.aggregations;
 
-import java.util.List;
-import java.util.Map;
-
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
+
+import java.util.List;
+import java.util.Map;
 
 public abstract class InternalMultiBucketAggregation extends InternalAggregation implements MultiBucketsAggregation {
 
@@ -53,8 +53,14 @@ public abstract class InternalMultiBucketAggregation extends InternalAggregation
             Aggregations aggregations = getAggregations();
             String aggName = path.get(0);
             if (aggName.equals("_count")) {
+                if (path.size() > 1) {
+                    throw new ElasticsearchIllegalArgumentException("_count must be the last element in the path");
+                }
                 return getDocCount();
             } else if (aggName.equals("_key")) {
+                if (path.size() > 1) {
+                    throw new ElasticsearchIllegalArgumentException("_key must be the last element in the path");
+                }
                 return getKey();
             }
             InternalAggregation aggregation = aggregations.get(aggName);

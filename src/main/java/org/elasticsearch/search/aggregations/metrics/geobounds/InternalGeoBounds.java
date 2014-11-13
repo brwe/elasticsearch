@@ -139,7 +139,7 @@ public class InternalGeoBounds extends InternalMetricsAggregation implements Geo
             default:
                 throw new ElasticsearchIllegalArgumentException("Found unknown path element [" + cornerString + "] in [" + getName() + "]");
             }
-            String latLonString = path.get(0);
+            String latLonString = path.get(1);
             switch (latLonString) {
             case "lat":
                 return cornerPoint.lat();

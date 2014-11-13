@@ -244,6 +244,16 @@ public class GeoBoundsTests extends ElasticsearchIntegrationTest {
         assertThat(geobounds, notNullValue());
         assertThat(geobounds.getName(), equalTo("geoBounds"));
         assertThat((GeoBounds) global.getProperty("geoBounds"), sameInstance(geobounds));
+        GeoPoint topLeft = geobounds.topLeft();
+        GeoPoint bottomRight = geobounds.bottomRight();
+        assertThat(topLeft.lat(), equalTo(singleTopLeft.lat()));
+        assertThat(topLeft.lon(), equalTo(singleTopLeft.lon()));
+        assertThat(bottomRight.lat(), equalTo(singleBottomRight.lat()));
+        assertThat(bottomRight.lon(), equalTo(singleBottomRight.lon()));
+        assertThat((double) global.getProperty("geoBounds.top"), equalTo(singleTopLeft.lat()));
+        assertThat((double) global.getProperty("geoBounds.left"), equalTo(singleTopLeft.lon()));
+        assertThat((double) global.getProperty("geoBounds.bottom"), equalTo(singleBottomRight.lat()));
+        assertThat((double) global.getProperty("geoBounds.right"), equalTo(singleBottomRight.lon()));
     }
 
     @Test
