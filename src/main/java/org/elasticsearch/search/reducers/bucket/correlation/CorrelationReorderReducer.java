@@ -22,11 +22,13 @@ package org.elasticsearch.search.reducers.bucket.correlation;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.aggregations.bucket.BucketStreamContext;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation.Bucket;
+import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.reducers.*;
 import org.elasticsearch.search.reducers.bucket.BucketReducer;
 import org.elasticsearch.search.reducers.bucket.InternalBucketReducerAggregation;
@@ -132,18 +134,23 @@ public class CorrelationReorderReducer extends BucketReducer {
         return bucketsValues;
     }
 
-    private void addValuesAndBuckets(Object properties, MultiBucketsAggregation aggregation, List<String> curve, List<BucketsValuesTuple> bucketsValues, String label) {
+    private void addValuesAndBuckets(Object properties, Aggregation aggregation, List<String> curve, List<BucketsValuesTuple> bucketsValues, String label) {
         //path length is the dimension of the agg so we stop if we reach the bottom
-        if (curve.size() > 1) {
+        if (curve.size() > 2) {
             Object[] propertiesArray = (Object[]) properties;
             int bucketCounter = 0;
             List<String> innerCurves = curve.subList(1, curve.size());
-            for (Bucket bucket : aggregation.getBuckets()) {
-                addValuesAndBuckets(propertiesArray[bucketCounter], (MultiBucketsAggregation) bucket.getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + bucket.getKey());
-                bucketCounter++;
+            if (aggregation instanceof MultiBucketsAggregation) {
+                for (Bucket bucket : ((MultiBucketsAggregation) aggregation).getBuckets()) {
+                    addValuesAndBuckets(propertiesArray[bucketCounter], bucket.getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + bucket.getKey());
+                    bucketCounter++;
+                }
+            } else {
+                addValuesAndBuckets(propertiesArray, ((SingleBucketAggregation)aggregation).getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + aggregation.getName());
             }
+
         } else {
-            bucketsValues.add(new BucketsValuesTuple((Object[]) properties, aggregation.getBuckets(), label, ((InternalAggregation) aggregation).type().stream()));
+            bucketsValues.add(new BucketsValuesTuple((Object[]) properties, ((MultiBucketsAggregation)aggregation).getBuckets(), label, ((InternalAggregation) aggregation).type().stream()));
         }
     }
 

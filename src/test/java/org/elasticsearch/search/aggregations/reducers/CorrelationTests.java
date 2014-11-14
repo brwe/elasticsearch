@@ -52,7 +52,7 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
                         .subAggregation(terms("reference_label").field("reference_label")
                                 .subAggregation(histogram("x").field("x").interval(1)
                                         .subAggregation(avg("avg").field("y")))))
-                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg").curve("dummy_agg.label.x.avg"))
+                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value").curve("dummy_agg.label.x.avg.value"))
                 .get();
         assertSearchResponse(searchResponse);
         assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));
@@ -73,12 +73,12 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
                         .subAggregation(filter("reference_label").filter(FilterBuilders.termFilter("label", "reference"))
                                 .subAggregation(histogram("x").field("x").interval(1)
                                         .subAggregation(avg("avg").field("y")))))
-                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg").curve("dummy_agg.label.x.avg"))
+                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value").curve("dummy_agg.label.x.avg.value"))
                 .get();
         assertSearchResponse(searchResponse);
         assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));
         InternalCorrelationReorder corr = searchResponse.getReductions().get("corr");
-        Double[] expectedCorrelations = {1d, -1d, -1d};
+        Double[] expectedCorrelations = {1d, 1d, -1d, -1d};
         assertArrayEquals(corr.getCorrelations(), expectedCorrelations);
         assertThat(corr.getBuckets().get(0).getKey(), equalTo("label.dummy_value.1"));
     }
