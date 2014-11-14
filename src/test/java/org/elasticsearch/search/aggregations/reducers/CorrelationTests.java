@@ -22,6 +22,7 @@ package org.elasticsearch.search.aggregations.reducers;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.search.reducers.bucket.correlation.CorrelationReorderBuilder;
 import org.elasticsearch.search.reducers.bucket.correlation.InternalCorrelationReorder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -42,7 +43,7 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
 
     @Test
     public void testNaiveCorrelation() throws IOException, ExecutionException, InterruptedException {
-        indexDocs();
+        indexDocs("reference_label");
         SearchResponse searchResponse = client().prepareSearch("index").setQuery(matchAllQuery())
                 .addAggregation(terms("dummy_agg").field("dummy_field")
                         .subAggregation(terms("label").field("label")
@@ -61,8 +62,29 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
         assertThat(corr.getBuckets().get(0).getKey(), equalTo("label.dummy_value.1"));
     }
 
+    @Test
+    public void testNaiveCorrelationWithFilterBucket() throws IOException, ExecutionException, InterruptedException {
+        indexDocs("label");
+        SearchResponse searchResponse = client().prepareSearch("index").setQuery(matchAllQuery())
+                .addAggregation(terms("dummy_agg").field("dummy_field")
+                        .subAggregation(terms("label").field("label")
+                                .subAggregation(histogram("x").field("x").interval(1)
+                                        .subAggregation(avg("avg").field("y"))))
+                        .subAggregation(filter("reference_label").filter(FilterBuilders.termFilter("label", "reference"))
+                                .subAggregation(histogram("x").field("x").interval(1)
+                                        .subAggregation(avg("avg").field("y")))))
+                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg").curve("dummy_agg.label.x.avg"))
+                .get();
+        assertSearchResponse(searchResponse);
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));
+        InternalCorrelationReorder corr = searchResponse.getReductions().get("corr");
+        Double[] expectedCorrelations = {1d, -1d, -1d};
+        assertArrayEquals(corr.getCorrelations(), expectedCorrelations);
+        assertThat(corr.getBuckets().get(0).getKey(), equalTo("label.dummy_value.1"));
+    }
 
-    private void indexDocs() throws IOException, ExecutionException, InterruptedException {
+
+    private void indexDocs(String referenceLabelField) throws IOException, ExecutionException, InterruptedException {
         List<IndexRequestBuilder> indexRequests = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 10; j++) {
@@ -71,7 +93,7 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
             }
         }
         for (int j = 0; j < 10; j++) {
-            indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("x", j).field("reference_label", "reference").field("y", 9 - j).endObject()).setIndex("index").setType("type"));
+            indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("x", j).field(referenceLabelField, "reference").field("y", 9 - j).endObject()).setIndex("index").setType("type"));
         }
         indexRandom(true, indexRequests);
         ensureGreen("index");
