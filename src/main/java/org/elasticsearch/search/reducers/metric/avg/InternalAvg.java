@@ -26,7 +26,7 @@ import org.elasticsearch.search.aggregations.metrics.avg.Avg;
 public class InternalAvg extends org.elasticsearch.search.aggregations.metrics.avg.InternalAvg implements Avg {
 
     public InternalAvg(String name, double sum, long count) {
-        super(name, sum, count);
+        super(name, sum, count, null);
     }
 
     @Override

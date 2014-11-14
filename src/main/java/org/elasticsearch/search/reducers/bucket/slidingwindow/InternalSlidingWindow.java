@@ -66,7 +66,7 @@ public class InternalSlidingWindow extends InternalBucketReducerAggregation impl
     }
 
     public InternalSlidingWindow(String name, List<InternalSelection> selections) {
-        super(name, selections);
+        super(name, selections, null);
     }
 
     @Override

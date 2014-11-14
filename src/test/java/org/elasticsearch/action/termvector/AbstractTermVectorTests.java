@@ -207,7 +207,7 @@ public abstract class AbstractTermVectorTests extends ElasticsearchIntegrationTe
     /**
      * Generate test documentsThe returned documents are already indexed.
      */
-    protected TestDoc[] generateTestDocs(int numberOfDocs, TestFieldSetting[] fieldSettings) {
+    protected TestDoc[] generateTestDocs(String index, TestFieldSetting[] fieldSettings) {
         String[] fieldContentOptions = new String[]{"Generating a random permutation of a sequence (such as when shuffling cards).",
                 "Selecting a random sample of a population (important in statistical sampling).",
                 "Allocating experimental units via random assignment to a treatment or control condition.",
@@ -216,16 +216,19 @@ public abstract class AbstractTermVectorTests extends ElasticsearchIntegrationTe
 
         String[] contentArray = new String[fieldSettings.length];
         Map<String, Object> docSource = new HashMap<>();
-        TestDoc[] testDocs = new TestDoc[numberOfDocs];
-        for (int docId = 0; docId < numberOfDocs; docId++) {
+        int totalShards = getNumShards(index).numPrimaries;
+        TestDoc[] testDocs = new TestDoc[totalShards];
+        // this methods wants to send one doc to each shard
+        for (int i = 0; i < totalShards; i++) {
             docSource.clear();
-            for (int i = 0; i < contentArray.length; i++) {
-                contentArray[i] = fieldContentOptions[randomInt(fieldContentOptions.length - 1)];
-                docSource.put(fieldSettings[i].name, contentArray[i]);
+            for (int j = 0; j < contentArray.length; j++) {
+                contentArray[j] = fieldContentOptions[randomInt(fieldContentOptions.length - 1)];
+                docSource.put(fieldSettings[j].name, contentArray[j]);
             }
-            TestDoc doc = new TestDoc(Integer.toString(docId), fieldSettings, contentArray.clone());
+            final String id = routingKeyForShard(index, "type", i);
+            TestDoc doc = new TestDoc(id, fieldSettings, contentArray.clone());
             index(doc.index, doc.type, doc.id, docSource);
-            testDocs[docId] = doc;
+            testDocs[i] = doc;
         }
 
         refresh();
@@ -283,9 +286,9 @@ public abstract class AbstractTermVectorTests extends ElasticsearchIntegrationTe
             if (field.storedPayloads) {
                 mapping.put(field.name, new Analyzer() {
                     @Override
-                    protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
-                        Tokenizer tokenizer = new StandardTokenizer(Version.CURRENT.luceneVersion, reader);
-                        TokenFilter filter = new LowerCaseFilter(Version.CURRENT.luceneVersion, tokenizer);
+                    protected TokenStreamComponents createComponents(String fieldName) {
+                        Tokenizer tokenizer = new StandardTokenizer();
+                        TokenFilter filter = new LowerCaseFilter(tokenizer);
                         filter = new TypeAsPayloadTokenFilter(filter);
                         return new TokenStreamComponents(tokenizer, filter);
                     }
@@ -293,10 +296,10 @@ public abstract class AbstractTermVectorTests extends ElasticsearchIntegrationTe
                 });
             }
         }
-        PerFieldAnalyzerWrapper wrapper = new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.CURRENT.luceneVersion, CharArraySet.EMPTY_SET), mapping);
+        PerFieldAnalyzerWrapper wrapper = new PerFieldAnalyzerWrapper(new StandardAnalyzer(CharArraySet.EMPTY_SET), mapping);
 
         Directory dir = new RAMDirectory();
-        IndexWriterConfig conf = new IndexWriterConfig(Version.CURRENT.luceneVersion, wrapper);
+        IndexWriterConfig conf = new IndexWriterConfig(wrapper);
 
         conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
         IndexWriter writer = new IndexWriter(dir, conf);

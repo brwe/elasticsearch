@@ -18,9 +18,14 @@
  */
 package org.elasticsearch.search.aggregations.bucket;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
 import com.carrotsearch.hppc.ObjectIntMap;
 import com.carrotsearch.hppc.ObjectIntOpenHashMap;
 import com.carrotsearch.hppc.cursors.ObjectIntCursor;
+
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.geo.GeoHashUtils;
@@ -29,12 +34,9 @@ import org.elasticsearch.index.query.GeoBoundingBoxFilterBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGrid;
+import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGrid.Bucket;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.search.aggregations.AggregationBuilders.geohashGrid;
@@ -107,7 +109,11 @@ public class GeoHashGridTests extends ElasticsearchIntegrationTest {
             assertSearchResponse(response);
 
             GeoHashGrid geoGrid = response.getAggregations().get("geohashgrid");
-            for (GeoHashGrid.Bucket cell : geoGrid.getBuckets()) {
+            List<Bucket> buckets = geoGrid.getBuckets();
+            Object[] propertiesKeys = (Object[]) geoGrid.getProperty("_key");
+            Object[] propertiesDocCounts = (Object[]) geoGrid.getProperty("_count");
+            for (int i = 0; i < buckets.size(); i++) {
+                GeoHashGrid.Bucket cell = buckets.get(i);
                 String geohash = cell.getKey();
 
                 long bucketCount = cell.getDocCount();
@@ -115,6 +121,8 @@ public class GeoHashGridTests extends ElasticsearchIntegrationTest {
                 assertNotSame(bucketCount, 0);
                 assertEquals("Geohash " + geohash + " has wrong doc count ",
                         expectedBucketCount, bucketCount);
+                assertThat((String) propertiesKeys[i], equalTo(geohash));
+                assertThat((long) propertiesDocCounts[i], equalTo(bucketCount));
             }
         }
     }

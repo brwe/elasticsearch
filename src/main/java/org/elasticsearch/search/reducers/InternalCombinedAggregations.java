@@ -110,6 +110,11 @@ public class InternalCombinedAggregations implements Aggregations {
         return aggregation;
     }
 
+    @Override
+    public Object getProperty(String path) {
+        return null;
+    }
+
     private Map<String, Aggregation> getReductionsMap() {
         if (reductionsAsMap == null) {
             Map<String, InternalAggregation> aggregationsAsMap = newHashMap();

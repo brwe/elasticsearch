@@ -18,6 +18,9 @@
  */
 package org.elasticsearch.search.aggregations.bucket;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.mapper.ip.IpFieldMapper;
@@ -29,12 +32,12 @@ import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.search.aggregations.AggregationBuilders.*;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.histogram;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.ipRange;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.max;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.sum;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.Matchers.equalTo;
@@ -227,6 +230,9 @@ public class IPv4RangeTests extends ElasticsearchIntegrationTest {
         assertThat(range, notNullValue());
         assertThat(range.getName(), equalTo("range"));
         assertThat(range.getBuckets().size(), equalTo(3));
+        Object[] propertiesKeys = (Object[]) range.getProperty("_key");
+        Object[] propertiesDocCounts = (Object[]) range.getProperty("_count");
+        Object[] propertiesCounts = (Object[]) range.getProperty("sum");
 
         IPv4Range.Bucket bucket = range.getBucketByKey("*-10.0.0.100");
         assertThat(bucket, notNullValue());
@@ -239,6 +245,9 @@ public class IPv4RangeTests extends ElasticsearchIntegrationTest {
         Sum sum = bucket.getAggregations().get("sum");
         assertThat(sum, notNullValue());
         assertThat(sum.getValue(), equalTo((double) 100));
+        assertThat((String) propertiesKeys[0], equalTo("*-10.0.0.100"));
+        assertThat((long) propertiesDocCounts[0], equalTo(100l));
+        assertThat((double) propertiesCounts[0], equalTo((double) 100));
 
         bucket = range.getBucketByKey("10.0.0.100-10.0.0.200");
         assertThat(bucket, notNullValue());
@@ -251,6 +260,9 @@ public class IPv4RangeTests extends ElasticsearchIntegrationTest {
         sum = bucket.getAggregations().get("sum");
         assertThat(sum, notNullValue());
         assertThat(sum.getValue(), equalTo((double) 200));
+        assertThat((String) propertiesKeys[1], equalTo("10.0.0.100-10.0.0.200"));
+        assertThat((long) propertiesDocCounts[1], equalTo(100l));
+        assertThat((double) propertiesCounts[1], equalTo((double) 200));
 
         bucket = range.getBucketByKey("10.0.0.200-*");
         assertThat(bucket, notNullValue());
@@ -263,6 +275,9 @@ public class IPv4RangeTests extends ElasticsearchIntegrationTest {
         sum = bucket.getAggregations().get("sum");
         assertThat(sum, notNullValue());
         assertThat(sum.getValue(), equalTo((double) 55*3));
+        assertThat((String) propertiesKeys[2], equalTo("10.0.0.200-*"));
+        assertThat((long) propertiesDocCounts[2], equalTo(55l));
+        assertThat((double) propertiesCounts[2], equalTo((double) 55 * 3));
     }
 
     @Test

@@ -26,7 +26,7 @@ import org.elasticsearch.search.aggregations.metrics.stats.Stats;
 public class InternalStats extends org.elasticsearch.search.aggregations.metrics.stats.InternalStats implements Stats {
 
     public InternalStats(String name, long count, double sum, double min, double max) {
-        super(name, count, sum, min, max);
+        super(name, count, sum, min, max, null);
     }
 
     @Override

@@ -51,6 +51,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -150,7 +151,7 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                         // it exists on the directory, but shouldn't exist on the FS, its a leftover (possibly dangling)
                         // its a "new index create" API, we have to do something, so better to clean it than use same data
                         logger.trace("cleaning existing shard, shouldn't exists");
-                        IndexWriter writer = new IndexWriter(indexShard.store().directory(), new IndexWriterConfig(Lucene.VERSION, Lucene.STANDARD_ANALYZER).setOpenMode(IndexWriterConfig.OpenMode.CREATE));
+                        IndexWriter writer = new IndexWriter(indexShard.store().directory(), new IndexWriterConfig(Lucene.STANDARD_ANALYZER).setOpenMode(IndexWriterConfig.OpenMode.CREATE));
                         writer.close();
                     }
                 }
@@ -290,7 +291,11 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
             }
             indexShard.performRecoveryFinalization(true);
 
-            recoveringTranslogFile.delete();
+            try {
+                Files.delete(recoveringTranslogFile.toPath());
+            } catch (Exception ex) {
+                logger.debug("Failed to delete recovering translog file {}", ex, recoveringTranslogFile);
+            }
 
             for (final String type : typesToUpdate) {
                 final CountDownLatch latch = new CountDownLatch(1);

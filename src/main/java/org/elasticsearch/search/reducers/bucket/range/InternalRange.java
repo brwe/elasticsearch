@@ -49,7 +49,7 @@ public class InternalRange extends InternalBucketReducerAggregation implements R
     }
 
     public InternalRange(String name, List<InternalSelection> selections) {
-        super(name, selections);
+        super(name, selections, null);
     }
 
     @Override

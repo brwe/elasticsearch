@@ -72,6 +72,13 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
         }
 
         @Override
+        public Object getProperty(String path) {
+
+            AggregationPath aggPath = AggregationPath.parse(path);
+            return getProperty(aggPath.getPathElementsAsStringList());
+        }
+
+        @Override
         public String getKey() {
             return key;
         }
@@ -114,7 +121,6 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
             return (B) bucketMap.get(key);
         }
 
-        @Override
         public Object getProperty(List<String> path) {
             if (path.isEmpty()) {
                 return this;
@@ -129,9 +135,8 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
         }
 
         @Override
-        public Object getProperty(String path) {
-            AggregationPath aggPath = AggregationPath.parse(path);
-            return getProperty(aggPath.getPathElementsAsStringList());
+        public Map<String, Object> getMetaData() {
+            return null;
         }
 
         @Override
@@ -193,8 +198,8 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
         // For serialization only
     }
 
-    protected InternalBucketReducerAggregation(String name, List<InternalSelection> selections) {
-        super(name);
+    protected InternalBucketReducerAggregation(String name, List<InternalSelection> selections, Map<String, Object> metaData) {
+        super(name, metaData);
         this.name = name;
         this.selections = selections;
     }
@@ -233,7 +238,7 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
             List<? extends Selection> selections = getBuckets();
             Object[] propertyArray = new Object[selections.size()];
             for (int i = 0; i < selections.size(); i++) {
-                propertyArray[i] = selections.get(i).getProperty(path.subList(1, path.size()));
+                propertyArray[i] = selections.get(i).getProperty(getName(), path);
             }
             return propertyArray;
         }
@@ -250,7 +255,7 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
     }
 
     @Override
-    public void readFrom(StreamInput in) throws IOException {
+    public void doReadFrom(StreamInput in) throws IOException {
         this.name = in.readString();
         int size = in.readVInt();
         List<InternalSelection> selections = new ArrayList<>(size);
@@ -264,7 +269,7 @@ public abstract class InternalBucketReducerAggregation extends InternalMultiBuck
     }
 
     @Override
-    public void writeTo(StreamOutput out) throws IOException {
+    public void doWriteTo(StreamOutput out) throws IOException {
         out.writeString(name);
         out.writeVInt(selections.size());
         for (Selection selection : selections) {

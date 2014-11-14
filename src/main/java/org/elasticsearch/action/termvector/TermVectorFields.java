@@ -248,7 +248,7 @@ public final class TermVectorFields extends Fields {
                         // realloc.
                         growBuffers();
                         // finally, read the values into the arrays
-                        // curentPosition etc. so that we can just iterate
+                        // currentPosition etc. so that we can just iterate
                         // later
                         writeInfos(perFieldTermVectorInput);
                         return spare.get();
@@ -295,11 +295,6 @@ public final class TermVectorFields extends Fields {
                 }
 
                 @Override
-                public Comparator<BytesRef> getComparator() {
-                    return BytesRef.getUTF8SortedAsUnicodeComparator();
-                }
-
-                @Override
                 public SeekStatus seekCeil(BytesRef text) throws IOException {
                     throw new UnsupportedOperationException();
                 }
@@ -343,11 +338,6 @@ public final class TermVectorFields extends Fields {
                 }
 
             };
-        }
-
-        @Override
-        public Comparator<BytesRef> getComparator() {
-            return BytesRef.getUTF8SortedAsUnicodeComparator();
         }
 
         @Override

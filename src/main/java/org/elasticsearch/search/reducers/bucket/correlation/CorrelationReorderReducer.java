@@ -117,7 +117,7 @@ public class CorrelationReorderReducer extends BucketReducer {
     private List<BucketsValuesTuple> gatherBucketLists(String referenceAgg, MultiBucketsAggregation aggregation) {
         List<BucketsValuesTuple> bucketsValues = new ArrayList<>();
         List<String> pathElements = Arrays.asList(referenceAgg.split("\\."));
-        Object properties = aggregation.getProperty(pathElements);
+        Object properties = aggregation.getProperty(referenceAgg.replace('.','>'));
         addValuesAndBuckets(properties, aggregation, pathElements, bucketsValues, pathElements.get(0));
         return bucketsValues;
     }
@@ -126,7 +126,7 @@ public class CorrelationReorderReducer extends BucketReducer {
         List<BucketsValuesTuple> bucketsValues = new ArrayList<>();
         for (String curve : curves) {
             List<String> pathElements = Arrays.asList(curve.split("\\."));
-            Object properties = aggregation.getProperty(pathElements);
+            Object properties = aggregation.getProperty(curve.replace('.','>'));
             addValuesAndBuckets(properties, aggregation, pathElements, bucketsValues, pathElements.get(0));
         }
         return bucketsValues;

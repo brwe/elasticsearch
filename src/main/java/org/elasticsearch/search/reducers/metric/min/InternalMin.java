@@ -26,7 +26,7 @@ import org.elasticsearch.search.aggregations.metrics.min.Min;
 public class InternalMin extends org.elasticsearch.search.aggregations.metrics.min.InternalMin implements Min {
 
     public InternalMin(String name, double maxValue) {
-        super(name, maxValue);
+        super(name, maxValue, null);
     }
 
     @Override

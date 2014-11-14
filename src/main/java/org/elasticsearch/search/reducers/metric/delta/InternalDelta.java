@@ -52,7 +52,7 @@ public class InternalDelta extends InternalNumericMetricsAggregation.SingleValue
     }
 
     public InternalDelta(String name, double deltaValue) {
-        super(name);
+        super(name, null);
         this.value = deltaValue;
     }
 
@@ -73,13 +73,13 @@ public class InternalDelta extends InternalNumericMetricsAggregation.SingleValue
 
     
     @Override
-    public void readFrom(StreamInput in) throws IOException {
+    public void doReadFrom(StreamInput in) throws IOException {
         name = in.readString();
         value = in.readDouble();
     }
 
     @Override
-    public void writeTo(StreamOutput out) throws IOException {
+    public void doWriteTo(StreamOutput out) throws IOException {
         out.writeString(name);
         out.writeDouble(value);
     }

@@ -27,7 +27,7 @@ import org.elasticsearch.search.aggregations.metrics.max.Max;
 public class InternalMax extends org.elasticsearch.search.aggregations.metrics.max.InternalMax implements Max {
 
     public InternalMax(String name, double maxValue) {
-        super(name, maxValue);
+        super(name, maxValue, null);
     }
 
     @Override

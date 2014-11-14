@@ -21,10 +21,13 @@ package org.elasticsearch.indices.stats;
 
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.Version;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
-import org.elasticsearch.action.admin.indices.stats.*;
+import org.elasticsearch.action.admin.indices.stats.CommonStats;
+import org.elasticsearch.action.admin.indices.stats.CommonStatsFlags;
 import org.elasticsearch.action.admin.indices.stats.CommonStatsFlags.Flag;
+import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequestBuilder;
+import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
+import org.elasticsearch.action.admin.indices.stats.ShardStats;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -56,7 +59,12 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 @ClusterScope(scope = Scope.SUITE, numDataNodes = 2, numClientNodes = 0, randomDynamicTemplates = false)
 public class IndexStatsTests extends ElasticsearchIntegrationTest {
@@ -321,7 +329,6 @@ public class IndexStatsTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
-    @LuceneTestCase.AwaitsFix(bugUrl = "This test intermittently fails with no throttling happening.")
     public void throttleStats() throws Exception {
         assertAcked(prepareCreate("test")
                 .setSettings(ImmutableSettings.builder()
@@ -363,7 +370,9 @@ public class IndexStatsTests extends ElasticsearchIntegrationTest {
             }
         }
         stats = client().admin().indices().prepareStats().execute().actionGet();
-        assertThat(stats.getPrimaries().getIndexing().getTotal().getThrottleTimeInMillis(), greaterThan(0l));
+        if (done) {
+            assertThat(stats.getPrimaries().getIndexing().getTotal().getThrottleTimeInMillis(), greaterThan(0l));
+        }
     }
 
     @Test
@@ -514,7 +523,7 @@ public class IndexStatsTests extends ElasticsearchIntegrationTest {
 
         NumShards test1 = getNumShards("test1");
 
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 100; i++) {
             index("test1", "type1", Integer.toString(i), "field", "value");
             index("test1", "type2", Integer.toString(i), "field", "value");
         }
@@ -530,7 +539,7 @@ public class IndexStatsTests extends ElasticsearchIntegrationTest {
 
         assertThat(stats.getTotal().getSegments(), notNullValue());
         assertThat(stats.getTotal().getSegments().getCount(), equalTo((long) test1.totalNumShards));
-        assumeTrue(org.elasticsearch.Version.CURRENT.luceneVersion != Version.LUCENE_46);
+        assumeTrue(org.elasticsearch.Version.CURRENT.luceneVersion != Version.LUCENE_4_6_0);
         assertThat(stats.getTotal().getSegments().getMemoryInBytes(), greaterThan(0l));
     }
 

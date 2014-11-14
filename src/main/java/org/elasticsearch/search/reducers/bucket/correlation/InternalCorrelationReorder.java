@@ -72,7 +72,7 @@ public class InternalCorrelationReorder extends InternalBucketReducerAggregation
     }
 
     public InternalCorrelationReorder(String name, List<InternalSelection> selections, List<Double> correlations) {
-        super(name, selections);
+        super(name, selections, null);
         this.correlations = correlations;
     }
 
@@ -81,7 +81,7 @@ public class InternalCorrelationReorder extends InternalBucketReducerAggregation
         return TYPE;
     }
 
-    public void readFrom(StreamInput in) throws IOException {
+    public void doReadFrom(StreamInput in) throws IOException {
 
         correlations = new ArrayList<>();
         this.name = in.readString();
@@ -98,7 +98,7 @@ public class InternalCorrelationReorder extends InternalBucketReducerAggregation
     }
 
     @Override
-    public void writeTo(StreamOutput out) throws IOException {
+    public void doWriteTo(StreamOutput out) throws IOException {
         out.writeString(name);
         out.writeVInt(selections.size());
         int i = 0;

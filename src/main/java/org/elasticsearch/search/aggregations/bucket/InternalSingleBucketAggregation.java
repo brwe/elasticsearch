@@ -18,6 +18,11 @@
  */
 package org.elasticsearch.search.aggregations.bucket;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -25,10 +30,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A base class for all the single bucket aggregations.
@@ -47,8 +48,8 @@ public abstract class InternalSingleBucketAggregation extends InternalAggregatio
      * @param docCount      The document count in the single bucket.
      * @param aggregations  The already built sub-aggregations that are associated with the bucket.
      */
-    protected InternalSingleBucketAggregation(String name, long docCount, InternalAggregations aggregations) {
-        super(name);
+    protected InternalSingleBucketAggregation(String name, long docCount, InternalAggregations aggregations, Map<String, Object> metaData) {
+        super(name, metaData);
         this.docCount = docCount;
         this.aggregations = aggregations;
     }
@@ -88,24 +89,26 @@ public abstract class InternalSingleBucketAggregation extends InternalAggregatio
             return this;
         } else {
             String aggName = path.get(0);
-            Aggregation aggregation = aggregations.get(aggName);
+            if (aggName.equals("_count")) {
+                return getDocCount();
+            }
+            InternalAggregation aggregation = aggregations.get(aggName);
             if (aggregation == null) {
                 throw new ElasticsearchIllegalArgumentException("Cannot find an aggregation named [" + aggName + "] in [" + getName() + "]");
             }
-            return aggregation.getProperty(path);
+            return aggregation.getProperty(path.subList(1, path.size()));
         }
     }
 
     @Override
-    public void readFrom(StreamInput in) throws IOException {
-        name = in.readString();
+
+    protected void doReadFrom(StreamInput in) throws IOException {
         docCount = in.readVLong();
         aggregations = InternalAggregations.readAggregations(in);
     }
 
     @Override
-    public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(name);
+    protected void doWriteTo(StreamOutput out) throws IOException {
         out.writeVLong(docCount);
         aggregations.writeTo(out);
     }

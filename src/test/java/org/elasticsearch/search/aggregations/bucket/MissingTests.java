@@ -18,6 +18,9 @@
  */
 package org.elasticsearch.search.aggregations.bucket;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
@@ -27,12 +30,11 @@ import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
-import static org.elasticsearch.search.aggregations.AggregationBuilders.*;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.avg;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.histogram;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.missing;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -146,6 +148,7 @@ public class MissingTests extends ElasticsearchIntegrationTest {
         assertThat(missing, notNullValue());
         assertThat(missing.getName(), equalTo("missing_tag"));
         assertThat(missing.getDocCount(), equalTo((long) numDocsMissing + numDocsUnmapped));
+        assertThat((long) missing.getProperty("_count"), equalTo((long) numDocsMissing + numDocsUnmapped));
         assertThat(missing.getAggregations().asList().isEmpty(), is(false));
 
         long sum = 0;
@@ -159,6 +162,7 @@ public class MissingTests extends ElasticsearchIntegrationTest {
         assertThat(avgValue, notNullValue());
         assertThat(avgValue.getName(), equalTo("avg_value"));
         assertThat(avgValue.getValue(), equalTo((double) sum / (numDocsMissing + numDocsUnmapped)));
+        assertThat((double) missing.getProperty("avg_value"), equalTo((double) sum / (numDocsMissing + numDocsUnmapped)));
     }
 
     @Test

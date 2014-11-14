@@ -26,7 +26,7 @@ import org.elasticsearch.search.aggregations.metrics.sum.Sum;
 public class InternalSum extends org.elasticsearch.search.aggregations.metrics.sum.InternalSum implements Sum {
 
     public InternalSum(String name, double maxValue) {
-        super(name, maxValue);
+        super(name, maxValue, null);
     }
 
     @Override
