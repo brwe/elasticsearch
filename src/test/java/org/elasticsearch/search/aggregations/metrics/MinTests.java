@@ -106,7 +106,7 @@ public class MinTests extends AbstractNumericTests {
         assertThat(min.getName(), equalTo("min"));
         double expectedMinValue = 1.0;
         assertThat(min.getValue(), equalTo(expectedMinValue));
-        assertThat((double) global.getProperty("min"), equalTo(expectedMinValue));
+        assertThat((Min) global.getProperty("min"), equalTo(min));
         assertThat((double) global.getProperty("min.value"), equalTo(expectedMinValue));
         assertThat((double) min.getProperty("value"), equalTo(expectedMinValue));
     }

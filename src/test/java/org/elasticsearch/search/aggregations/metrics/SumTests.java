@@ -106,7 +106,7 @@ public class SumTests extends AbstractNumericTests {
         assertThat(sum.getName(), equalTo("sum"));
         double expectedSumValue = (double) 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10;
         assertThat(sum.getValue(), equalTo(expectedSumValue));
-        assertThat((double) global.getProperty("sum"), equalTo(expectedSumValue));
+        assertThat((Sum) global.getProperty("sum"), equalTo(sum));
         assertThat((double) global.getProperty("sum.value"), equalTo(expectedSumValue));
         assertThat((double) sum.getProperty("value"), equalTo(expectedSumValue));
     }

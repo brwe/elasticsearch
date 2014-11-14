@@ -246,7 +246,7 @@ public class CardinalityTests extends ElasticsearchIntegrationTest {
         assertThat(cardinality.getName(), equalTo("cardinality"));
         long expectedValue = numDocs;
         assertThat(cardinality.getValue(), equalTo(expectedValue));
-        assertThat((double) global.getProperty("cardinality"), equalTo((double) expectedValue));
+        assertThat((Cardinality) global.getProperty("cardinality"), equalTo(cardinality));
         assertThat((double) global.getProperty("cardinality.value"), equalTo((double) expectedValue));
         assertThat((double) cardinality.getProperty("value"), equalTo((double) expectedValue));
     }

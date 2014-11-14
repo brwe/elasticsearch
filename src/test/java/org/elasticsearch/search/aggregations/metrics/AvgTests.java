@@ -18,23 +18,20 @@
  */
 package org.elasticsearch.search.aggregations.metrics;
 
-import org.elasticsearch.search.aggregations.bucket.global.Global;
-import org.elasticsearch.search.aggregations.metrics.sum.Sum;
-
-import static org.elasticsearch.search.aggregations.AggregationBuilders.global;
-import static org.elasticsearch.search.aggregations.AggregationBuilders.sum;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
-
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.search.aggregations.bucket.global.Global;
 import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
 import org.elasticsearch.search.aggregations.metrics.avg.Avg;
 import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.junit.Test;
+
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.search.aggregations.AggregationBuilders.avg;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.global;
 import static org.elasticsearch.search.aggregations.AggregationBuilders.histogram;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  *
@@ -111,7 +108,7 @@ public class AvgTests extends AbstractNumericTests {
         assertThat(avg.getName(), equalTo("avg"));
         double expectedAvgValue = (double) (1+2+3+4+5+6+7+8+9+10) / 10;
         assertThat(avg.getValue(), equalTo(expectedAvgValue));
-        assertThat((double) global.getProperty("avg"), equalTo(expectedAvgValue));
+        assertThat((Avg) global.getProperty("avg"), equalTo(avg));
         assertThat((double) global.getProperty("avg.value"), equalTo(expectedAvgValue));
         assertThat((double) avg.getProperty("value"), equalTo(expectedAvgValue));
     }

@@ -43,7 +43,9 @@ public abstract class InternalNumericMetricsAggregation extends InternalMetricsA
 
         @Override
         public Object getProperty(List<String> path) {
-            if (path.isEmpty() || path.size() == 1 && "value".equals(path.get(0))) {
+            if (path.isEmpty()) {
+                return this;
+            } else if (path.size() == 1 && "value".equals(path.get(0))) {
                 return value();
             } else {
                 throw new ElasticsearchIllegalArgumentException("path not supported for [" + getName() + "]: " + path);
