@@ -28,41 +28,45 @@ import java.util.List;
 
 public class CorrelationReorderBuilder extends ReductionBuilder<CorrelationReorderBuilder> {
 
-    private String reference = null;
-    private List<String> curves = new ArrayList<>();
+    private CorrelationReorderParser.CurveXY reference = null;
+    private List<CorrelationReorderParser.CurveXY> curves = new ArrayList<>();
 
     public CorrelationReorderBuilder(String name) {
         super(name, InternalCorrelationReorder.TYPE.name());
     }
 
-    public CorrelationReorderBuilder reference(String path) {
-        this.reference = path;
+    public CorrelationReorderBuilder reference(String ys, String xs) {
+        this.reference = new CorrelationReorderParser.CurveXY(xs, ys);
         return this;
     }
 
-    public CorrelationReorderBuilder curves(List<String> curves) {
-        this.curves = curves;
-        return this;
-    }
-
-    public CorrelationReorderBuilder curve(String curve) {
-        this.curves.add(curve);
+    public CorrelationReorderBuilder curve(String ys, String xs) {
+        this.curves.add(new CorrelationReorderParser.CurveXY(xs, ys));
         return this;
     }
 
     @Override
     protected XContentBuilder internalXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-
         if (reference != null) {
-            builder.field(CorrelationReorderParser.REFERENCE_FIELD.getPreferredName(), reference);
+            builder.field(CorrelationReorderParser.REFERENCE_FIELD.getPreferredName());
+            toXContent(builder, reference);
         }
         if (curves != null) {
-            builder.field(CorrelationReorderParser.CURVES_FIELD.getPreferredName(), curves);
+            builder.startArray(CorrelationReorderParser.CURVES_FIELD.getPreferredName());
+            for (CorrelationReorderParser.CurveXY curve : curves) {
+                toXContent(builder, curve);
+            }
+            builder.endArray();
         }
-
         builder.endObject();
         return builder;
     }
 
+    private void toXContent(XContentBuilder builder, CorrelationReorderParser.CurveXY curveXY) throws IOException {
+        builder.startObject();
+        builder.field(CorrelationReorderParser.XS_FIELD.getPreferredName(), curveXY.getXPath());
+        builder.field(CorrelationReorderParser.YS_FIELD.getPreferredName(), curveXY.getYPath());
+        builder.endObject();
+    }
 }

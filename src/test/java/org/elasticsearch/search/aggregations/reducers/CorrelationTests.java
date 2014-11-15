@@ -52,7 +52,7 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
                         .subAggregation(terms("reference_label").field("reference_label")
                                 .subAggregation(histogram("x").field("x").interval(1)
                                         .subAggregation(avg("avg").field("y")))))
-                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value").curve("dummy_agg.label.x.avg.value"))
+                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value", "dummy_agg.reference_label.x._key").curve("dummy_agg.label.x.avg.value", "dummy_agg.label.x._key"))
                 .get();
         assertSearchResponse(searchResponse);
         assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));
@@ -73,7 +73,7 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
                         .subAggregation(filter("reference_label").filter(FilterBuilders.termFilter("label", "reference"))
                                 .subAggregation(histogram("x").field("x").interval(1)
                                         .subAggregation(avg("avg").field("y")))))
-                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value").curve("dummy_agg.label.x.avg.value"))
+                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value", "dummy_agg.reference_label.x._key").curve("dummy_agg.label.x.avg.value", "dummy_agg.label.x._key"))
                 .get();
         assertSearchResponse(searchResponse);
         assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));

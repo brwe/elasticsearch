@@ -55,26 +55,27 @@ public class CorrelationReorderReducer extends BucketReducer {
         ReducerFactoryStreams.registerStream(STREAM, InternalCorrelationReorder.TYPE.stream());
     }
 
-    private List<String> curves;
-    private String referenceAgg;
+    private List<CorrelationReorderParser.CurveXY> curves;
+    private CorrelationReorderParser.CurveXY referenceAgg;
     private int numCorrelatingCurves;
 
-    public CorrelationReorderReducer(String name, String referenceAgg, List<String> curves, int numCorrelatingCurves, ReducerFactories factories, ReducerContext context, Reducer parent) {
+    public CorrelationReorderReducer(String name, CorrelationReorderParser.CurveXY referenceAgg, List<CorrelationReorderParser.CurveXY> curves, int numCorrelatingCurves, ReducerFactories factories, ReducerContext context, Reducer parent) {
         super(name, topLevelAggregationName(referenceAgg, curves), factories, context, parent);
         this.referenceAgg = referenceAgg;
         this.curves = new ArrayList<>();
         // remove the common prefix from all the paths
-        this.referenceAgg = referenceAgg.substring(bucketsPath().length() + 1);
-        for (String curve : curves) {
-            this.curves.add(curve.substring(bucketsPath().length() + 1));
+        this.referenceAgg = new CorrelationReorderParser.CurveXY(referenceAgg.getXPath().substring(bucketsPath().length() + 1), referenceAgg.getYPath().substring(bucketsPath().length() + 1));
+        for (CorrelationReorderParser.CurveXY curve : curves) {
+            this.curves.add(new CorrelationReorderParser.CurveXY(curve.getXPath().substring(bucketsPath().length() + 1), curve.getYPath().substring(bucketsPath().length() + 1)));
         }
         this.numCorrelatingCurves = numCorrelatingCurves;
     }
 
-    private static String topLevelAggregationName(String referenceAgg, List<String> curves) {
-        String aggPath = null;
-        for (String curveName : curves) {
-            aggPath = findMinPrefix(referenceAgg, curveName);
+    private static String topLevelAggregationName(CorrelationReorderParser.CurveXY referenceAgg, List<CorrelationReorderParser.CurveXY> curves) {
+        String aggPath = findMinPrefix(referenceAgg.getXPath(), referenceAgg.getYPath());
+        for (CorrelationReorderParser.CurveXY curveName : curves) {
+            aggPath = findMinPrefix(aggPath, curveName.getXPath());
+            aggPath = findMinPrefix(aggPath, curveName.getYPath());
         }
         return aggPath;
     }
@@ -82,10 +83,10 @@ public class CorrelationReorderReducer extends BucketReducer {
     public static String findMinPrefix(String aggPath, String curveName) {
         String prefix = "";
         int i = 0;
-        String[] test = aggPath.split("\\.");
         List<String> aggPathElements = Arrays.asList(aggPath.split("\\."));
         List<String> curvePathElements = Arrays.asList(curveName.split("\\."));
-        while (aggPathElements.get(i).equals(curvePathElements.get(i))) {
+        while ((i < aggPathElements.size() && i < curvePathElements.size())
+                && aggPathElements.get(i).equals(curvePathElements.get(i))) {
             prefix += aggPathElements.get(i) + ".";
             i++;
         }
@@ -95,14 +96,14 @@ public class CorrelationReorderReducer extends BucketReducer {
     public InternalBucketReducerAggregation doReduce(MultiBucketsAggregation aggregation, BytesReference bucketType, BucketStreamContext bucketStreamContext) {
         List<InternalSelection> selections = new ArrayList<>();
 
-        List<BucketsValuesTuple> referenceBuckets = gatherBucketLists(referenceAgg, aggregation);
-        List<BucketsValuesTuple> curveBuckets = gatherBucketLists(curves, aggregation);
+        List<BucketsAndValues> referenceBuckets = gatherBucketLists(referenceAgg, aggregation);
+        List<BucketsAndValues> curveBuckets = gatherBucketLists(curves, aggregation);
         PriorityQueue<SortableInternalSelection> queue = new PriorityQueue<>();
-        for (BucketsValuesTuple tuple : curveBuckets) {
+        for (BucketsAndValues tuple : curveBuckets) {
             InternalSelection selection = new InternalSelection(tuple.key, tuple.bucketType, bucketStreamContext, tuple.bucketList, InternalAggregations.EMPTY);
             InternalAggregations subReducersResults = runSubReducers(selection);
             selection.setAggregations(subReducersResults);
-            queue.offer(new SortableInternalSelection(selection, NormalizedCorrelation.normalizedCorrelation(tuple.values, referenceBuckets.get(0).values)));
+            queue.offer(new SortableInternalSelection(selection, NormalizedCorrelation.normalizedCorrelation(tuple.ys, referenceBuckets.get(0).ys)));
         }
         List<Double> correlations = new ArrayList<>();
         for (int i = 0; i < numCorrelatingCurves; i++) {
@@ -116,55 +117,60 @@ public class CorrelationReorderReducer extends BucketReducer {
         return new InternalCorrelationReorder(name(), selections, correlations);
     }
 
-    private List<BucketsValuesTuple> gatherBucketLists(String referenceAgg, MultiBucketsAggregation aggregation) {
-        List<BucketsValuesTuple> bucketsValues = new ArrayList<>();
-        List<String> pathElements = Arrays.asList(referenceAgg.split("\\."));
-        Object properties = aggregation.getProperty(referenceAgg.replace('.','>'));
-        addValuesAndBuckets(properties, aggregation, pathElements, bucketsValues, pathElements.get(0));
+    private List<BucketsAndValues> gatherBucketLists(CorrelationReorderParser.CurveXY curve, MultiBucketsAggregation aggregation) {
+        List<BucketsAndValues> bucketsValues = new ArrayList<>();
+        addXYCurve(aggregation, bucketsValues, curve);
         return bucketsValues;
     }
 
-    private List<BucketsValuesTuple> gatherBucketLists(List<String> curves, MultiBucketsAggregation aggregation) {
-        List<BucketsValuesTuple> bucketsValues = new ArrayList<>();
-        for (String curve : curves) {
-            List<String> pathElements = Arrays.asList(curve.split("\\."));
-            Object properties = aggregation.getProperty(curve.replace('.','>'));
-            addValuesAndBuckets(properties, aggregation, pathElements, bucketsValues, pathElements.get(0));
+    private List<BucketsAndValues> gatherBucketLists(List<CorrelationReorderParser.CurveXY> curves, MultiBucketsAggregation aggregation) {
+        List<BucketsAndValues> bucketsValues = new ArrayList<>();
+        for (CorrelationReorderParser.CurveXY curve : curves) {
+            addXYCurve(aggregation, bucketsValues, curve);
         }
         return bucketsValues;
     }
 
-    private void addValuesAndBuckets(Object properties, Aggregation aggregation, List<String> curve, List<BucketsValuesTuple> bucketsValues, String label) {
+    private void addXYCurve(MultiBucketsAggregation aggregation, List<BucketsAndValues> bucketsValues, CorrelationReorderParser.CurveXY curve) {
+        List<String> yPath = Arrays.asList(curve.getYPath().split("\\."));
+        Object xs = aggregation.getProperty(curve.getXPath().replace('.', '>'));
+        Object ys = aggregation.getProperty(curve.getYPath().replace('.', '>'));
+        addValuesAndBuckets(ys, xs, aggregation, yPath, bucketsValues, yPath.get(0));
+    }
+
+    private void addValuesAndBuckets(Object ys, Object xs, Aggregation aggregation, List<String> curve, List<BucketsAndValues> bucketsValues, String label) {
         //path length is the dimension of the agg so we stop if we reach the bottom
+        Object[] xArray = (Object[]) xs;
+        Object[] yArray = (Object[]) ys;
         if (curve.size() > 2) {
-            Object[] propertiesArray = (Object[]) properties;
+
             int bucketCounter = 0;
             List<String> innerCurves = curve.subList(1, curve.size());
             if (aggregation instanceof MultiBucketsAggregation) {
                 for (Bucket bucket : ((MultiBucketsAggregation) aggregation).getBuckets()) {
-                    addValuesAndBuckets(propertiesArray[bucketCounter], bucket.getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + bucket.getKey());
+                    addValuesAndBuckets(yArray[bucketCounter],xArray[bucketCounter], bucket.getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + bucket.getKey());
                     bucketCounter++;
                 }
             } else {
-                addValuesAndBuckets(propertiesArray, ((SingleBucketAggregation)aggregation).getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + aggregation.getName());
+                addValuesAndBuckets(yArray,xArray, ((SingleBucketAggregation)aggregation).getAggregations().asMap().get(curve.get(0)), innerCurves, bucketsValues, label + "." + aggregation.getName());
             }
 
         } else {
-            bucketsValues.add(new BucketsValuesTuple((Object[]) properties, ((MultiBucketsAggregation)aggregation).getBuckets(), label, ((InternalAggregation) aggregation).type().stream()));
+            bucketsValues.add(new BucketsAndValues(yArray,xArray, ((MultiBucketsAggregation)aggregation).getBuckets(), label, ((InternalAggregation) aggregation).type().stream()));
         }
     }
 
     public static class Factory extends ReducerFactory {
 
-        private String referenceAgg;
-        private List<String> curves;
+        private CorrelationReorderParser.CurveXY referenceAgg;
+        private List<CorrelationReorderParser.CurveXY> curves;
         private int numCorrelatingCurves;
 
         public Factory() {
             super(InternalCorrelationReorder.TYPE);
         }
 
-        public Factory(String name, String referenceAgg, List<String> curves, int numCorrelatingCurves) {
+        public Factory(String name, CorrelationReorderParser.CurveXY referenceAgg, List<CorrelationReorderParser.CurveXY> curves, int numCorrelatingCurves) {
             super(name, InternalCorrelationReorder.TYPE);
             this.referenceAgg = referenceAgg;
             this.curves = curves;
@@ -179,29 +185,40 @@ public class CorrelationReorderReducer extends BucketReducer {
         @Override
         public void readFrom(StreamInput in) throws IOException {
             name = in.readString();
-            referenceAgg = in.readString();
-            curves = Arrays.asList(in.readStringArray());
+            referenceAgg = new CorrelationReorderParser.CurveXY(in.readString(), in.readString());
+            int numCurves = in.readInt();
+            curves = new ArrayList<>();
+            for (int i = 0; i< numCurves; i++) {
+                curves.add(new CorrelationReorderParser.CurveXY(in.readString(), in.readString()));
+            }
             numCorrelatingCurves = in.readInt();
         }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeString(name);
-            out.writeString(referenceAgg);
-            out.writeStringArray(curves.toArray(new String[curves.size()]));
+            out.writeString(referenceAgg.getXPath());
+            out.writeString(referenceAgg.getYPath());
+            out.writeInt(curves.size());
+            for (CorrelationReorderParser.CurveXY curve : curves) {
+                out.writeString(curve.getXPath());
+                out.writeString(curve.getYPath());
+            }
             out.writeInt(numCorrelatingCurves);
         }
 
     }
 
-    private class BucketsValuesTuple {
+    private class BucketsAndValues {
         List<Bucket> bucketList;
-        Object[] values;
+        Object[] xs;
+        Object[] ys;
         String key;
         BytesReference bucketType;
 
-        public BucketsValuesTuple(Object[] properties, List<? extends Bucket> buckets, String label, BytesReference bucketType) {
-            this.values = properties;
+        public BucketsAndValues(Object[] ys, Object[]xs , List<? extends Bucket> buckets, String label, BytesReference bucketType) {
+            this.xs = xs;
+            this.ys = ys;
             this.bucketList = (List<Bucket>) buckets;
             this.key = label;
             this.bucketType = bucketType;
