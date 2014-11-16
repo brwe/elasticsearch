@@ -66,7 +66,7 @@ public class InternalAvg extends InternalNumericMetricsAggregation.SingleValue i
     }
 
     public double getValue() {
-        return sum / count;
+        return count == 0 ? 0 : sum / count;
     }
 
     @Override

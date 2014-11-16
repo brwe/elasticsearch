@@ -103,7 +103,7 @@ public class CorrelationReorderReducer extends BucketReducer {
             InternalSelection selection = new InternalSelection(tuple.key, tuple.bucketType, bucketStreamContext, tuple.bucketList, InternalAggregations.EMPTY);
             InternalAggregations subReducersResults = runSubReducers(selection);
             selection.setAggregations(subReducersResults);
-            queue.offer(new SortableInternalSelection(selection, NormalizedCorrelation.normalizedCorrelation(tuple.ys, referenceBuckets.get(0).ys)));
+            queue.offer(new SortableInternalSelection(selection, NormalizedCorrelation.normalizedCorrelation(tuple.ys, tuple.xs, referenceBuckets.get(0).ys, referenceBuckets.get(0).xs)));
         }
         List<Double> correlations = new ArrayList<>();
         for (int i = 0; i < numCorrelatingCurves; i++) {
@@ -142,7 +142,7 @@ public class CorrelationReorderReducer extends BucketReducer {
         //path length is the dimension of the agg so we stop if we reach the bottom
         Object[] xArray = (Object[]) xs;
         Object[] yArray = (Object[]) ys;
-        if (curve.size() > 2) {
+        if (curve.size() > (curve.get(curve.size() - 1).equals("value") ? 2 : 1)) {
 
             int bucketCounter = 0;
             List<String> innerCurves = curve.subList(1, curve.size());

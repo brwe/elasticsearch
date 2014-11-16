@@ -20,6 +20,9 @@
 package org.elasticsearch.search.reducers.bucket.correlation;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class NormalizedCorrelation {
 
     public static double normalizedCorrelation(double[] a, double[] b) {
@@ -72,5 +75,9 @@ public class NormalizedCorrelation {
             doubleValues[i] = ((Number) o).doubleValue();
         }
         return doubleValues;
+    }
+
+    public static double normalizedCorrelation(Object[] ys1, Object[] xs1, Object[] ys2, Object[] xs2) {
+        return normalizedCorrelation(ys1,ys2);
     }
 }

@@ -55,7 +55,7 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
                 .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value", "dummy_agg.reference_label.x._key").curve("dummy_agg.label.x.avg.value", "dummy_agg.label.x._key"))
                 .get();
         assertSearchResponse(searchResponse);
-        assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(230l));
         InternalCorrelationReorder corr = searchResponse.getReductions().get("corr");
         Double[] expectedCorrelations = {1d, -1d, -1d};
         assertArrayEquals(corr.getCorrelations(), expectedCorrelations);
@@ -76,7 +76,28 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
                 .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x.avg.value", "dummy_agg.reference_label.x._key").curve("dummy_agg.label.x.avg.value", "dummy_agg.label.x._key"))
                 .get();
         assertSearchResponse(searchResponse);
-        assertThat(searchResponse.getHits().getTotalHits(), equalTo(40l));
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(230l));
+        InternalCorrelationReorder corr = searchResponse.getReductions().get("corr");
+        Double[] expectedCorrelations = {1d, 1d, -1d, -1d};
+        assertArrayEquals(corr.getCorrelations(), expectedCorrelations);
+        assertThat(corr.getBuckets().get(0).getKey(), equalTo("label.dummy_value.1"));
+    }
+
+    @Test
+    public void testNaiveCorrelationWithFilterBucketOnCounts() throws IOException, ExecutionException, InterruptedException {
+        indexDocs("label");
+        SearchResponse searchResponse = client().prepareSearch("index").setQuery(matchAllQuery())
+                .addAggregation(terms("dummy_agg").field("dummy_field")
+                        .subAggregation(terms("label").field("label")
+                                .subAggregation(histogram("x").field("x").interval(1)
+                                        .subAggregation(avg("avg").field("y"))))
+                        .subAggregation(filter("reference_label").filter(FilterBuilders.termFilter("label", "reference"))
+                                .subAggregation(histogram("x").field("x").interval(1)
+                                        .subAggregation(avg("avg").field("y")))))
+                .addReducer(new CorrelationReorderBuilder("corr").reference("dummy_agg.reference_label.x._count", "dummy_agg.reference_label.x._key").curve("dummy_agg.label.x._count", "dummy_agg.label.x._key"))
+                .get();
+        assertSearchResponse(searchResponse);
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(230l));
         InternalCorrelationReorder corr = searchResponse.getReductions().get("corr");
         Double[] expectedCorrelations = {1d, 1d, -1d, -1d};
         assertArrayEquals(corr.getCorrelations(), expectedCorrelations);
@@ -89,11 +110,15 @@ public class CorrelationTests extends ElasticsearchIntegrationTest {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 10; j++) {
                 int value = i == 1 ? 10 - j : j;
-                indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("label", Integer.toString(i)).field("y", value).field("x", j).endObject()).setIndex("index").setType("type"));
+                for (int k = 0; k< value+1; k++) {
+                    indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("label", Integer.toString(i)).field("y", value).field("x", j).endObject()).setIndex("index").setType("type"));
+                }
             }
         }
         for (int j = 0; j < 10; j++) {
-            indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("x", j).field(referenceLabelField, "reference").field("y", 9 - j).endObject()).setIndex("index").setType("type"));
+            for (int k = 0; k< 9-j+1; k++) {
+                indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("x", j).field(referenceLabelField, "reference").field("y", 9 - j).endObject()).setIndex("index").setType("type"));
+            }
         }
         indexRandom(true, indexRequests);
         ensureGreen("index");
