@@ -95,7 +95,9 @@ public abstract class InternalSingleBucketAggregation extends InternalAggregatio
             if (aggregation == null) {
                 throw new ElasticsearchIllegalArgumentException("Cannot find an aggregation named [" + aggName + "] in [" + getName() + "]");
             }
-            return aggregation.getProperty(path.subList(1, path.size()));
+            Object[] o = new Object[1];
+            o[0] = aggregation.getProperty(path.subList(1, path.size()));
+            return o;
         }
     }
 
