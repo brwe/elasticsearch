@@ -18,16 +18,23 @@
  */
 package org.elasticsearch.search.aggregations.bucket;
 
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.*;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -52,5 +59,31 @@ public class DedicatedAggregationTests extends ElasticsearchIntegrationTest {
         Filter filterAgg = (Filter) searchResponse.getAggregations().getAsMap().get("issue7240");
         assertThat(filterAgg.getAggregations().getAsMap().get("terms"), instanceOf(StringTerms.class));
         assertThat(((StringTerms) filterAgg.getAggregations().getAsMap().get("terms")).getBuckets().get(0).getDocCount(), equalTo(1l));
+    }
+
+    @Test
+    public void testGetPropertyBehavesTheSameForFiltersAndBucketsAggregations() throws IOException, ExecutionException, InterruptedException {
+        List<IndexRequestBuilder> indexRequests = new ArrayList<>();
+        for (int j = 0; j < 10; j++) {
+            indexRequests.add(client().prepareIndex().setSource(jsonBuilder().startObject().field("dummy_field", "dummy_value").field("x", j).field("y", j).endObject()).setIndex("index").setType("type"));
+        }
+        indexRandom(true, indexRequests);
+        ensureGreen("index");
+        SearchResponse searchResponse = client().prepareSearch("index").setQuery(matchAllQuery())
+                .addAggregation(terms("terms_agg").field("dummy_field")
+                        .subAggregation(histogram("x").field("x").interval(1)
+                                .subAggregation(avg("avg").field("y"))))
+                .addAggregation(filter("filter_agg").filter(FilterBuilders.termFilter("dummy_field", "dummy_value"))
+                        .subAggregation(histogram("x").field("x").interval(1)
+                                .subAggregation(avg("avg").field("y"))))
+                .get();
+        Object withoutFilter = searchResponse.getAggregations().getProperty("terms_agg>x>avg");
+        Object withFilter = searchResponse.getAggregations().getProperty("filter_agg>x>avg");
+        // result should be [[[][]...]]
+        // but is           [[][]...]   if a filter aggregation is used
+        assertThat(((Object[]) withoutFilter).length, equalTo(1));
+        assertThat(((Object[]) ((Object[]) withoutFilter)[0]).length, equalTo(10));
+        assertThat(((Object[]) withFilter).length, equalTo(1));
+        assertThat(((Object[]) ((Object[]) withFilter)[0]).length, equalTo(10));
     }
 }
