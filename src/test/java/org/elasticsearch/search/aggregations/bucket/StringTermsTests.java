@@ -650,7 +650,7 @@ public class StringTermsTests extends AbstractTermsTests {
         assertThat(terms.getBuckets().size(), equalTo(5));
         Object[] propertiesKeys = (Object[]) terms.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) terms.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) terms.getProperty("count");
+        Object[] propertiesCounts = (Object[]) terms.getProperty("count.value");
 
         for (int i = 0; i < 5; i++) {
             Terms.Bucket bucket = terms.getBucketByKey("val" + i);

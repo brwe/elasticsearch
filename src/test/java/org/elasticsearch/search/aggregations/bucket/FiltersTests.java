@@ -133,7 +133,7 @@ public class FiltersTests extends ElasticsearchIntegrationTest {
         assertThat(filters.getBuckets().size(), equalTo(2));
         Object[] propertiesKeys = (Object[]) filters.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) filters.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) filters.getProperty("avg_value");
+        Object[] propertiesCounts = (Object[]) filters.getProperty("avg_value.value");
 
         Filters.Bucket bucket = filters.getBucketByKey("tag1");
         assertThat(bucket, Matchers.notNullValue());

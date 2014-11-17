@@ -108,8 +108,8 @@ public class AvgTests extends AbstractNumericTests {
         assertThat(avg.getName(), equalTo("avg"));
         double expectedAvgValue = (double) (1+2+3+4+5+6+7+8+9+10) / 10;
         assertThat(avg.getValue(), equalTo(expectedAvgValue));
-        assertThat((Avg) global.getProperty("avg"), equalTo(avg));
-        assertThat((double) global.getProperty("avg.value"), equalTo(expectedAvgValue));
+        assertThat((Avg) ((Object[])global.getProperty("avg"))[0], equalTo(avg));
+        assertThat((double) ((Object[])global.getProperty("avg.value"))[0], equalTo(expectedAvgValue));
         assertThat((double) avg.getProperty("value"), equalTo(expectedAvgValue));
     }
 

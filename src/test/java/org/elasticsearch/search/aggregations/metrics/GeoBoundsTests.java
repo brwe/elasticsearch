@@ -243,17 +243,17 @@ public class GeoBoundsTests extends ElasticsearchIntegrationTest {
         GeoBounds geobounds = global.getAggregations().get("geoBounds");
         assertThat(geobounds, notNullValue());
         assertThat(geobounds.getName(), equalTo("geoBounds"));
-        assertThat((GeoBounds) global.getProperty("geoBounds"), sameInstance(geobounds));
+        assertThat((GeoBounds) ((Object[])global.getProperty("geoBounds"))[0], sameInstance(geobounds));
         GeoPoint topLeft = geobounds.topLeft();
         GeoPoint bottomRight = geobounds.bottomRight();
         assertThat(topLeft.lat(), equalTo(singleTopLeft.lat()));
         assertThat(topLeft.lon(), equalTo(singleTopLeft.lon()));
         assertThat(bottomRight.lat(), equalTo(singleBottomRight.lat()));
         assertThat(bottomRight.lon(), equalTo(singleBottomRight.lon()));
-        assertThat((double) global.getProperty("geoBounds.top"), equalTo(singleTopLeft.lat()));
-        assertThat((double) global.getProperty("geoBounds.left"), equalTo(singleTopLeft.lon()));
-        assertThat((double) global.getProperty("geoBounds.bottom"), equalTo(singleBottomRight.lat()));
-        assertThat((double) global.getProperty("geoBounds.right"), equalTo(singleBottomRight.lon()));
+        assertThat((double) ((Object[])global.getProperty("geoBounds.top"))[0], equalTo(singleTopLeft.lat()));
+        assertThat((double) ((Object[])global.getProperty("geoBounds.left"))[0], equalTo(singleTopLeft.lon()));
+        assertThat((double) ((Object[])global.getProperty("geoBounds.bottom"))[0], equalTo(singleBottomRight.lat()));
+        assertThat((double) ((Object[])global.getProperty("geoBounds.right"))[0], equalTo(singleBottomRight.lon()));
     }
 
     @Test

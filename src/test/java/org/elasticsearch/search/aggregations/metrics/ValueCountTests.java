@@ -104,8 +104,8 @@ public class ValueCountTests extends ElasticsearchIntegrationTest {
         assertThat(valueCount, notNullValue());
         assertThat(valueCount.getName(), equalTo("count"));
         assertThat(valueCount.getValue(), equalTo(10l));
-        assertThat((ValueCount) global.getProperty("count"), equalTo(valueCount));
-        assertThat((double) global.getProperty("count.value"), equalTo(10d));
+        assertThat((ValueCount) ((Object[])global.getProperty("count"))[0], equalTo(valueCount));
+        assertThat((double) ((Object[])global.getProperty("count.value"))[0], equalTo(10d));
         assertThat((double) valueCount.getProperty("value"), equalTo(10d));
     }
 

@@ -125,7 +125,7 @@ public class FilterTests extends ElasticsearchIntegrationTest {
         assertThat(avgValue, notNullValue());
         assertThat(avgValue.getName(), equalTo("avg_value"));
         assertThat(avgValue.getValue(), equalTo((double) sum / numTag1Docs));
-        assertThat((double) filter.getProperty("avg_value"), equalTo((double) sum / numTag1Docs));
+        assertThat((double) ((Object[])filter.getProperty("avg_value.value"))[0], equalTo((double) sum / numTag1Docs));
     }
 
     @Test

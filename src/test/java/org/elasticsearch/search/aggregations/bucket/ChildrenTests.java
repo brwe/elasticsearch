@@ -150,7 +150,7 @@ public class ChildrenTests extends ElasticsearchIntegrationTest {
             assertThat((long) childrenBucket.getProperty("_count"), equalTo((long) entry1.getValue().commentIds.size()));
 
             Terms commentersTerms = childrenBucket.getAggregations().get("commenters");
-            assertThat((Terms) childrenBucket.getProperty("commenters"), sameInstance(commentersTerms));
+            assertThat((Terms) ((Object[])childrenBucket.getProperty("commenters"))[0], sameInstance(commentersTerms));
             assertThat(commentersTerms.getBuckets().size(), equalTo(entry1.getValue().commenterToCommentId.size()));
             for (Map.Entry<String, Set<String>> entry2 : entry1.getValue().commenterToCommentId.entrySet()) {
                 Terms.Bucket commentBucket = commentersTerms.getBucketByKey(entry2.getKey());

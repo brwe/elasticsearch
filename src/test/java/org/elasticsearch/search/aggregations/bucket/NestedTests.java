@@ -256,7 +256,7 @@ public class NestedTests extends ElasticsearchIntegrationTest {
                 assertEquals(counts[i], bucket.getDocCount());
             }
         }
-        assertThat((LongTerms) nested.getProperty("values"), sameInstance(values));
+        assertThat((LongTerms) ((Object[])nested.getProperty("values"))[0], sameInstance(values));
     }
 
     @Test

@@ -355,7 +355,7 @@ public class DateHistogramTests extends ElasticsearchIntegrationTest {
         assertThat(histo.getBuckets().size(), equalTo(3));
         Object[] propertiesKeys = (Object[]) histo.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) histo.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) histo.getProperty("sum");
+        Object[] propertiesCounts = (Object[]) histo.getProperty("sum.value");
 
         long key = new DateTime(2012, 1, 1, 0, 0, DateTimeZone.UTC).getMillis();
         DateHistogram.Bucket bucket = histo.getBucketByKey(key);

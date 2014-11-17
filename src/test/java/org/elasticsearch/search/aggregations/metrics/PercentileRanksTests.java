@@ -180,7 +180,7 @@ public class PercentileRanksTests extends AbstractNumericTests {
         PercentileRanks percentiles = global.getAggregations().get("percentile_ranks");
         assertThat(percentiles, notNullValue());
         assertThat(percentiles.getName(), equalTo("percentile_ranks"));
-        assertThat((PercentileRanks) global.getProperty("percentile_ranks"), sameInstance(percentiles));
+        assertThat((PercentileRanks) ((Object[])global.getProperty("percentile_ranks"))[0], sameInstance(percentiles));
 
     }
 

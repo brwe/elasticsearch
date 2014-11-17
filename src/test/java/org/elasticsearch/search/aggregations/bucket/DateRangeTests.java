@@ -398,7 +398,7 @@ public class DateRangeTests extends ElasticsearchIntegrationTest {
         assertThat(range.getBuckets().size(), equalTo(3));
         Object[] propertiesKeys = (Object[]) range.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) range.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) range.getProperty("sum");
+        Object[] propertiesCounts = (Object[]) range.getProperty("sum.value");
 
         DateRange.Bucket bucket = range.getBucketByKey("r1");
         assertThat(bucket, notNullValue());

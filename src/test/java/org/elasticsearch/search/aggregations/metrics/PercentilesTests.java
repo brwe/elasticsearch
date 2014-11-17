@@ -179,7 +179,7 @@ public class PercentilesTests extends AbstractNumericTests {
         Percentiles percentiles = global.getAggregations().get("percentiles");
         assertThat(percentiles, notNullValue());
         assertThat(percentiles.getName(), equalTo("percentiles"));
-        assertThat((Percentiles) global.getProperty("percentiles"), sameInstance(percentiles));
+        assertThat((Percentiles) ((Object[])global.getProperty("percentiles"))[0], sameInstance(percentiles));
 
     }
 

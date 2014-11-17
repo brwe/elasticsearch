@@ -395,7 +395,7 @@ public class LongTermsTests extends AbstractTermsTests {
         assertThat(terms.getBuckets().size(), equalTo(5));
         Object[] propertiesKeys = (Object[]) terms.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) terms.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) terms.getProperty("sum");
+        Object[] propertiesCounts = (Object[]) terms.getProperty("sum.value");
 
         for (int i = 0; i < 5; i++) {
             Terms.Bucket bucket = terms.getBucketByKey("" + i);

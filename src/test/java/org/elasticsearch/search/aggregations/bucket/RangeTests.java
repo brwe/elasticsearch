@@ -274,7 +274,7 @@ public class RangeTests extends ElasticsearchIntegrationTest {
         assertThat(range.getBuckets().size(), equalTo(3));
         Object[] propertiesKeys = (Object[]) range.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) range.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) range.getProperty("sum");
+        Object[] propertiesCounts = (Object[]) range.getProperty("sum.value");
 
         Range.Bucket bucket = range.getBucketByKey("*-3.0");
         assertThat(bucket, notNullValue());

@@ -106,8 +106,8 @@ public class MaxTests extends AbstractNumericTests {
         assertThat(max.getName(), equalTo("max"));
         double expectedMaxValue = 10.0;
         assertThat(max.getValue(), equalTo(expectedMaxValue));
-        assertThat((Max) global.getProperty("max"), equalTo(max));
-        assertThat((double) global.getProperty("max.value"), equalTo(expectedMaxValue));
+        assertThat((Max) ((Object[])global.getProperty("max"))[0], equalTo(max));
+        assertThat((double) ((Object[])global.getProperty("max.value"))[0], equalTo(expectedMaxValue));
         assertThat((double) max.getProperty("value"), equalTo(expectedMaxValue));
     }
 

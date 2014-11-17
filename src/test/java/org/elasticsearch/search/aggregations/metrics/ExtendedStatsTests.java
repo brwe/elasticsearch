@@ -141,33 +141,33 @@ public class ExtendedStatsTests extends AbstractNumericTests {
         ExtendedStats stats = global.getAggregations().get("stats");
         assertThat(stats, notNullValue());
         assertThat(stats.getName(), equalTo("stats"));
-        ExtendedStats statsFromProperty = (ExtendedStats) global.getProperty("stats");
+        ExtendedStats statsFromProperty = (ExtendedStats) ((Object[])global.getProperty("stats"))[0];
         assertThat(statsFromProperty, notNullValue());
         assertThat(statsFromProperty, sameInstance(stats));
         double expectedAvgValue = (double) (1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10) / 10;
         assertThat(stats.getAvg(), equalTo(expectedAvgValue));
-        assertThat((double) global.getProperty("stats.avg"), equalTo(expectedAvgValue));
+        assertThat((double) ((Object[])global.getProperty("stats.avg"))[0], equalTo(expectedAvgValue));
         double expectedMinValue = 1.0;
         assertThat(stats.getMin(), equalTo(expectedMinValue));
-        assertThat((double) global.getProperty("stats.min"), equalTo(expectedMinValue));
+        assertThat((double) ((Object[])global.getProperty("stats.min"))[0], equalTo(expectedMinValue));
         double expectedMaxValue = 10.0;
         assertThat(stats.getMax(), equalTo(expectedMaxValue));
-        assertThat((double) global.getProperty("stats.max"), equalTo(expectedMaxValue));
+        assertThat((double) ((Object[])global.getProperty("stats.max"))[0], equalTo(expectedMaxValue));
         double expectedSumValue = (double) (1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10);
         assertThat(stats.getSum(), equalTo(expectedSumValue));
-        assertThat((double) global.getProperty("stats.sum"), equalTo(expectedSumValue));
+        assertThat((double) ((Object[])global.getProperty("stats.sum"))[0], equalTo(expectedSumValue));
         long expectedCountValue = 10;
         assertThat(stats.getCount(), equalTo(expectedCountValue));
-        assertThat((double) global.getProperty("stats.count"), equalTo((double) expectedCountValue));
+        assertThat((double) ((Object[])global.getProperty("stats.count"))[0], equalTo((double) expectedCountValue));
         double expectedSumOfSquaresValue = (double) 1 + 4 + 9 + 16 + 25 + 36 + 49 + 64 + 81 + 100;
         assertThat(stats.getSumOfSquares(), equalTo(expectedSumOfSquaresValue));
-        assertThat((double) global.getProperty("stats.sum_of_squares"), equalTo(expectedSumOfSquaresValue));
+        assertThat((double) ((Object[])global.getProperty("stats.sum_of_squares"))[0], equalTo(expectedSumOfSquaresValue));
         double expectedVarianceValue = variance(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         assertThat(stats.getVariance(), equalTo(expectedVarianceValue));
-        assertThat((double) global.getProperty("stats.variance"), equalTo(expectedVarianceValue));
+        assertThat((double) ((Object[])global.getProperty("stats.variance"))[0], equalTo(expectedVarianceValue));
         double expectedStdDevValue = stdDev(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         assertThat(stats.getStdDeviation(), equalTo(expectedStdDevValue));
-        assertThat((double) global.getProperty("stats.std_deviation"), equalTo(expectedStdDevValue));
+        assertThat((double) ((Object[])global.getProperty("stats.std_deviation"))[0], equalTo(expectedStdDevValue));
     }
 
     @Test

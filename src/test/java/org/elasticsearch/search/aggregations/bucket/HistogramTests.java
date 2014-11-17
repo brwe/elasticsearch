@@ -304,7 +304,7 @@ public class HistogramTests extends ElasticsearchIntegrationTest {
         assertThat(histo.getBuckets().size(), equalTo(numValueBuckets));
         Object[] propertiesKeys = (Object[]) histo.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) histo.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) histo.getProperty("sum");
+        Object[] propertiesCounts = (Object[]) histo.getProperty("sum.value");
 
         List<Histogram.Bucket> buckets = new ArrayList<>(histo.getBuckets());
         for (int i = 0; i < numValueBuckets; ++i) {

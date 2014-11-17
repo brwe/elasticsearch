@@ -160,7 +160,8 @@ public class ReverseNestedTests extends ElasticsearchIntegrationTest {
         ReverseNested reverseNested = bucket.getAggregations().get("nested1_to_field1");
         assertThat((long) reverseNested.getProperty("_count"), equalTo(5l));
         Terms tags = reverseNested.getAggregations().get("field1");
-        assertThat((Terms) reverseNested.getProperty("field1"), sameInstance(tags));
+        Object[] terms = (Object[])reverseNested.getProperty("field1");
+        assertThat((Terms) terms[0], sameInstance(tags));
         List<Terms.Bucket> tagsBuckets = new ArrayList<>(tags.getBuckets());
         assertThat(tagsBuckets.size(), equalTo(6));
         assertThat(tagsBuckets.get(0).getKey(), equalTo("c"));

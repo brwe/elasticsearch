@@ -91,7 +91,7 @@ public class GlobalTests extends ElasticsearchIntegrationTest {
         assertThat(global.getAggregations().asList().isEmpty(), is(false));
 
         Stats stats = global.getAggregations().get("value_stats");
-        assertThat((Stats) global.getProperty("value_stats"), sameInstance(stats));
+        assertThat((Stats) ((Object[])global.getProperty("value_stats"))[0], sameInstance(stats));
         assertThat(stats, notNullValue());
         assertThat(stats.getName(), equalTo("value_stats"));
         long sum = 0;

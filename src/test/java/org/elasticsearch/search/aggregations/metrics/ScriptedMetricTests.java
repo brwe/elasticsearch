@@ -413,8 +413,8 @@ public class ScriptedMetricTests extends ElasticsearchIntegrationTest {
         assertThat(object, notNullValue());
         assertThat(object, instanceOf(Number.class));
         assertThat(((Number) object).longValue(), equalTo(numDocs * 3));
-        assertThat((List) global.getProperty("scripted"), sameInstance((List) aggregationList));
-        assertThat((List) global.getProperty("scripted.value"), sameInstance((List) aggregationList));
+        assertThat((List) ((Object[])global.getProperty("scripted"))[0], sameInstance((List) aggregationList));
+        assertThat((List) ((Object[])global.getProperty("scripted.value"))[0], sameInstance((List) aggregationList));
         assertThat((List) scriptedMetricAggregation.getProperty("value"), sameInstance((List) aggregationList));
 
     }

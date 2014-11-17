@@ -162,7 +162,7 @@ public class MissingTests extends ElasticsearchIntegrationTest {
         assertThat(avgValue, notNullValue());
         assertThat(avgValue.getName(), equalTo("avg_value"));
         assertThat(avgValue.getValue(), equalTo((double) sum / (numDocsMissing + numDocsUnmapped)));
-        assertThat((double) missing.getProperty("avg_value"), equalTo((double) sum / (numDocsMissing + numDocsUnmapped)));
+        assertThat((double) ((Object[])missing.getProperty("avg_value.value"))[0], equalTo((double) sum / (numDocsMissing + numDocsUnmapped)));
     }
 
     @Test

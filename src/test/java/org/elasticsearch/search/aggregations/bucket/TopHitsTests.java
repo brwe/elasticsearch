@@ -285,7 +285,7 @@ public class TopHitsTests extends ElasticsearchIntegrationTest {
         TopHits topHits = global.getAggregations().get("hits");
         assertThat(topHits, notNullValue());
         assertThat(topHits.getName(), equalTo("hits"));
-        assertThat((TopHits) global.getProperty("hits"), sameInstance(topHits));
+        assertThat((TopHits) ((Object[])global.getProperty("hits"))[0], sameInstance(topHits));
 
     }
 

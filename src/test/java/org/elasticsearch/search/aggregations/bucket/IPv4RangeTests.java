@@ -232,7 +232,7 @@ public class IPv4RangeTests extends ElasticsearchIntegrationTest {
         assertThat(range.getBuckets().size(), equalTo(3));
         Object[] propertiesKeys = (Object[]) range.getProperty("_key");
         Object[] propertiesDocCounts = (Object[]) range.getProperty("_count");
-        Object[] propertiesCounts = (Object[]) range.getProperty("sum");
+        Object[] propertiesCounts = (Object[]) range.getProperty("sum.value");
 
         IPv4Range.Bucket bucket = range.getBucketByKey("*-10.0.0.100");
         assertThat(bucket, notNullValue());
