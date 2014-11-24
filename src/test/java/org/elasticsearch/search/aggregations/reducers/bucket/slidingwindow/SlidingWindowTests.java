@@ -36,7 +36,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.search.aggregations.AggregationBuilders.histogram;
-import static org.elasticsearch.search.aggregations.ReducerBuilders.slidingWindowReducer;
+import static org.elasticsearch.search.reducers.ReducerBuilders.slidingWindowReducer;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.core.Is.is;
 
