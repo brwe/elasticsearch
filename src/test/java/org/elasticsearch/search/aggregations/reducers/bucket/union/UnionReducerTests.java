@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.elasticsearch.search.aggregations.reducers;
+package org.elasticsearch.search.aggregations.reducers.bucket.union;
 
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
@@ -40,7 +40,7 @@ import static org.elasticsearch.search.aggregations.ReducerBuilders.slidingWindo
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.core.Is.is;
 
-public class SlidingWindowTests extends ElasticsearchIntegrationTest {
+public class UnionReducerTests extends ElasticsearchIntegrationTest {
 
     @Test
     public void testBasicSelection() throws IOException, ExecutionException, InterruptedException {
