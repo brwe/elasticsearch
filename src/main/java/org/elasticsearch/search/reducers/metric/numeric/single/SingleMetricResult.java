@@ -57,7 +57,11 @@ public class SingleMetricResult extends NumericMetricResult {
     }
 
     public double getValue(String name) {
-        return value;
+        if (name.equals("value")) {
+            return value;
+        } else {
+            throw new IllegalArgumentException("no result with name " + name);
+        }
     }
 
     public XContentBuilder doXContentBody(XContentBuilder builder, ToXContent.Params params) throws IOException {

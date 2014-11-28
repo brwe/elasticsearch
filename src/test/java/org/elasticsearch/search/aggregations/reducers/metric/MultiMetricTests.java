@@ -24,8 +24,9 @@ import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.reducers.metric.InternalMetric;
+import org.elasticsearch.search.reducers.metric.MetricResult;
 import org.elasticsearch.search.reducers.metric.MetricsBuilder;
+import org.elasticsearch.search.reducers.metric.SingleBucketMetricAggregation;
 import org.elasticsearch.search.reducers.metric.numeric.NumericMetricResult;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
@@ -50,29 +51,36 @@ public class MultiMetricTests extends ElasticsearchIntegrationTest {
     @Test
     public void testVeryBasicDelta() throws IOException, ExecutionException, InterruptedException {
         indexData();
-        InternalMetric metric = getAndSanityCheckMetric(deltaReducer(REDUCER_NAME));
-        assertThat(((NumericMetricResult) (((InternalMetric) metric).getMetricResult())).getValue("delta"), equalTo(18d));
+        MetricResult metric = getAndSanityCheckMetric(deltaReducer(REDUCER_NAME));
+        assertThat(((NumericMetricResult) metric).getValue("value"), equalTo(18d));
         metric = getAndSanityCheckMetric(deltaReducer(REDUCER_NAME).computeGradient(true));
-        assertThat(((NumericMetricResult) (((InternalMetric) metric).getMetricResult())).getValue("delta"), equalTo(2d));
+        assertThat(((NumericMetricResult) metric).getValue("value"), equalTo(2d));
     }
 
     @Test
     public void testVeryBasicStats() throws IOException, ExecutionException, InterruptedException {
         indexData();
-        InternalMetric metric = getAndSanityCheckMetric(statsReducer(REDUCER_NAME));
-        assertThat(((NumericMetricResult) (((InternalMetric) metric).getMetricResult())).getValue("length"), equalTo(10d));
+        MetricResult metric = getAndSanityCheckMetric(statsReducer(REDUCER_NAME));
+        assertThat(((NumericMetricResult) metric).getValue("length"), equalTo(10d));
     }
 
-    private InternalMetric getAndSanityCheckMetric(MetricsBuilder builder) throws IOException {
+    private MetricResult getAndSanityCheckMetric(MetricsBuilder builder) throws IOException {
         SearchResponse searchResponse = client().prepareSearch("index")
                 .addAggregation(histogram("histo").field("hist_field").interval(1))
                 .addReducer(builder.bucketsPath("histo").field("_count")).get();
         assertSearchResponse(searchResponse);
-        Aggregations reductions = searchResponse.getReductions();
-        Aggregation sumReduc = reductions.getAsMap().get(REDUCER_NAME);
+        Aggregations reductions;
+        Aggregation sumReduc;
+        reductions = searchResponse.getReductions();
+        sumReduc = reductions.getAsMap().get(REDUCER_NAME);
         assertNotNull(sumReduc);
-        assertThat(sumReduc, instanceOf(InternalMetric.class));
-        return (InternalMetric) sumReduc;
+        assertThat(sumReduc, instanceOf(SingleBucketMetricAggregation.class));
+        sumReduc = (Aggregation)sumReduc.getProperty("histo");
+        assertNotNull(sumReduc);
+        assertThat(sumReduc, instanceOf(SingleBucketMetricAggregation.class));
+        MetricResult metricResult = (MetricResult)sumReduc.getProperty(REDUCER_NAME);
+        assertNotNull(metricResult);
+        return (MetricResult) metricResult;
     }
 
     private void indexData() throws IOException, ExecutionException, InterruptedException {

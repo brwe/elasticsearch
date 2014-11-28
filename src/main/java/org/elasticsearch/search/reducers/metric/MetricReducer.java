@@ -25,10 +25,15 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.InternalAggregation;
+import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
+import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
+import org.elasticsearch.search.aggregations.support.AggregationPath;
 import org.elasticsearch.search.reducers.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class MetricReducer extends Reducer {
@@ -40,25 +45,48 @@ public class MetricReducer extends Reducer {
 
     @Override
     public InternalAggregation reduce(Aggregations aggregationsTree, Aggregation currentAggregation) {
-        MultiBucketsAggregation aggregation;
-        if (currentAggregation == null) {
-            Object o = aggregationsTree.getProperty(bucketsPath);
-            if (o instanceof MultiBucketsAggregation) {
-                aggregation = (MultiBucketsAggregation) o;
-            } else {
-                throw new ReductionExecutionException("bucketsPath must resolve to a muti-bucket aggregation for reducer [" + name() + "]");
-            }
-        } else {
-            if (currentAggregation instanceof MultiBucketsAggregation) {
-                aggregation = (MultiBucketsAggregation) currentAggregation;
-            } else {
-                throw new ReductionExecutionException("aggregation must be a muti-bucket aggregation for reducer [" + name() + "]");
-            }
-        }
-        return doReduce(aggregationsTree, aggregation);
+        AggregationPath path = AggregationPath.parse(bucketsPath);
+        InternalAggregation reducedAgg = traverseAggTree(path, aggregationsTree.get(path.getPathElements().get(0).name));
+        List<InternalAggregation> reducedAggs = new ArrayList<>();
+        reducedAggs.add(reducedAgg);
+        return new SingleBucketMetricAggregation(name(), 0, new InternalAggregations(reducedAggs), null);
+
     }
 
-    public InternalAggregation doReduce(Aggregations aggregationsTree, Aggregation aggregation) throws ReductionExecutionException {
+    private InternalAggregation traverseAggTree(AggregationPath path, Aggregation aggregation) {
+        if (path.getPathElements().size() == 1) {
+            if (!(aggregation instanceof MultiBucketsAggregation)) {
+                throw new ReductionExecutionException("aggregation must be a muti-bucket aggregation for reducer [" + name() + "]");
+            }
+            InternalAggregation reducedAgg = doReduce(aggregation);
+            List<InternalAggregation> reducedAggs = new ArrayList<>();
+            reducedAggs.add(reducedAgg);
+            return new SingleBucketMetricAggregation(aggregation.getName(), 0, new InternalAggregations(reducedAggs), null);
+        } else {
+            if (aggregation instanceof SingleBucketAggregation) {
+                Aggregation nestedAgg = ((SingleBucketMetricAggregation) aggregation).getAggregations().get(path.getPathElements().get(0).name);
+                AggregationPath subPath = path.subPath(1, path.getPathElements().size() - 1);
+                InternalAggregation reducedAgg = traverseAggTree(subPath, nestedAgg);
+                List<InternalAggregation> reducedAggs = new ArrayList<>();
+                reducedAggs.add(reducedAgg);
+                return new SingleBucketMetricAggregation(aggregation.getName(), 0, new InternalAggregations(reducedAggs), null);
+            } else if (aggregation instanceof MultiBucketsAggregation) {
+                List<MultiBucketMetricAggregation.InternalBucket> buckets = new ArrayList<>();
+                for (MultiBucketsAggregation.Bucket bucket : ((MultiBucketsAggregation)aggregation).getBuckets()) {
+                   InternalAggregation bucketAgg = traverseAggTree(path.subPath(1, path.getPathElements().size() - 1), bucket.getAggregations().asMap().get(path.getPathElements().get(1).name));
+                    List<InternalAggregation> reducedAggs = new ArrayList<>();
+                    reducedAggs.add(bucketAgg);
+                    MultiBucketMetricAggregation.InternalBucket metricBucket = new MultiBucketMetricAggregation.InternalBucket(bucket.getKeyAsText().string(), new InternalAggregations(reducedAggs));
+                    buckets.add(metricBucket);
+                }
+                return new MultiBucketMetricAggregation(aggregation.getName(), buckets);
+            } else {
+                throw new ReductionExecutionException("wrong agg type");
+            }
+        }
+    }
+
+    public InternalAggregation doReduce(Aggregation aggregation) throws ReductionExecutionException {
         Object[] bucketProperties = getProperties(aggregation);
         return new InternalMetric(name(), op.evaluate(bucketProperties));
 

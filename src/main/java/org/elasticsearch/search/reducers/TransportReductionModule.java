@@ -29,6 +29,8 @@ import org.elasticsearch.search.reducers.bucket.unpacking.InternalUnpacking;
 import org.elasticsearch.search.reducers.bucket.unpacking.UnpackingReducer;
 import org.elasticsearch.search.reducers.metric.InternalMetric;
 import org.elasticsearch.search.reducers.metric.MetricReducer;
+import org.elasticsearch.search.reducers.metric.MultiBucketMetricAggregation;
+import org.elasticsearch.search.reducers.metric.SingleBucketMetricAggregation;
 
 /**
  * A module that registers all the transport streams for the addAggregation
@@ -43,6 +45,8 @@ public class TransportReductionModule extends AbstractModule {
         InternalUnpacking.registerStreams();
         InternalRange.registerStreams();
         InternalMetric.registerStreams();
+        SingleBucketMetricAggregation.registerStreams();
+        MultiBucketMetricAggregation.registerStreams();
 
         SlidingWindowReducer.registerStreams();
         UnionReducer.registerStreams();

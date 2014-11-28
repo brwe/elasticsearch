@@ -187,9 +187,12 @@ public class AggregationPath {
     }
 
     public AggregationPath subPath(int offset, int length) {
-        PathElement[] subTokens = new PathElement[length];
-        System.arraycopy(pathElements, offset, subTokens, 0, length);
-        return new AggregationPath(pathElements);
+        List<PathElement> subTokens = new ArrayList<>();
+        for (int i=0;i<length; i++) {
+            subTokens.add(pathElements.get(i+offset));
+        }
+        //System.arraycopy(pathElements, offset, subTokens, 0, length);
+        return new AggregationPath(subTokens);
     }
 
     /**

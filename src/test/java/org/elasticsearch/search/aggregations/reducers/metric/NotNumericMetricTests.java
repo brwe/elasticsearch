@@ -25,7 +25,9 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.reducers.metric.InternalMetric;
+import org.elasticsearch.search.reducers.metric.MetricResult;
 import org.elasticsearch.search.reducers.metric.MetricsBuilder;
+import org.elasticsearch.search.reducers.metric.SingleBucketMetricAggregation;
 import org.elasticsearch.search.reducers.metric.format.ArrayResult;
 import org.elasticsearch.search.reducers.metric.linefit.LineFitResult;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -50,25 +52,25 @@ public class NotNumericMetricTests extends ElasticsearchIntegrationTest {
     @Test
     public void testVeryBasicArray() throws IOException, ExecutionException, InterruptedException {
         indexData();
-        InternalMetric metric = getAndSanityCheckMetric(arrayReducer(REDUCER_NAME));
+        MetricResult metric = getAndSanityCheckMetric(arrayReducer(REDUCER_NAME));
         double[] expectedArray = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
-        assertArrayEquals(expectedArray, ((ArrayResult) (metric.getMetricResult())).getArray(), 0.0);
+        assertArrayEquals(expectedArray, ((ArrayResult) metric).getArray(), 0.0);
     }
 
     @Test
     public void testVeryBasicLineFit() throws IOException, ExecutionException, InterruptedException {
         indexData();
-        InternalMetric metric = getAndSanityCheckMetric(lineFitReducer(REDUCER_NAME));
-        assertEquals(2.0, ((LineFitResult) metric.getMetricResult()).getSlope(), 1.e-8);
-        assertEquals(2.0, ((LineFitResult) metric.getMetricResult()).getBias(), 1.e-8);
+        MetricResult metric = getAndSanityCheckMetric(lineFitReducer(REDUCER_NAME));
+        assertEquals(2.0, ((LineFitResult) metric).getSlope(), 1.e-8);
+        assertEquals(2.0, ((LineFitResult) metric).getBias(), 1.e-8);
         metric = getAndSanityCheckMetric(lineFitReducer(REDUCER_NAME).outputFittedLine(true));
-        assertEquals(2.0, ((LineFitResult) metric.getMetricResult()).getSlope(), 1.e-8);
-        assertEquals(2.0, ((LineFitResult) metric.getMetricResult()).getBias(), 1.e-8);
+        assertEquals(2.0, ((LineFitResult) metric).getSlope(), 1.e-8);
+        assertEquals(2.0, ((LineFitResult) metric).getBias(), 1.e-8);
         double[] expectedModelValues = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
-        assertArrayEquals(((LineFitResult) metric.getMetricResult()).getModelValues(), expectedModelValues, 1.e-8);
+        assertArrayEquals(((LineFitResult) metric).getModelValues(), expectedModelValues, 1.e-8);
     }
 
-    private InternalMetric getAndSanityCheckMetric(MetricsBuilder builder) throws IOException {
+    private MetricResult getAndSanityCheckMetric(MetricsBuilder builder) throws IOException {
         SearchResponse searchResponse = client().prepareSearch("index")
                 .addAggregation(histogram("histo").field("hist_field").interval(1))
                 .addReducer(builder.bucketsPath("histo").field("_count")).get();
@@ -76,8 +78,10 @@ public class NotNumericMetricTests extends ElasticsearchIntegrationTest {
         Aggregations reductions = searchResponse.getReductions();
         Aggregation sumReduc = reductions.getAsMap().get(REDUCER_NAME);
         assertNotNull(sumReduc);
-        assertThat(sumReduc, instanceOf(InternalMetric.class));
-        return (InternalMetric) sumReduc;
+        assertThat(sumReduc, instanceOf(SingleBucketMetricAggregation.class));
+        sumReduc = (Aggregation)sumReduc.getProperty("histo");
+        assertThat(sumReduc, instanceOf(SingleBucketMetricAggregation.class));
+        return (MetricResult) sumReduc.getProperty(REDUCER_NAME);
     }
 
     private void indexData() throws IOException, ExecutionException, InterruptedException {
