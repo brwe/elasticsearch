@@ -176,7 +176,14 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
         final CountDownLatch rerouteLatch = new CountDownLatch(10);
         List<Thread> threads = new ArrayList();
         final int numDocsPerBulk = 10;
-
+        XContentBuilder mapping = jsonBuilder().startObject()
+                .startObject("events")
+                .startObject("_routing")
+                .field("path", "@key")
+                .endObject()
+                .endObject();
+        client().admin().indices().prepareCreate("statistics-20141110").addMapping("events", mapping).setSettings(ImmutableSettings.builder().put("index.codec.bloom.load", false)).get();
+        ensureGreen();
         for (int t = 0; t < 10; t++) {
 
             Thread indexingThread = new Thread() {
@@ -189,17 +196,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        try {
-                            XContentBuilder mapping = jsonBuilder().startObject()
-                                    .startObject("events")
-                                    .startObject("_routing")
-                                    .field("path", "@key")
-                                    .endObject()
-                                    .endObject();
-                            client().admin().indices().prepareCreate("statistics-20141110").addMapping("events", mapping).setSettings(ImmutableSettings.builder().put("index.codec.bloom.load", false)).get();
-                        } catch (Throwable t) {
-                            t.printStackTrace();
-                        }
+
                         while (!stop.get()) {
 
                             int node = randomInt(cluster().numDataNodes() - 1);
@@ -308,7 +305,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                             int node = randomInt(cluster().numDataNodes() - 1);
                             try {
                                 HttpRequestBuilder httpRequestBuilder = new HttpRequestBuilder(HttpClients.createDefault());
-                                String includeString = "{\"index.routing.allocation.include.group1\" : \"node_" + node + "\"}";
+                                String includeString = "{\"index.routing.allocation.include._name\" : \"node_" + node + "\"}";
                                 httpRequestBuilder.body(includeString);
                                 InetSocketAddress hoststring = cluster().httpAddresses()[node];
                                 httpRequestBuilder.path("/statistics-20141110/_settings");
@@ -326,7 +323,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                                 httpRequestBuilder.method("POST");
                                 httpResponse = httpRequestBuilder.execute();
                                 responseBody = httpResponse.getBody();
-                                sleep(10000);
+                                sleep(5000);
                             } catch (Throwable t) {
                                 logger.info("reroute failed due to {}", t.getClass().getName());
                             }
@@ -363,7 +360,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                 .setWaitForNodes(Integer.toString(previous_data_nodes))
                 .setWaitForGreenStatus()
                 .setWaitForEvents(Priority.LANGUID)
-                .setTimeout("30s")
+                .setTimeout("1m")
                 .get();
         logger.info(resp.toString());
         logger.info("Expecting {} docs", numDocs.intValue());
