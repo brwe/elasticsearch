@@ -27,7 +27,9 @@ import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.node.Node;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.InternalTestCluster;
 import org.elasticsearch.test.rest.client.http.HttpRequestBuilder;
 import org.elasticsearch.test.rest.client.http.HttpResponse;
 import org.json.JSONArray;
@@ -44,7 +46,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
+import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTest {
@@ -195,11 +200,9 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                     }
                     while (!stop.get()) {
                         int node = randomInt(cluster().numDataNodes() - 1);
-                        InetSocketAddress hoststring = cluster().httpAddresses()[node];
+
                         HttpRequestBuilder httpRequestBuilder = new HttpRequestBuilder(HttpClients.createDefault());
                         httpRequestBuilder.path("/_bulk");
-                        httpRequestBuilder.host(hoststring.getHostName());
-                        httpRequestBuilder.port(hoststring.getPort());
                         String bulkString = "";
                         String header = "{ \"index\" : { \"_index\" : \"statistics-20141110\", \"_type\" : \"events\"} }";
                         for (int i = 0; i < numDocsPerBulk; i++) {
@@ -209,6 +212,10 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
                         }
                         httpRequestBuilder.body(bulkString);
+                        InetSocketAddress hoststring = cluster().httpAddresses()[node];
+                        httpRequestBuilder.path("/_bulk");
+                        httpRequestBuilder.host(hoststring.getHostName());
+                        httpRequestBuilder.port(hoststring.getPort());
                         try {
                             httpRequestBuilder.method("POST");
                             HttpResponse httpResponse = httpRequestBuilder.execute();
@@ -231,8 +238,9 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                             }
                             numDocs.addAndGet(numSuccessfulDocs);
 
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                        } catch (Exception e) {
+                            logger.info("Bulk failed due to {}, node probably restarting: {}:{}", e.getClass(), hoststring.getHostName(), hoststring.getPort());
+                            //e.printStackTrace();
                         }
                         rerouteLatch.countDown();
                     }
@@ -241,6 +249,35 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
             indexingThread.start();
             threads.add(indexingThread);
         }
+
+
+        Thread startStopThread  = new Thread() {
+
+            @Override
+            public void run() {
+                try {
+                    rerouteLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                for (int i = 0; i < 3; i++) {
+                    try {
+                        ((InternalTestCluster) cluster()).restartRandomNode();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+               // Node node = nodeBuilder().settings(settingsBuilder().put("name", "another_node").put("cluster.name", ((InternalTestCluster) cluster()).getClusterName())).node();
+                //node.start();
+                stop.set(true);
+            }
+        };
 
 
         Thread relocationThread = new Thread() {
@@ -254,27 +291,34 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                 }
                 for (int i = 0; i < 10; i++) {
                     allowNodes("statistics-20141110", between(1, cluster().numDataNodes()));
-                    client().admin().cluster().prepareReroute().get();
-                    ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setTimeout("5m").get();
-                    logger.info("Reroute...");
+                    try {
+                        client().admin().cluster().prepareReroute().get();
+                        ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setTimeout("5m").get();
+                        logger.info("Reroute...");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
                 }
                 stop.set(true);
             }
         };
         relocationThread.start();
-
+        startStopThread.start();
         indexingLatch.countDown();
 
         for (Thread thread : threads) {
             thread.join();
         }
+        startStopThread.join();
+        relocationThread.join();
         refresh();
 
         client().admin().indices().prepareOptimize("statistics-20141110").setMaxNumSegments(2).get();
 
         ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setWaitForEvents(Priority.LANGUID).setTimeout("5m").get();
         logger.info("Expecting {} docs", numDocs.intValue());
-        SearchResponse response = client().prepareSearch("statistics-20141110").setSize(numDocs.intValue()).addField("_id").get();
+        SearchResponse response = client().prepareSearch("statistics-20141110").setSize(numDocs.intValue() * 2).addField("_id").get();
 
         Set<String> uniqueIds = new HashSet();
 
@@ -283,10 +327,10 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                 fail("duplicateIdDetected " + response.getHits().getHits()[i].getId());
             }
         }
+        assertSearchResponse(response);
+       // assertThat(response.getHits().totalHits(), equalTo(numDocs.longValue()));
 
-        assertThat(response.getHits().totalHits(), equalTo(numDocs.longValue()));
-
-        assertThat((long) uniqueIds.size(), equalTo(numDocs.longValue()));
+        //assertThat((long) uniqueIds.size(), equalTo(numDocs.longValue()));
 
     }
 }
