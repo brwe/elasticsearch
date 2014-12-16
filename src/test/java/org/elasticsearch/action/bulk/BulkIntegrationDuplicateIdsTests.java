@@ -170,6 +170,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
     public void testUniqueIdsHTTP() throws Exception {
 
 
+        int previous_data_nodes = cluster().numDataNodes();
         final AtomicLong numDocs = new AtomicLong(0);
         final CountDownLatch indexingLatch = new CountDownLatch(1);
         final CountDownLatch rerouteLatch = new CountDownLatch(10);
@@ -239,11 +240,13 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                                     }
                                 }
                                 numDocs.addAndGet(numSuccessfulDocs);
-                                rerouteLatch.countDown();
+
 
                             } catch (Exception e) {
                                 logger.info("Bulk failed due to {}, node probably restarting: {}:{}", e.getClass(), hoststring.getHostName(), hoststring.getPort());
                                 //e.printStackTrace();
+                            } finally {
+                                rerouteLatch.countDown();
                             }
                         }
                     } finally {
@@ -266,21 +269,21 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-
                     for (int i = 0; i < 3; i++) {
                         try {
+                            logger.info("start-stop thread: try restarting node, iteration {}...", i);
                             ((InternalTestCluster) cluster()).restartRandomNode();
+                            logger.info("start-stop thread, restarted node , iteration {}...", i);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         try {
-                            sleep(1000);
+                            sleep(10000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
-                    // Node node = nodeBuilder().settings(settingsBuilder().put("name", "another_node").put("cluster.name", ((InternalTestCluster) cluster()).getClusterName())).node();
-                    //node.start();
+
                     stop.set(true);
                 } finally {
                     stop.set(true);
@@ -301,11 +304,33 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                     }
                     for (int i = 0; i < 10; i++) {
                         try {
-                            allowNodes("statistics-20141110", between(1, cluster().numDataNodes()));
 
-                            client().admin().cluster().prepareReroute().get();
-                            ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setTimeout("30s").get();
-                            logger.info("Reroute...");
+                            int node = randomInt(cluster().numDataNodes() - 1);
+                            try {
+                                HttpRequestBuilder httpRequestBuilder = new HttpRequestBuilder(HttpClients.createDefault());
+                                String includeString = "{\"index.routing.allocation.include.group1\" : \"node_" + node + "\"}";
+                                httpRequestBuilder.body(includeString);
+                                InetSocketAddress hoststring = cluster().httpAddresses()[node];
+                                httpRequestBuilder.path("/statistics-20141110/_settings");
+                                httpRequestBuilder.host(hoststring.getHostName());
+                                httpRequestBuilder.port(hoststring.getPort());
+                                httpRequestBuilder.method("PUT");
+                                HttpResponse httpResponse = httpRequestBuilder.execute();
+                                String responseBody = httpResponse.getBody();
+                                httpRequestBuilder = new HttpRequestBuilder(HttpClients.createDefault());
+                                httpRequestBuilder.path("/_cluster/reroute");
+                                hoststring = cluster().httpAddresses()[node];
+
+                                httpRequestBuilder.host(hoststring.getHostName());
+                                httpRequestBuilder.port(hoststring.getPort());
+                                httpRequestBuilder.method("POST");
+                                httpResponse = httpRequestBuilder.execute();
+                                responseBody = httpResponse.getBody();
+                                sleep(10000);
+                            } catch (Throwable t) {
+                                logger.info("reroute failed due to {}", t.getClass().getName());
+                            }
+
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -326,12 +351,21 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
             thread.join();
         }
         startStopThread.join();
+        logger.info("start/stop thread done");
         relocationThread.join();
+        logger.info("relocation thread done");
         refresh();
 
         client().admin().indices().prepareOptimize("statistics-20141110").setMaxNumSegments(2).get();
 
-        ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setWaitForEvents(Priority.LANGUID).setTimeout("30s").get();
+        ClusterHealthResponse resp = client().admin().cluster().prepareHealth()
+                .setWaitForRelocatingShards(0)
+                .setWaitForNodes(Integer.toString(previous_data_nodes))
+                .setWaitForGreenStatus()
+                .setWaitForEvents(Priority.LANGUID)
+                .setTimeout("30s")
+                .get();
+        logger.info(resp.toString());
         logger.info("Expecting {} docs", numDocs.intValue());
         SearchResponse response = client().prepareSearch("statistics-20141110").setSize(numDocs.intValue() * 2).addField("_id").get();
 
