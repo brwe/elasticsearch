@@ -251,7 +251,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
         }
 
 
-        Thread startStopThread  = new Thread() {
+        Thread startStopThread = new Thread() {
 
             @Override
             public void run() {
@@ -273,7 +273,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                         e.printStackTrace();
                     }
                 }
-               // Node node = nodeBuilder().settings(settingsBuilder().put("name", "another_node").put("cluster.name", ((InternalTestCluster) cluster()).getClusterName())).node();
+                // Node node = nodeBuilder().settings(settingsBuilder().put("name", "another_node").put("cluster.name", ((InternalTestCluster) cluster()).getClusterName())).node();
                 //node.start();
                 stop.set(true);
             }
@@ -290,8 +290,9 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                     e.printStackTrace();
                 }
                 for (int i = 0; i < 10; i++) {
-                    allowNodes("statistics-20141110", between(1, cluster().numDataNodes()));
                     try {
+                        allowNodes("statistics-20141110", between(1, cluster().numDataNodes()));
+
                         client().admin().cluster().prepareReroute().get();
                         ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setTimeout("5m").get();
                         logger.info("Reroute...");
@@ -328,7 +329,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
             }
         }
         assertSearchResponse(response);
-       // assertThat(response.getHits().totalHits(), equalTo(numDocs.longValue()));
+        // assertThat(response.getHits().totalHits(), equalTo(numDocs.longValue()));
 
         //assertThat((long) uniqueIds.size(), equalTo(numDocs.longValue()));
 
