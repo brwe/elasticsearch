@@ -20,6 +20,7 @@
 
 package org.elasticsearch.action.bulk;
 
+import com.google.common.base.Joiner;
 import org.apache.http.impl.client.HttpClients;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -269,12 +270,14 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
                     for (int i = 0; i < 3; i++) {
                         try {
+                            logger.info("restarting random node...");
                             ((InternalTestCluster) cluster()).restartRandomNode();
+                            logger.info("...restarting done.");
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                         try {
-                            sleep(1000);
+                            sleep(2000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -301,11 +304,22 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                     }
                     for (int i = 0; i < 10; i++) {
                         try {
-                            allowNodes("statistics-20141110", between(1, cluster().numDataNodes()));
-
-                            client().admin().cluster().prepareReroute().get();
-                            ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setTimeout("30s").get();
                             logger.info("Reroute...");
+                            int notAllowedNode = between(1, cluster().numDataNodes());
+                            logger.info("Relocating from node node_{}", notAllowedNode);
+                            ImmutableSettings.Builder builder = ImmutableSettings.builder();
+                            builder.put("index.routing.allocation.exclude._name", "node_" + notAllowedNode);
+                            Settings build = builder.build();
+                            client().admin().indices().prepareUpdateSettings("statistics-20141110").setSettings(build).setTimeout("5s").execute().actionGet();
+                            client().admin().cluster().prepareReroute().get();
+                            logger.info("sleep to wait for relocations...");
+                            sleep(500);//ClusterHealthResponse resp = client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).setTimeout("30s").get();
+                            builder = ImmutableSettings.builder();
+                            builder.put("index.routing.allocation.include._name", "node_" + notAllowedNode);
+                            build = builder.build();
+                            client().admin().indices().prepareUpdateSettings("statistics-20141110").setSettings(build).setTimeout("5s").execute().actionGet();
+                            client().admin().cluster().prepareReroute().get();
+                            sleep(500);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -318,15 +332,23 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
             }
 
         };
+        logger.info("Starting relocation thread...");
         relocationThread.start();
+        logger.info("Starting start/stop thread...");
         startStopThread.start();
+        logger.info("Starting indexing threads...");
         indexingLatch.countDown();
 
         for (Thread thread : threads) {
             thread.join();
         }
+        logger.info(" indexing done...");
         startStopThread.join();
+        ((InternalTestCluster)cluster()).ensureAtLeastNumDataNodes(cluster().numDataNodes());
+        logger.info(" startStopThread done...");
+        //relocationThread.interrupt();
         relocationThread.join();
+        logger.info(" relocationThread done...");
         refresh();
 
         client().admin().indices().prepareOptimize("statistics-20141110").setMaxNumSegments(2).get();
