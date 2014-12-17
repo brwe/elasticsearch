@@ -176,13 +176,8 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
         final CountDownLatch rerouteLatch = new CountDownLatch(10);
         List<Thread> threads = new ArrayList();
         final int numDocsPerBulk = 10;
-        XContentBuilder mapping = jsonBuilder().startObject()
-                .startObject("events")
-                .startObject("_routing")
-                .field("path", "@key")
-                .endObject()
-                .endObject();
-        client().admin().indices().prepareCreate("statistics-20141110").addMapping("events", mapping).setSettings(ImmutableSettings.builder().put("index.codec.bloom.load", false)).get();
+
+        client().admin().indices().prepareCreate("statistics-20141110").get();
         ensureGreen("statistics-20141110");
         for (int t = 0; t < 10; t++) {
 
