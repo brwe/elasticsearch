@@ -372,13 +372,19 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
         long dupCounter = 0;
 
+        boolean found_duplicate_already = false;
         for (int i = 0; i < response.getHits().getHits().length; i++) {
             if (!uniqueIds.add(response.getHits().getHits()[i].getId())) {
                 //fail("duplicateIdDetected " + response.getHits().getHits()[i].getId());
-                SearchResponse dupIdResponse = client().prepareSearch("statistics-20141110").setQuery(termQuery("_id", response.getHits().getHits()[i].getId())).setExplain(true).get();
-                assertThat(dupIdResponse.getHits().totalHits(), greaterThan(1l));
-                for (SearchHit hit : dupIdResponse.getHits()) {
-                    logger.info("Doc {} was found on shard {}", hit.getId(), hit.getShard().getShardId());
+                if (! found_duplicate_already) {
+                    SearchResponse dupIdResponse = client().prepareSearch("statistics-20141110").setQuery(termQuery("_id", response.getHits().getHits()[i].getId())).setExplain(true).get();
+                    assertThat(dupIdResponse.getHits().totalHits(), greaterThan(1l));
+                    logger.info("found a duplicate id:");
+                    for (SearchHit hit : dupIdResponse.getHits()) {
+                        logger.info("Doc {} was found on shard {}", hit.getId(), hit.getShard().getShardId());
+                    }
+                    logger.info("will not print anymore in case more duplicates are found.");
+                    found_duplicate_already = true;
                 }
                 dupCounter++;
             }
