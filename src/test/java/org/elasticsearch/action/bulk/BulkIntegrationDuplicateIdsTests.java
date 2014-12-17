@@ -27,7 +27,9 @@ import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.discovery.zen.elect.ElectMasterService;
 import org.elasticsearch.node.Node;
+import org.elasticsearch.search.highlight.CustomHighlighterPlugin;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.elasticsearch.test.InternalTestCluster;
 import org.elasticsearch.test.rest.client.http.HttpRequestBuilder;
@@ -49,12 +51,23 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
+import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.CoreMatchers.equalTo;
 
+
+@ElasticsearchIntegrationTest.ClusterScope(scope = ElasticsearchIntegrationTest.Scope.SUITE, numDataNodes = 3)
 public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTest {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
+
+    @Override
+    protected Settings nodeSettings(int nodeOrdinal) {
+        return settingsBuilder()
+                .put(ElectMasterService.DISCOVERY_ZEN_MINIMUM_MASTER_NODES, 2)
+                .put(super.nodeSettings(nodeOrdinal))
+                .build();
+    }
 
     @Test
     public void testUniqueIds() throws Exception {
@@ -169,7 +182,6 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
     @Test
     public void testUniqueIdsHTTP() throws Exception {
 
-
         int previous_data_nodes = cluster().numDataNodes();
         final AtomicLong numDocs = new AtomicLong(0);
         final CountDownLatch indexingLatch = new CountDownLatch(1);
@@ -177,7 +189,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
         List<Thread> threads = new ArrayList();
         final int numDocsPerBulk = 10;
 
-        client().admin().indices().prepareCreate("statistics-20141110").get();
+        assertAcked(client().admin().indices().prepareCreate("statistics-20141110"));
         ensureGreen("statistics-20141110");
         for (int t = 0; t < 10; t++) {
 
