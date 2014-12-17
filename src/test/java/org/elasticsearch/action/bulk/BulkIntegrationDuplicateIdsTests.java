@@ -184,7 +184,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
         List<Thread> threads = new ArrayList();
         final int numDocsPerBulk = 10;
 
-        assertAcked(client().admin().indices().prepareCreate("statistics-20141110"));
+        assertAcked(client().admin().indices().prepareCreate("statistics-20141110").setSettings(ImmutableSettings.builder().put("index.number_of_replicas", 0).build()));
         ensureGreen("statistics-20141110");
         for (int t = 0; t < 10; t++) {
 
