@@ -29,6 +29,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.discovery.zen.elect.ElectMasterService;
 import org.elasticsearch.node.Node;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.highlight.CustomHighlighterPlugin;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.elasticsearch.test.InternalTestCluster;
@@ -50,10 +51,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 
 
 public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTest {
@@ -372,6 +375,11 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
         for (int i = 0; i < response.getHits().getHits().length; i++) {
             if (!uniqueIds.add(response.getHits().getHits()[i].getId())) {
                 //fail("duplicateIdDetected " + response.getHits().getHits()[i].getId());
+                SearchResponse dupIdResponse = client().prepareSearch("statistics-20141110").setQuery(termQuery("_id", response.getHits().getHits()[i].getId())).setExplain(true).get();
+                assertThat(dupIdResponse.getHits().totalHits(), greaterThan(1l));
+                for (SearchHit hit : dupIdResponse.getHits()) {
+                    logger.info("Doc {} was found on shard {}", hit.getId(), hit.getShard().getShardId());
+                }
                 dupCounter++;
             }
         }
