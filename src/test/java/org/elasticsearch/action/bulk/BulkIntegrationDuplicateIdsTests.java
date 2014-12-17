@@ -56,18 +56,10 @@ import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSear
 import static org.hamcrest.CoreMatchers.equalTo;
 
 
-@ElasticsearchIntegrationTest.ClusterScope(scope = ElasticsearchIntegrationTest.Scope.SUITE, numDataNodes = 3)
 public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTest {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
-    @Override
-    protected Settings nodeSettings(int nodeOrdinal) {
-        return settingsBuilder()
-                .put(ElectMasterService.DISCOVERY_ZEN_MINIMUM_MASTER_NODES, 2)
-                .put(super.nodeSettings(nodeOrdinal))
-                .build();
-    }
 
     @Test
     public void testUniqueIds() throws Exception {
