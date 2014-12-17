@@ -20,6 +20,7 @@
 
 package org.elasticsearch.action.bulk;
 
+import jsr166e.LongAdder;
 import org.apache.http.impl.client.HttpClients;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -179,9 +180,10 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
         int previous_data_nodes = cluster().numDataNodes();
         final AtomicLong numDocs = new AtomicLong(0);
+        final AtomicLong docIds = new AtomicLong(0);
         final CountDownLatch indexingLatch = new CountDownLatch(1);
         final CountDownLatch rerouteLatch = new CountDownLatch(10);
-        List<Thread> threads = new ArrayList();
+        List<Thread> threads =  new ArrayList();
         final int numDocsPerBulk = 10;
 
         assertAcked(client().admin().indices().prepareCreate("statistics-20141110"));
@@ -206,7 +208,8 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                             HttpRequestBuilder httpRequestBuilder = new HttpRequestBuilder(HttpClients.createDefault());
                             httpRequestBuilder.path("/_bulk");
                             String bulkString = "";
-                            String header = "{ \"index\" : { \"_index\" : \"statistics-20141110\", \"_type\" : \"events\"} }";
+                            String header = "{ \"index\" : { \"_index\" : \"statistics-20141110\", \"_type\" : \"events\", \"_id\" : \""+ Long.toString(docIds.incrementAndGet())+"\"} }";
+                            //logger.info("{}", header);
                             for (int i = 0; i < numDocsPerBulk; i++) {
                                 bulkString += "\n";
                                 bulkString = bulkString + header + "\n";
@@ -218,18 +221,19 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                             httpRequestBuilder.path("/_bulk");
                             httpRequestBuilder.host(hoststring.getHostName());
                             httpRequestBuilder.port(hoststring.getPort());
+                            JSONObject jsonResponse=null;
                             try {
                                 httpRequestBuilder.method("POST");
                                 HttpResponse httpResponse = httpRequestBuilder.execute();
                                 String responseBody = httpResponse.getBody();
                                 long numSuccessfulDocs = 0;
-                                JSONObject jsonResponse = new JSONObject(responseBody);
+                                jsonResponse = new JSONObject(responseBody);
                                 if (!jsonResponse.has("errors")) {
                                     logger.info("No errors element in response : {}", jsonResponse.toString());
                                 }
                                 JSONArray responses = jsonResponse.getJSONArray("items");
                                 for (int i = 0; i < responses.length(); i++) {
-                                    JSONObject singleItemResponse = responses.getJSONObject(i).getJSONObject("create");
+                                    JSONObject singleItemResponse = responses.getJSONObject(i).getJSONObject("index");
                                     // logger.info("Singe item response: {}", singleItemResponse);
                                     if (!singleItemResponse.has("status")) {
                                         //  logger.info("No status element in single response : {}", singleItemResponse.toString());
@@ -243,6 +247,10 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
                             } catch (Exception e) {
                                 logger.info("Bulk failed due to {}, node probably restarting: {}:{}", e.getClass(), hoststring.getHostName(), hoststring.getPort());
+                                if (jsonResponse!=null) {
+                                    logger.info("{}", jsonResponse.toString());
+                                }
+                                //e.printStackTrace();
                                 //e.printStackTrace();
                             } finally {
                                 rerouteLatch.countDown();
