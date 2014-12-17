@@ -183,7 +183,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                 .endObject()
                 .endObject();
         client().admin().indices().prepareCreate("statistics-20141110").addMapping("events", mapping).setSettings(ImmutableSettings.builder().put("index.codec.bloom.load", false)).get();
-        ensureGreen();
+        ensureGreen("statistics-20141110");
         for (int t = 0; t < 10; t++) {
 
             Thread indexingThread = new Thread() {
