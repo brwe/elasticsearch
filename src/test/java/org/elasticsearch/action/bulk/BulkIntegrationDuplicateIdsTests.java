@@ -63,6 +63,10 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
     private AtomicBoolean stop = new AtomicBoolean(false);
 
+    @Override
+    protected Settings nodeSettings(int nodeOrdinal) {
+        return ImmutableSettings.settingsBuilder().put(super.nodeSettings(nodeOrdinal)).put("gateway.type", "local").build();
+    }
 
     @Test
     public void testUniqueIds() throws Exception {
