@@ -53,6 +53,7 @@ import org.elasticsearch.index.cache.id.IdCacheStats;
 import org.elasticsearch.index.codec.CodecService;
 import org.elasticsearch.index.deletionpolicy.SnapshotIndexCommit;
 import org.elasticsearch.index.engine.*;
+import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.fielddata.FieldDataStats;
 import org.elasticsearch.index.fielddata.IndexFieldDataService;
 import org.elasticsearch.index.fielddata.ShardFieldData;
@@ -378,7 +379,7 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
     }
 
     @Override
-    public ParsedDocument create(Engine.Create create) throws ElasticsearchException {
+    public ParsedDocument create(Engine.Create create) throws ElasticsearchException, DuplicateIdException {
         writeAllowed(create.origin());
         create = indexingService.preCreate(create);
         if (logger.isTraceEnabled()) {
@@ -746,7 +747,7 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
      * Performs a single recovery operation, and returns the indexing operation (or null if its not an indexing operation)
      * that can then be used for mapping updates (for example) if needed.
      */
-    public Engine.IndexingOperation performRecoveryOperation(Translog.Operation operation) throws ElasticsearchException {
+    public Engine.IndexingOperation performRecoveryOperation(Translog.Operation operation) throws ElasticsearchException, DuplicateIdException {
         if (state != IndexShardState.RECOVERING) {
             throw new IndexShardNotRecoveringException(shardId, state);
         }

@@ -35,6 +35,7 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.deletionpolicy.SnapshotIndexCommit;
+import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.ParseContext.Document;
 import org.elasticsearch.index.mapper.ParsedDocument;
@@ -71,7 +72,7 @@ public interface Engine extends IndexShardComponent, CloseableComponent {
      */
     void start() throws EngineException;
 
-    void create(Create create) throws EngineException;
+    void create(Create create) throws EngineException, DuplicateIdException;
 
     void index(Index index) throws EngineException;
 
@@ -157,7 +158,7 @@ public interface Engine extends IndexShardComponent, CloseableComponent {
 
         void phase1(SnapshotIndexCommit snapshot) throws ElasticsearchException;
 
-        void phase2(Translog.Snapshot snapshot) throws ElasticsearchException;
+        void phase2(Translog.Snapshot snapshot) throws ElasticsearchException, DuplicateIdException;
 
         void phase3(Translog.Snapshot snapshot) throws ElasticsearchException;
     }
