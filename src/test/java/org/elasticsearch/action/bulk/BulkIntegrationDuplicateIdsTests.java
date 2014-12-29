@@ -347,14 +347,14 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
 
         };
         relocationThread.start();
-        startStopThread.start();
+        //startStopThread.start();
         indexingLatch.countDown();
 
         for (Thread thread : threads) {
             thread.join();
         }
-        startStopThread.join();
-        logger.info("start/stop thread done");
+        //startStopThread.join();
+        //logger.info("start/stop thread done");
         relocationThread.join();
         logger.info("relocation thread done");
         refresh();
