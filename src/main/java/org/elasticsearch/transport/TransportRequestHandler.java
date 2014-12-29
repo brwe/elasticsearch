@@ -19,8 +19,6 @@
 
 package org.elasticsearch.transport;
 
-import org.elasticsearch.index.engine.internal.DuplicateIdException;
-
 /**
  *
  */
@@ -28,7 +26,7 @@ public interface TransportRequestHandler<T extends TransportRequest> {
 
     T newInstance();
 
-    void messageReceived(T request, TransportChannel channel) throws Exception, DuplicateIdException;
+    void messageReceived(T request, TransportChannel channel) throws Exception;
 
     String executor();
 

@@ -53,7 +53,6 @@ import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.engine.DocumentAlreadyExistsException;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.engine.VersionConflictEngineException;
-import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.SourceToParse;
 import org.elasticsearch.index.service.IndexService;
@@ -578,7 +577,7 @@ public class TransportShardBulkAction extends TransportShardReplicationOperation
     }
 
 
-    protected void shardOperationOnReplica(ReplicaOperationRequest shardRequest) throws DuplicateIdException {
+    protected void shardOperationOnReplica(ReplicaOperationRequest shardRequest) {
         IndexShard indexShard = indicesService.indexServiceSafe(shardRequest.request.index()).shardSafe(shardRequest.shardId);
         final BulkShardRequest request = shardRequest.request;
         for (int i = 0; i < request.items().length; i++) {

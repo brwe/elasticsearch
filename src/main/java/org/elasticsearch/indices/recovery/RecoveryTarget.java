@@ -37,7 +37,6 @@ import org.elasticsearch.common.util.concurrent.ConcurrentCollections;
 import org.elasticsearch.common.util.concurrent.ConcurrentMapLong;
 import org.elasticsearch.index.IndexShardMissingException;
 import org.elasticsearch.index.engine.RecoveryEngineException;
-import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.shard.*;
 import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.index.shard.service.InternalIndexShard;
@@ -422,7 +421,7 @@ public class RecoveryTarget extends AbstractComponent {
         }
 
         @Override
-        public void messageReceived(RecoveryTranslogOperationsRequest request, TransportChannel channel) throws Exception, DuplicateIdException {
+        public void messageReceived(RecoveryTranslogOperationsRequest request, TransportChannel channel) throws Exception {
             RecoveryStatus onGoingRecovery = onGoingRecoveries.get(request.recoveryId());
             validateRecoveryStatus(onGoingRecovery, request.shardId());
 

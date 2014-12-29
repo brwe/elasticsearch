@@ -47,7 +47,6 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
 import org.elasticsearch.index.engine.DocumentAlreadyExistsException;
 import org.elasticsearch.index.engine.VersionConflictEngineException;
-import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.indices.IndicesService;
@@ -111,9 +110,9 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
 
     protected abstract String executor();
 
-    protected abstract PrimaryResponse<Response, ReplicaRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest) throws DuplicateIdException;
+    protected abstract PrimaryResponse<Response, ReplicaRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest);
 
-    protected abstract void shardOperationOnReplica(ReplicaOperationRequest shardRequest) throws DuplicateIdException;
+    protected abstract void shardOperationOnReplica(ReplicaOperationRequest shardRequest);
 
     /**
      * Called once replica operations have been dispatched on the
@@ -246,7 +245,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
         }
 
         @Override
-        public void messageReceived(final ReplicaOperationRequest request, final TransportChannel channel) throws Exception, DuplicateIdException {
+        public void messageReceived(final ReplicaOperationRequest request, final TransportChannel channel) throws Exception {
             try {
                 shardOperationOnReplica(request);
             } catch (Throwable t) {
