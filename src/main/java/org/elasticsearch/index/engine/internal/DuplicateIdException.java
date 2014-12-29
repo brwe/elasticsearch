@@ -17,23 +17,10 @@
  * under the License.
  */
 
-package org.elasticsearch.transport;
-
-import org.elasticsearch.index.engine.internal.DuplicateIdException;
+package org.elasticsearch.index.engine.internal;
 
 /**
- *
+ * Created by britta on 29.12.14.
  */
-public interface TransportRequestHandler<T extends TransportRequest> {
-
-    T newInstance();
-
-    void messageReceived(T request, TransportChannel channel) throws Exception, DuplicateIdException;
-
-    String executor();
-
-    /**
-     * See {@link org.elasticsearch.common.util.concurrent.AbstractRunnable#isForceExecution()}.
-     */
-    boolean isForceExecution();
+public class DuplicateIdException extends Throwable {
 }
