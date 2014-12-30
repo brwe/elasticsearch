@@ -58,7 +58,7 @@ import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSear
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 
-
+@ElasticsearchIntegrationTest.ClusterScope(scope = ElasticsearchIntegrationTest.Scope.SUITE)
 public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTest {
 
     private AtomicBoolean stop = new AtomicBoolean(false);
