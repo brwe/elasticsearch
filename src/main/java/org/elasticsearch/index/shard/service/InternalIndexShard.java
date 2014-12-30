@@ -380,14 +380,22 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
 
     @Override
     public ParsedDocument create(Engine.Create create) throws ElasticsearchException, DuplicateIdException {
+        DuplicateIdException ex = null;
         writeAllowed(create.origin());
         create = indexingService.preCreate(create);
         if (logger.isTraceEnabled()) {
             logger.trace("index [{}][{}]{}", create.type(), create.id(), create.docs());
         }
-        engine.create(create);
+         try {
+             engine.create(create);
+         } catch (DuplicateIdException e) {
+             ex = e;
+         }
         create.endTime(System.nanoTime());
         indexingService.postCreate(create);
+        if (ex != null) {
+            throw ex.setParsedDoc(create.parsedDoc());
+        }
         return create.parsedDoc();
     }
 
@@ -752,6 +760,7 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
             throw new IndexShardNotRecoveringException(shardId, state);
         }
         Engine.IndexingOperation indexOperation = null;
+        DuplicateIdException ex = null;
         try {
             switch (operation.opType()) {
                 case CREATE:
@@ -760,7 +769,13 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
                             source(create.source()).type(create.type()).id(create.id())
                                     .routing(create.routing()).parent(create.parent()).timestamp(create.timestamp()).ttl(create.ttl()),
                             create.version(), create.versionType().versionTypeForReplicationAndRecovery(), Engine.Operation.Origin.RECOVERY, true, false);
-                    engine.create(engineCreate);
+                    try {
+                        engine.create(engineCreate);
+                    } catch (DuplicateIdException e) {
+                        ex= e;
+                        ex.setIndexOperation(engineCreate);
+                        logger.info("{}", ex);
+                    }
                     indexOperation = engineCreate;
                     break;
                 case SAVE:
@@ -801,6 +816,9 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
             if (!hasIgnoreOnRecoveryException) {
                 throw e;
             }
+        }
+        if (ex != null ) {
+            throw ex;
         }
         return indexOperation;
     }

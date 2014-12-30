@@ -19,8 +19,28 @@
 
 package org.elasticsearch.index.engine.internal;
 
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.index.engine.Engine;
+import org.elasticsearch.index.mapper.ParsedDocument;
+
 /**
  * Created by britta on 29.12.14.
  */
 public class DuplicateIdException extends Throwable {
+    private ParsedDocument parsedDoc = null;
+    private Engine.Create indexOperation;
+    private Engine.IndexingOperation indexOp;
+
+    public DuplicateIdException setParsedDoc(ParsedDocument parsedDocument) {
+        this.parsedDoc=parsedDocument;
+        return this;
+    }
+
+    public void setIndexOperation(Engine.Create indexOperation) {
+        this.indexOperation = indexOperation;
+    }
+
+    public Engine.IndexingOperation getIndexOp() {
+        return indexOp;
+    }
 }
