@@ -311,6 +311,7 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                             int node = randomInt(cluster().numDataNodes() - 1);
                             try {
                                 HttpRequestBuilder httpRequestBuilder = new HttpRequestBuilder(HttpClients.createDefault());
+                                logger.info("Relocate all to node_{}", node);
                                 String includeString = "{\"index.routing.allocation.include._name\" : \"node_" + node + "\"}";
                                 httpRequestBuilder.body(includeString);
                                 InetSocketAddress hoststring = cluster().httpAddresses()[node];
