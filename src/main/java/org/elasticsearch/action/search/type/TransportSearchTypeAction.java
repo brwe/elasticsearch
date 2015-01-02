@@ -349,7 +349,7 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
             firstResults.set(shardIndex, result);
 
             if (logger.isTraceEnabled()) {
-                logger.trace("got first-phase result from {}", result != null ? result.shardTarget() : null);
+                logger.trace("got first-phase result from {}({})", result != null ? result.shardTarget() : null, shard.primary() ? "primary" : "replica");
             }
 
             // clean a previous error on this shard group (note, this code will be serialized on the same shardIndex value level

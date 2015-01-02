@@ -34,6 +34,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.discovery.Discovery;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.elasticsearch.test.transport.MockTransportService;
 import org.elasticsearch.transport.*;
 import org.junit.Test;
@@ -50,6 +51,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 
 @ElasticsearchIntegrationTest.ClusterScope(scope = ElasticsearchIntegrationTest.Scope.SUITE)
+@TestLogging("action.search.type:TRACE")
 public class ExceptionRetryTests extends ElasticsearchIntegrationTest {
 
     @Override
