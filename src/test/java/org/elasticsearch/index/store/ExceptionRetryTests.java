@@ -58,7 +58,7 @@ public class ExceptionRetryTests extends ElasticsearchIntegrationTest {
     protected Settings nodeSettings(int nodeOrdinal) {
         return ImmutableSettings.builder()
                 .put(super.nodeSettings(nodeOrdinal)).put("gateway.type", "local")
-                .put(TransportModule.TRANSPORT_SERVICE_TYPE_KEY, MockTransportService.class.getName())
+                .put(TransportModule.TRANSPORT_SERVICE_TYPE_KEY, MockTransportServiceWithExceptionOnResponse.class.getName())
                 .build();
     }
 
@@ -76,7 +76,7 @@ public class ExceptionRetryTests extends ElasticsearchIntegrationTest {
         assertAcked(client().admin().indices().prepareCreate("index"));
         ensureGreen("index");
 
-        //create a transport service that throws a ConnectTransportException for one bulk request and therefore triggers a retry.
+        /*//create a transport service that throws a ConnectTransportException for one bulk request and therefore triggers a retry.
         for (NodeStats dataNode : nodeStats.getNodes()) {
             MockTransportService mockTransportService = ((MockTransportService) internalCluster().getInstance(TransportService.class, dataNode.getNode().name()));
             mockTransportService.addDelegate(internalCluster().getInstance(Discovery.class, unluckyNode.getNode().name()).localNode(), new MockTransportService.DelegateTransport(mockTransportService.original()) {
@@ -91,7 +91,7 @@ public class ExceptionRetryTests extends ElasticsearchIntegrationTest {
                     }
                 }
             });
-        }
+        }*/
 
         BulkRequestBuilder bulkBuilder = client().prepareBulk();
         for (int i = 0; i < numDocs; i++) {
