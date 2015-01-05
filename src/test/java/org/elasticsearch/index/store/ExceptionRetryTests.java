@@ -118,10 +118,9 @@ public class ExceptionRetryTests extends ElasticsearchIntegrationTest {
         for (int i = 0; i < searchResponse.getHits().getHits().length; i++) {
             if (!uniqueIds.add(searchResponse.getHits().getHits()[i].getId())) {
                 if (!found_duplicate_already) {
-                    logger.info("found a duplicate id {}:", searchResponse.getHits().getHits()[i].getId());
                     SearchResponse dupIdResponse = client().prepareSearch("index").setQuery(termQuery("_id", searchResponse.getHits().getHits()[i].getId())).setExplain(true).get();
                     assertThat(dupIdResponse.getHits().totalHits(), greaterThan(1l));
-
+                    logger.info("found a duplicate id:");
                     for (SearchHit hit : dupIdResponse.getHits()) {
                         logger.info("Doc {} was found on shard {}", hit.getId(), hit.getShard().getShardId());
                     }
