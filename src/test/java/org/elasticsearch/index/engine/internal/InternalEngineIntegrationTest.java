@@ -23,16 +23,23 @@ import org.elasticsearch.action.admin.indices.segments.IndexSegments;
 import org.elasticsearch.action.admin.indices.segments.IndexShardSegments;
 import org.elasticsearch.action.admin.indices.segments.IndicesSegmentResponse;
 import org.elasticsearch.action.admin.indices.segments.ShardSegments;
+import org.elasticsearch.action.delete.DeleteRequestBuilder;
+import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.index.engine.EngineConfig;
 import org.elasticsearch.index.engine.Segment;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
+import static org.hamcrest.CoreMatchers.equalTo;
 
 public class InternalEngineIntegrationTest extends ElasticsearchIntegrationTest {
 
@@ -89,5 +96,75 @@ public class InternalEngineIntegrationTest extends ElasticsearchIntegrationTest 
             }
         }
         return segmentSet;
+    }
+
+    @Test
+    @TestLogging("org.elasticsearch.action.search:TRACE,org.elasticsearch.search:TRACE")
+    public void testConcurrentIndexDeletes() throws InterruptedException {
+        client().admin().indices().prepareCreate("test").setSettings(ImmutableSettings.settingsBuilder().put("index.number_of_replicas", maximumNumberOfReplicas())).get();
+        ensureGreen("test");
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        List<Thread> indexThreads = new ArrayList<>();
+        final IndexRequestBuilder indexRequest = client().prepareIndex().setId("1").setType("doc").setIndex("test").setSource("{\"foo\":\"bar\"}");
+        final DeleteRequestBuilder deleteRequest = client().prepareDelete("test", "doc", "1");
+        indexThreads.add(new Thread() {
+            public void run() {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    indexRequest.get();
+                } catch (Exception e) {
+                    logger.info("Caught an exception while indexing", e);
+                }
+            }
+        });
+        indexThreads.add(new Thread() {
+            public void run() {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    indexRequest.get();
+                } catch (Exception e) {
+                    logger.info("Caught an exception while indexing", e);
+                }
+            }
+        });
+        indexThreads.add(new Thread() {
+            public void run() {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                deleteRequest.get();
+            }
+        });
+        for (Thread t : indexThreads) {
+            t.start();
+        }
+        latch.countDown();
+        for (Thread t : indexThreads) {
+            t.join();
+        }
+        flush("test");
+        logger.info("Get search response from primary");
+        SearchResponse primaryResponse = client().prepareSearch("test").setQuery(termQuery("_id", "1")).setPreference("_primary").setVersion(true).get();
+        for (int i = 0; i< 10; i++) {
+            logger.info("Get search response from other");
+            SearchResponse otherResponse = client().prepareSearch("test").setQuery(termQuery("_id", "1")).setVersion(true).get();
+            assertThat(primaryResponse.getHits().totalHits(), equalTo(otherResponse.getHits().totalHits()));
+            if (primaryResponse.getHits().getTotalHits() == 1) {
+                logger.info("Checking version of response");
+                assertThat(primaryResponse.getHits().getAt(0).version(), equalTo(otherResponse.getHits().getAt(0).version()));
+            }
+        }
+
     }
 }
