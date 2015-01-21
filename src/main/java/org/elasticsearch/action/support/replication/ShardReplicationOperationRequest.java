@@ -48,11 +48,20 @@ public abstract class ShardReplicationOperationRequest<T extends ShardReplicatio
     private boolean threadedOperation = true;
     private ReplicationType replicationType = ReplicationType.DEFAULT;
     private WriteConsistencyLevel consistencyLevel = WriteConsistencyLevel.DEFAULT;
-    private volatile boolean canHaveDuplicates = false;
 
     protected ShardReplicationOperationRequest() {
 
     }
+
+    public boolean isRetry() {
+        return isRetry;
+    }
+
+    public void setRetry(boolean isRetry) {
+        this.isRetry = isRetry;
+    }
+
+    private volatile boolean isRetry = false;
 
     /**
      * Creates a new request that inherits headers and context from the request provided as argument.
@@ -79,17 +88,6 @@ public abstract class ShardReplicationOperationRequest<T extends ShardReplicatio
         this.threadedOperation = request.operationThreaded();
         this.replicationType = request.replicationType();
         this.consistencyLevel = request.consistencyLevel();
-    }
-
-    void setCanHaveDuplicates() {
-        this.canHaveDuplicates = true;
-    }
-
-    /**
-     * Is this request can potentially be dup on a single shard.
-     */
-    public boolean canHaveDuplicates() {
-        return canHaveDuplicates;
     }
 
     /**
@@ -201,7 +199,7 @@ public abstract class ShardReplicationOperationRequest<T extends ShardReplicatio
         consistencyLevel = WriteConsistencyLevel.fromId(in.readByte());
         timeout = TimeValue.readTimeValue(in);
         index = in.readSharedString();
-        canHaveDuplicates = in.readBoolean();
+        isRetry = in.readBoolean();
         // no need to serialize threaded* parameters, since they only matter locally
     }
 
@@ -212,7 +210,7 @@ public abstract class ShardReplicationOperationRequest<T extends ShardReplicatio
         out.writeByte(consistencyLevel.id());
         timeout.writeTo(out);
         out.writeSharedString(index);
-        out.writeBoolean(canHaveDuplicates);
+        out.writeBoolean(isRetry);
     }
 
     /**

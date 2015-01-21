@@ -24,6 +24,7 @@ import org.elasticsearch.ElasticsearchIllegalStateException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.*;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.TransportAction;
@@ -440,7 +441,6 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                             if (exp.unwrapCause() instanceof ConnectTransportException || exp.unwrapCause() instanceof NodeClosedException ||
                                     retryPrimaryException(exp)) {
                                 primaryOperationStarted.set(false);
-                                internalRequest.request().setCanHaveDuplicates();
                                 // we already marked it as started when we executed it (removed the listener) so pass false
                                 // to re-add to the cluster listener
                                 logger.trace("received an error from node the primary was assigned to ({}), scheduling a retry", exp.getMessage());
@@ -470,6 +470,9 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
             // make it threaded operation so we fork on the discovery listener thread
             internalRequest.request().beforeLocalFork();
             internalRequest.request().operationThreaded(true);
+            if (internalRequest.request() instanceof ShardReplicationOperationRequest) {
+                ((ShardReplicationOperationRequest)internalRequest.request()).setRetry(true);
+            }
 
             observer.waitForNextChange(new ClusterStateObserver.Listener() {
                 @Override
@@ -500,7 +503,6 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                 Tuple<Response, ReplicaRequest> primaryResponse = shardOperationOnPrimary(clusterState, por);
                 performReplicas(por, primaryResponse);
             } catch (Throwable e) {
-                internalRequest.request.setCanHaveDuplicates();
                 // shard has not been allocated yet, retry it here
                 if (retryPrimaryException(e)) {
                     primaryOperationStarted.set(false);
@@ -561,13 +563,9 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                     }
                 }
                 shardIt.reset();
-                internalRequest.request().setCanHaveDuplicates(); // safe side, cluster state changed, we might have dups
             } else {
                 shardIt.reset();
                 while ((shard = shardIt.nextOrNull()) != null) {
-                    if (shard.state() != ShardRoutingState.STARTED) {
-                        internalRequest.request().setCanHaveDuplicates();
-                    }
                     if (!shard.primary() && shard.unassigned()) {
                         numberOfUnassignedReplicas++;
                     }
