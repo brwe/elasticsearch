@@ -33,6 +33,7 @@ import org.elasticsearch.index.mapper.internal.SourceFieldMapper;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchParseElement;
 import org.elasticsearch.search.SearchPhase;
+import org.elasticsearch.search.fetch.analyzed_text.AnalyzedTextFetchSubPhase;
 import org.elasticsearch.search.fetch.explain.ExplainFetchSubPhase;
 import org.elasticsearch.search.fetch.fielddata.FieldDataFieldsFetchSubPhase;
 import org.elasticsearch.search.fetch.matchedqueries.MatchedQueriesFetchSubPhase;
@@ -62,9 +63,9 @@ public class FetchPhase implements SearchPhase {
     @Inject
     public FetchPhase(HighlightPhase highlightPhase, ScriptFieldsFetchSubPhase scriptFieldsPhase, PartialFieldsFetchSubPhase partialFieldsPhase,
                       MatchedQueriesFetchSubPhase matchedQueriesPhase, ExplainFetchSubPhase explainPhase, VersionFetchSubPhase versionPhase,
-                      FetchSourceSubPhase fetchSourceSubPhase, FieldDataFieldsFetchSubPhase fieldDataFieldsFetchSubPhase) {
+                      FetchSourceSubPhase fetchSourceSubPhase, FieldDataFieldsFetchSubPhase fieldDataFieldsFetchSubPhase, AnalyzedTextFetchSubPhase analyzedTextFetchSubPhase) {
         this.fetchSubPhases = new FetchSubPhase[]{scriptFieldsPhase, partialFieldsPhase, matchedQueriesPhase, explainPhase, highlightPhase,
-                fetchSourceSubPhase, versionPhase, fieldDataFieldsFetchSubPhase};
+                fetchSourceSubPhase, versionPhase, fieldDataFieldsFetchSubPhase, analyzedTextFetchSubPhase};
     }
 
     @Override

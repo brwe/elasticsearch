@@ -47,6 +47,7 @@ import org.elasticsearch.index.query.ParsedQuery;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.index.similarity.SimilarityService;
+import org.elasticsearch.index.termvectors.ShardTermVectorService;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchShardTarget;
@@ -54,6 +55,7 @@ import org.elasticsearch.search.aggregations.SearchContextAggregations;
 import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.facet.SearchContextFacets;
 import org.elasticsearch.search.fetch.FetchSearchResult;
+import org.elasticsearch.search.fetch.analyzed_text.AnalyzedTextContext;
 import org.elasticsearch.search.fetch.fielddata.FieldDataFieldsContext;
 import org.elasticsearch.search.fetch.partial.PartialFieldsContext;
 import org.elasticsearch.search.fetch.script.ScriptFieldsContext;
@@ -165,6 +167,15 @@ public abstract class SearchContext implements Releasable {
     public abstract void highlight(SearchContextHighlight highlight);
 
     public abstract SuggestionSearchContext suggest();
+
+    public ShardTermVectorService termVectorService(int shardId) {
+        throw new UnsupportedOperationException("Really? term vectors in p/c inner hits? You guys are nuts...");
+    }
+
+    public AnalyzedTextContext analyzedTextFields() {
+        throw new UnsupportedOperationException("Really? analyzed text in p/c inner hits? You guys are nuts...");
+    }
+
 
     public abstract void suggest(SuggestionSearchContext suggest);
 
@@ -367,6 +378,10 @@ public abstract class SearchContext implements Releasable {
     public abstract SearchContext useSlowScroll(boolean useSlowScroll);
 
     public abstract Counter timeEstimateCounter();
+
+    public boolean hasAnalyzedTextFields() {
+        return analyzedTextFields() != null;
+    }
 
     /**
      * The life time of an object that is used during search execution.

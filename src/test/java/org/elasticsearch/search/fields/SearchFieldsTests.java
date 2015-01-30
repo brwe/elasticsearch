@@ -19,7 +19,9 @@
 
 package org.elasticsearch.search.fields;
 
+import com.google.common.collect.Lists;
 import org.apache.lucene.util.BytesRef;
+import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchPhaseExecutionException;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -31,17 +33,25 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Test;
 
 import java.util.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import static org.elasticsearch.client.Requests.refreshRequest;
@@ -501,6 +511,38 @@ public class SearchFieldsTests extends ElasticsearchIntegrationTest {
         assertHitCount(searchResponse, 1);
         Map<String,SearchHitField> fields = searchResponse.getHits().getHits()[0].getFields();
         assertThat((String)fields.get("test_field").value(), equalTo("foobar"));
+    }
+
+    @Test
+    public void testBasicAnalyzedText() throws ExecutionException, InterruptedException {
+        createIndex("test");
+        indexRandom(true, client().prepareIndex("test", "type", "1").setSource("test_field", "the quick brown brown fox"));
+        refresh();
+        SearchResponse searchResponse = client().prepareSearch("test").setTypes("type").setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [{\"field\":\"test_field\",\"idf_threshold\": 0, \"df_threshold\": 0}]}"))).get();
+        assertHitCount(searchResponse, 1);
+        Map<String,SearchHitField> fields = searchResponse.getHits().getHits()[0].getFields();
+        assertThat((String)fields.get("test_field").value(), equalTo(null));
+    }
+
+    @Test
+    @TestLogging("search.fetch.analyzed_text:TRACE")
+    public void testBasicAnalyzedTextWithResult() throws ExecutionException, InterruptedException, IOException {
+        XContentBuilder mapping = jsonBuilder().startObject().startObject("type")
+                .startObject("properties")
+                .startObject("test_field")
+                .field("type", "string")
+                .field("term_vector", "with_positions_offsets_payloads")
+                .endObject()
+                .endObject()
+                .endObject().endObject();
+        assertAcked(prepareCreate("test").addMapping("type", mapping));
+        indexRandom(true, client().prepareIndex("test", "type", "1").setSource("test_field", "the, QUICK brown - brown fox"));
+        refresh();
+        SearchResponse searchResponse = client().prepareSearch("test").setTypes("type").setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [{\"field\":\"test_field\",\"idf_threshold\": -10, \"df_threshold\": 0}]}"))).get();
+        assertHitCount(searchResponse, 1);
+        Map<String,SearchHitField> fields = searchResponse.getHits().getHits()[0].getFields();
+        String[] expected = {"the", "quick", "brown", "brown", "fox"};
+        assertArrayEquals(fields.get("test_field").values().toArray(new String[5]), expected);
     }
 
     @Test(expected = SearchPhaseExecutionException.class)

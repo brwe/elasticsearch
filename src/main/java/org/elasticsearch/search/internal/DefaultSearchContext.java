@@ -42,8 +42,8 @@ import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.index.analysis.AnalysisService;
 import org.elasticsearch.index.cache.docset.DocSetCache;
 import org.elasticsearch.index.cache.filter.FilterCache;
-import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.cache.fixedbitset.FixedBitSetFilterCache;
+import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.fielddata.IndexFieldDataService;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.FieldMappers;
@@ -54,6 +54,7 @@ import org.elasticsearch.index.query.ParsedQuery;
 import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.index.similarity.SimilarityService;
+import org.elasticsearch.index.termvectors.ShardTermVectorService;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchShardTarget;
@@ -61,6 +62,7 @@ import org.elasticsearch.search.aggregations.SearchContextAggregations;
 import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.facet.SearchContextFacets;
 import org.elasticsearch.search.fetch.FetchSearchResult;
+import org.elasticsearch.search.fetch.analyzed_text.AnalyzedTextContext;
 import org.elasticsearch.search.fetch.fielddata.FieldDataFieldsContext;
 import org.elasticsearch.search.fetch.partial.PartialFieldsContext;
 import org.elasticsearch.search.fetch.script.ScriptFieldsContext;
@@ -135,6 +137,7 @@ public class DefaultSearchContext extends SearchContext {
 
     private List<String> fieldNames;
     private FieldDataFieldsContext fieldDataFields;
+    private AnalyzedTextContext analyzedTextFields;
     private ScriptFieldsContext scriptFields;
     private PartialFieldsContext partialFields;
     private FetchSourceContext fetchSourceContext;
@@ -385,6 +388,14 @@ public class DefaultSearchContext extends SearchContext {
         return this.fieldDataFields;
     }
 
+    @Override
+    public AnalyzedTextContext analyzedTextFields() {
+        if (analyzedTextFields == null) {
+            analyzedTextFields = new AnalyzedTextContext();
+        }
+        return this.analyzedTextFields;
+    }
+
     public boolean hasScriptFields() {
         return scriptFields != null;
     }
@@ -427,6 +438,10 @@ public class DefaultSearchContext extends SearchContext {
     public SearchContext fetchSourceContext(FetchSourceContext fetchSourceContext) {
         this.fetchSourceContext = fetchSourceContext;
         return this;
+    }
+
+    public ShardTermVectorService termVectorService(int shardId) {
+        return indexService.shard(shardId).termVectorService();
     }
 
     public ContextIndexSearcher searcher() {
