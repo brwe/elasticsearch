@@ -96,6 +96,7 @@ public class DocumentMapperParser extends AbstractIndexComponent {
                 .put(IpFieldMapper.CONTENT_TYPE, new IpFieldMapper.TypeParser())
                 .put(StringFieldMapper.CONTENT_TYPE, new StringFieldMapper.TypeParser())
                 .put(TokenCountFieldMapper.CONTENT_TYPE, new TokenCountFieldMapper.TypeParser())
+                .put(AnalyzedTextFieldMapper.CONTENT_TYPE, new AnalyzedTextFieldMapper.TypeParser())
                 .put(ObjectMapper.CONTENT_TYPE, new ObjectMapper.TypeParser())
                 .put(ObjectMapper.NESTED_CONTENT_TYPE, new ObjectMapper.TypeParser())
                 .put(TypeParsers.MULTI_FIELD_CONTENT_TYPE, TypeParsers.multiFieldConverterTypeParser)

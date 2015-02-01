@@ -55,6 +55,7 @@ public class AnalyzedTextParseElement implements SearchParseElement {
                 String analyzedFieldName = null;
                 float idf_threshold = 0;
                 float df_threshold = 0;
+                String tokenCountField = null;
                 while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
                     String fieldName;
                     if (token == XContentParser.Token.FIELD_NAME) {
@@ -70,12 +71,14 @@ public class AnalyzedTextParseElement implements SearchParseElement {
                         idf_threshold = parser.floatValue();
                     } else if (fieldName.equals("df_threshold")) {
                         df_threshold = parser.floatValue();
-                    }else {
+                    } else if (fieldName.equals("token_count_field")) {
+                        tokenCountField = parser.text();
+                    } else {
                         throw new ElasticsearchParseException("no field with name " + fieldName + "known");
                     }
 
                 }
-                context.analyzedTextFields().add(new AnalyzedTextContext.AnalyzedTextField(analyzedFieldName, idf_threshold, df_threshold));
+                context.analyzedTextFields().add(new AnalyzedTextContext.AnalyzedTextField(analyzedFieldName, idf_threshold, df_threshold, tokenCountField));
             }
         } else {
             throw new ElasticsearchIllegalStateException("Expected START_ARRAY but got " + token);

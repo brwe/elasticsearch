@@ -30,6 +30,8 @@ import org.elasticsearch.action.termvector.TermVectorResponse;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.index.fielddata.AtomicFieldData;
+import org.elasticsearch.index.fielddata.ScriptDocValues;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.termvectors.ShardTermVectorService;
 import org.elasticsearch.search.SearchHitField;
@@ -126,16 +128,29 @@ public class AnalyzedTextFetchSubPhase implements FetchSubPhase {
             TermVectorResponse termVectorsResponse = termVectorsService.getTermVector(new TermVectorRequest(context.shardTarget().index(), hitContext.hit().type(), hitContext.hit().getId()).termStatistics(true), context.shardTarget().index());
             try {
                 if (termVectorsResponse.isExists() && termVectorsResponse.getFields().size() != 0) {
+
+                    String tokenCountField = field.getTokenCountField();
+                    if (tokenCountField != null) {
+                        FieldMapper mapper = context.mapperService().smartNameFieldMapper(tokenCountField);
+                        if (mapper != null) {
+                            AtomicFieldData data = context.fieldData().getForField(mapper).load(hitContext.readerContext());
+                            ScriptDocValues values = data.getScriptValues();
+                            values.setNextDocId(hitContext.docId());
+                            text = new String[((Number)values.getValues().get(0)).intValue()];
+                        }
+                    }
                     final CharsRefBuilder spare = new CharsRefBuilder();
                     Terms terms = termVectorsResponse.getFields().terms(field.name());
                     TermsEnum termIter = terms.iterator(null);
                     BytesRef term = termIter.next();
                     DocsAndPositionsEnum posEnum;
                     while (term != null) {
-                        float idf = (float) Math.log(terms.getDocCount() / termIter.docFreq());
+                        float idf = (float) terms.getDocCount() / termIter.docFreq();
                         spare.copyUTF8Bytes(term);
-                        logger.trace("term: {}, idfthreshold: {}, idf: {}", spare.toString(), field.getIdfThreshold(), idf);
-                        logger.trace("term: {}, dfthreshold: {}, df: {}", spare.toString(), field.getDfThreshold(), termIter.docFreq());
+                        if (logger.isTraceEnabled()) {
+                            logger.trace("term: {}, idfthreshold: {}, idf: {}", spare.toString(), field.getIdfThreshold(), Math.log(idf));
+                            logger.trace("term: {}, dfthreshold: {}, df: {}", spare.toString(), field.getDfThreshold(), termIter.docFreq());
+                        }
                         if ((idf > field.getIdfThreshold()) && (termIter.docFreq() > field.getDfThreshold())) {
                             posEnum = termIter.docsAndPositions(null, null);
                             for (int i = 0; i < posEnum.freq(); i++) {
@@ -145,7 +160,7 @@ public class AnalyzedTextFetchSubPhase implements FetchSubPhase {
                         }
                         term = termIter.next();
                     }
-                    List<String> cleanText = new ArrayList<>();
+                    List<String> cleanText = new ArrayList<>(text.length);
                     for (String s : text) {
                         if (s != null) {
                             cleanText.add(s);

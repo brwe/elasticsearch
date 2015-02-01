@@ -188,11 +188,11 @@ public class StringFieldMapper extends AbstractFieldMapper<String> implements Al
         }
     }
 
-    private String nullValue;
-    private Boolean includeInAll;
+    protected String nullValue;
+    Boolean includeInAll;
     private int positionOffsetGap;
     private NamedAnalyzer searchQuotedAnalyzer;
-    private int ignoreAbove;
+    int ignoreAbove;
     private final FieldType defaultFieldType;
 
     protected StringFieldMapper(Names names, float boost, FieldType fieldType,FieldType defaultFieldType, Boolean docValues,

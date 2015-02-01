@@ -145,6 +145,10 @@ public final class MapperBuilders {
         return new TokenCountFieldMapper.Builder(name);
     }
 
+    public static AnalyzedTextFieldMapper.Builder analyzedTextField(String name) {
+        return new AnalyzedTextFieldMapper.Builder(name);
+    }
+
     public static LongFieldMapper.Builder longField(String name) {
         return new LongFieldMapper.Builder(name);
     }

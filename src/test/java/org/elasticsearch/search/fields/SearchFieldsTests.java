@@ -545,6 +545,38 @@ public class SearchFieldsTests extends ElasticsearchIntegrationTest {
         assertArrayEquals(fields.get("test_field").values().toArray(new String[5]), expected);
     }
 
+    @Test
+    @TestLogging("search.fetch.analyzed_text:TRACE")
+    public void testBasicAnalyzedTextWithResultAndTokenCount() throws ExecutionException, InterruptedException, IOException {
+        XContentBuilder mapping = jsonBuilder().startObject().startObject("type")
+                .startObject("properties")
+                .startObject("test_field")
+                .field("type", "string")
+                .field("term_vector", "with_positions_offsets_payloads")
+                .startObject("fields")
+                .startObject("token_count")
+                .field("type", "token_count")
+                .field("analyzer", "standard")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject().endObject();
+        assertAcked(prepareCreate("test").addMapping("type", mapping));
+        indexRandom(true, client().prepareIndex("test", "type", "1").setSource("test_field", "the, QUICK brown - brown fox"));
+        refresh();
+        SearchResponse searchResponse = client().prepareSearch("test").setTypes("type").setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [" +
+                "{\"field\":\"test_field\"," +
+                "\"idf_threshold\": -10, " +
+                "\"df_threshold\": 0, " +
+                "\"token_count_field\":\"test_field.token_count\"}" +
+                "]}"))).get();
+        assertHitCount(searchResponse, 1);
+        Map<String,SearchHitField> fields = searchResponse.getHits().getHits()[0].getFields();
+        String[] expected = {"the", "quick", "brown", "brown", "fox"};
+        assertArrayEquals(fields.get("test_field").values().toArray(new String[5]), expected);
+    }
+
     @Test(expected = SearchPhaseExecutionException.class)
     public void testInvalidFieldDataField() throws ExecutionException, InterruptedException {
         createIndex("test");

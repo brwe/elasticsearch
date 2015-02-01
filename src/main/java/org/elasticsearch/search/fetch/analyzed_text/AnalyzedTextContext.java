@@ -31,11 +31,13 @@ public class AnalyzedTextContext {
         private final String name;
         private double idfThreshold;
         private double dfThreshold;
+        private String tokenCountField;
 
-        public AnalyzedTextField(String name, double idfThreshold, double dfThreshold) {
+        public AnalyzedTextField(String name, double idfThreshold, double dfThreshold, String tokenCountField) {
             this.name = name;
-            this.idfThreshold = idfThreshold;
+            this.idfThreshold = Math.exp(idfThreshold);
             this.dfThreshold = dfThreshold;
+            this.tokenCountField = tokenCountField;
         }
 
         public String name() {
@@ -48,6 +50,10 @@ public class AnalyzedTextContext {
 
         public double getDfThreshold() {
             return dfThreshold;
+        }
+
+        public String getTokenCountField() {
+            return tokenCountField;
         }
     }
 
