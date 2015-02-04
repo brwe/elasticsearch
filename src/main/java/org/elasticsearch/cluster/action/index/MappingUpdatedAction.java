@@ -115,6 +115,10 @@ public class MappingUpdatedAction extends TransportMasterNodeOperationAction<Map
 
     public void updateMappingOnMaster(String index, DocumentMapper documentMapper, String indexUUID, MappingUpdateListener listener) {
         assert !documentMapper.type().equals(MapperService.DEFAULT_MAPPING) : "_default_ mapping should not be updated";
+
+        logger.debug("updating mapping on master with {}", documentMapper.refreshSource().toString());
+        logger.debug("stack: ", new Exception("test exception"));
+
         masterMappingUpdater.add(new MappingChange(documentMapper, index, indexUUID, listener));
     }
 
@@ -422,7 +426,7 @@ public class MappingUpdatedAction extends TransportMasterNodeOperationAction<Map
                             updateValue.notifyListeners(t);
                             continue;
                         }
-                        logger.trace("sending mapping updated to master: {}", mappingRequest);
+                        logger.debug("sending mapping updated to master: {}", mappingRequest);
                         execute(mappingRequest, new ActionListener<MappingUpdatedAction.MappingUpdatedResponse>() {
                             @Override
                             public void onResponse(MappingUpdatedAction.MappingUpdatedResponse mappingUpdatedResponse) {

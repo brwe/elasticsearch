@@ -297,6 +297,8 @@ public class IndexShardGateway extends AbstractIndexShardComponent implements Cl
             indexShard.store().decRef();
         }
         for (final String type : typesToUpdate) {
+            logger.debug("send update mapping on master for [{}] with source {}", type,indexService.mapperService().documentMapper(type).refreshSource().toString());
+            logger.debug("stack: ", new Exception("test exception"));
             final CountDownLatch latch = new CountDownLatch(1);
             mappingUpdatedAction.updateMappingOnMaster(indexService.index().name(), indexService.mapperService().documentMapper(type), indexService.indexUUID(), new MappingUpdatedAction.MappingUpdateListener() {
                 @Override
@@ -319,6 +321,7 @@ public class IndexShardGateway extends AbstractIndexShardComponent implements Cl
                         }
                     } catch (InterruptedException e) {
                         logger.debug("interrupted while waiting for mapping update");
+                        logger.debug("stack: ", e);
                         throw e;
                     }
                 }

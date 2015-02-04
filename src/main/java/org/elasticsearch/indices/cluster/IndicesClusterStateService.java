@@ -22,6 +22,7 @@ package org.elasticsearch.indices.cluster;
 import com.carrotsearch.hppc.IntOpenHashSet;
 import com.carrotsearch.hppc.ObjectContainer;
 import com.carrotsearch.hppc.cursors.ObjectCursor;
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.google.common.collect.Lists;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalStateException;
@@ -67,6 +68,7 @@ import org.elasticsearch.indices.recovery.RecoveryState;
 import org.elasticsearch.indices.recovery.RecoveryTarget;
 import org.elasticsearch.threadpool.ThreadPool;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -345,6 +347,17 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
     private void applyMappings(ClusterChangedEvent event) {
         // go over and update mappings
         for (IndexMetaData indexMetaData : event.state().metaData()) {
+            for (ObjectCursor<String> type : indexMetaData.getMappings().keys()) {
+                try {
+                    if (indexMetaData.getMappings().get(type.toString()) != null) {
+                        logger.info("applyMappings {}", indexMetaData.getMappings().get(type.toString()).getSourceAsMap().toString());
+                    } else {
+                        logger.info("applyMappings type mapping is empty");
+                    }
+                } catch (IOException e) {
+                    logger.debug("exception while looking at mappings", e);
+                }
+            }
             if (!indicesService.hasIndex(indexMetaData.index())) {
                 // we only create / update here
                 continue;
@@ -412,6 +425,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             if (!mapperService.hasMapping(mappingType)) {
                 if (logger.isDebugEnabled() && mappingSource.compressed().length < 512) {
                     logger.debug("[{}] adding mapping [{}], source [{}]", index, mappingType, mappingSource.string());
+                    logger.debug("stack: ", new Exception("test exception"));
                 } else if (logger.isTraceEnabled()) {
                     logger.trace("[{}] adding mapping [{}], source [{}]", index, mappingType, mappingSource.string());
                 } else {

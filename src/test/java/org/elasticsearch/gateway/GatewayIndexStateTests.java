@@ -98,6 +98,7 @@ public class GatewayIndexStateTests extends ElasticsearchIntegrationTest {
 
         logger.info("--> waiting for green status");
         ensureGreen();
+        logClusterState();
 
         ClusterStateResponse stateResponse = client().admin().cluster().prepareState().execute().actionGet();
         assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.OPEN));
@@ -186,6 +187,111 @@ public class GatewayIndexStateTests extends ElasticsearchIntegrationTest {
         logger.info("--> indexing a simple document");
         client().prepareIndex("test", "type1", "2").setSource("field1", "value1").execute().actionGet();
     }
+
+    @Test
+    public void testSimpleOpenCloseOneIndex() throws Exception {
+
+        logger.info("--> starting 2 nodes");
+        internalCluster().startNodesAsync(2).get();
+
+        logger.info("--> creating test index");
+        createIndex("test");
+
+        NumShards test = getNumShards("test");
+
+        logger.info("--> waiting for green status");
+        ensureGreen();
+        logClusterState();
+
+        ClusterStateResponse stateResponse = client().admin().cluster().prepareState().execute().actionGet();
+        assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.OPEN));
+        assertThat(stateResponse.getState().routingTable().index("test").shards().size(), equalTo(test.numPrimaries));
+        assertThat(stateResponse.getState().routingTable().index("test").shardsWithState(ShardRoutingState.STARTED).size(), equalTo(test.totalNumShards));
+
+        logger.info("--> indexing a simple document");
+        client().prepareIndex("test", "type1", "1").setSource("field1", "value1").execute().actionGet();
+        logger.info("--> closing test index...");
+        client().admin().indices().prepareClose("test").execute().actionGet();
+
+        stateResponse = client().admin().cluster().prepareState().execute().actionGet();
+        assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.CLOSE));
+        assertThat(stateResponse.getState().routingTable().index("test"), nullValue());
+
+        logger.info("--> verifying that the state is green");
+        ensureGreen();
+
+
+        logger.info("--> opening the first index again...");
+        client().admin().indices().prepareOpen("test").execute().actionGet();
+
+        logger.info("--> verifying that the state is green");
+        ensureGreen();
+
+        logger.info("--> restarting nodes...");
+        internalCluster().fullRestart();
+        logger.info("--> waiting for two nodes and green status");
+        ensureGreen();
+
+
+        waitForConcreteMappingsOnAll("test", "type1", "field1");
+/*
+        logger.info("--> opening the first index again...");
+        client().admin().indices().prepareOpen("test").execute().actionGet();
+
+        logger.info("--> verifying that the state is green");
+        ensureGreen();
+
+        stateResponse = client().admin().cluster().prepareState().execute().actionGet();
+        assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.OPEN));
+        assertThat(stateResponse.getState().routingTable().index("test").shards().size(), equalTo(test.numPrimaries));
+        assertThat(stateResponse.getState().routingTable().index("test").shardsWithState(ShardRoutingState.STARTED).size(), equalTo(test.totalNumShards));
+
+        logger.info("--> trying to get the indexed document on the first index");
+        GetResponse getResponse = client().prepareGet("test", "type1", "1").execute().actionGet();
+        assertThat(getResponse.isExists(), equalTo(true));
+
+        logger.info("--> closing test index...");
+        client().admin().indices().prepareClose("test").execute().actionGet();
+        stateResponse = client().admin().cluster().prepareState().execute().actionGet();
+        assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.CLOSE));
+        assertThat(stateResponse.getState().routingTable().index("test"), nullValue());
+
+        logger.info("--> restarting nodes...");
+        internalCluster().fullRestart();
+        logger.info("--> waiting for two nodes and green status");
+        ensureGreen();
+
+        stateResponse = client().admin().cluster().prepareState().execute().actionGet();
+        assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.CLOSE));
+        assertThat(stateResponse.getState().routingTable().index("test"), nullValue());
+
+        logger.info("--> trying to index into a closed index ...");
+        try {
+            client().prepareIndex("test", "type1", "1").setSource("field1", "value1").setTimeout("1s").execute().actionGet();
+            fail();
+        } catch (IndexClosedException e) {
+            // all is well
+        }
+
+        logger.info("--> opening index...");
+        client().admin().indices().prepareOpen("test").execute().actionGet();
+
+        logger.info("--> waiting for green status");
+        ensureGreen();
+
+        stateResponse = client().admin().cluster().prepareState().execute().actionGet();
+        assertThat(stateResponse.getState().metaData().index("test").state(), equalTo(IndexMetaData.State.OPEN));
+        assertThat(stateResponse.getState().routingTable().index("test").shards().size(), equalTo(test.numPrimaries));
+        assertThat(stateResponse.getState().routingTable().index("test").shardsWithState(ShardRoutingState.STARTED).size(), equalTo(test.totalNumShards));
+
+        logger.info("--> trying to get the indexed document on the first round (before close and shutdown)");
+        getResponse = client().prepareGet("test", "type1", "1").execute().actionGet();
+        assertThat(getResponse.isExists(), equalTo(true));
+
+        logger.info("--> indexing a simple document");
+        client().prepareIndex("test", "type1", "2").setSource("field1", "value1").execute().actionGet();*/
+    }
+
 
     @Test
     public void testJustMasterNode() throws Exception {

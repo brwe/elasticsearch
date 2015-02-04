@@ -876,6 +876,15 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
                         List<String> matches = documentMapper.mappers().simpleMatchToFullName(fieldName);
                         assertThat("field " + fieldName + " doesn't exists on " + node, matches, Matchers.not(emptyIterable()));
                     }
+                    GetMappingsResponse mappingsResponse = internalCluster().client(node).admin().indices().prepareGetMappings(index).addTypes(type).setLocal(true).get();
+                    for (String fieldName : fieldNames) {
+                        try {
+                            Map<String, Object> sourceAsMap = mappingsResponse.mappings().get(index).get(type).getSourceAsMap();
+                            assertNotNull(((LinkedHashMap) sourceAsMap.get("properties")).get(fieldName));
+                        } catch (IOException e) {
+                            fail("IOException while looking for field name " + fieldName + " in index/type " + index + "/" + type + " on node " + node);
+                        }
+                    }
                 }
             }
         });

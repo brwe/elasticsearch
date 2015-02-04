@@ -310,6 +310,7 @@ public class MetaDataMappingService extends AbstractComponent {
                     // build the updated mapping source
                     if (logger.isDebugEnabled()) {
                         logger.debug("[{}] update_mapping [{}] (dynamic) with source [{}]", index, type, updatedMapper.mappingSource());
+                        logger.debug("stack: ", new Exception("test exception"));
                     } else if (logger.isInfoEnabled()) {
                         logger.info("[{}] update_mapping [{}] (dynamic)", index, type);
                     }
