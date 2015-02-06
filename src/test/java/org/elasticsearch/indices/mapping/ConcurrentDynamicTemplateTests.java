@@ -24,11 +24,13 @@ import com.google.common.collect.Sets;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.fielddata.FieldDataType;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
@@ -43,6 +45,7 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertHitCount;
 import static org.hamcrest.Matchers.emptyIterable;
+import static org.hamcrest.Matchers.equalTo;
 
 public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest {
 
@@ -92,6 +95,123 @@ public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest
 
         }
     }
+
+
+
+    @Test // see #3544
+    public void testConcurrentDynamicMappingIssue3544() throws Exception {
+
+        String setingsSource =
+                "    {\"analysis\": {\n" +
+                "      \"analyzer\": {\n" +
+                "        \"nGram_analyzer\": {\n" +
+                "          \"alias\": \"default_index\",\n" +
+                "          \"tokenizer\": \"nGram_tokenizer\",\n" +
+                "          \"filter\": [\n" +
+                "            \"lowercase\",\n" +
+                "            \"asciifolding\"\n" +
+                "          ]\n" +
+                "        },\n" +
+                "        \"_autocomplete_de\": {\n" +
+                "          \"tokenizer\": \"standard\",\n" +
+                "          \"filter\": [\n" +
+                "            \"lowercase\",\n" +
+                "            \"stopwords_de_filter\"\n" +
+                "          ]\n" +
+                "        },\n" +
+                "        \"_autocomplete_en\": {\n" +
+                "          \"tokenizer\": \"standard\",\n" +
+                "          \"filter\": [\n" +
+                "            \"lowercase\",\n" +
+                "            \"stopwords_en_filter\"\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      },\n" +
+                "      \"tokenizer\": {\n" +
+                "        \"nGram_tokenizer\": {\n" +
+                "          \"type\": \"nGram\",\n" +
+                "          \"min_gram\": 3,\n" +
+                "          \"max_gram\": 25,\n" +
+                "          \"token_chars\": [ \"letter\", \"digit\", \"symbol\", \"punctuation\" ]\n" +
+                "        }\n" +
+                "      },\n" +
+                "      \"filter\": {\n" +
+                "        \"stopwords_de_filter\": {\n" +
+                "          \"type\": \"stop\",\n" +
+                "          \"stopwords\": \"_german_\"\n" +
+                "        },\n" +
+                "        \"stopwords_en_filter\": {\n" +
+                "          \"type\": \"stop\",\n" +
+                "          \"stopwords\": \"_english_\"\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }}\n" ;
+
+        String page_mapping= "{\n" +
+                "  \"page\": {\n" +
+                "    \"properties\": {\n" +
+                "      \"_lang\": {\n" +
+                "        \"type\": \"string\",\n" +
+                "        \"index\": \"not_analyzed\"\n" +
+                "      }\n" +
+                "    },\n" +
+                "    \"dynamic_templates\" : [\n" +
+                "      {\n" +
+                "        \"autocomplete_for_lang\" : {\n" +
+                "          \"match\" : \"_autocomplete_*\",\n" +
+                "          \"mapping\" : {\n" +
+                "            \"type\" : \"string\",\n" +
+                "            \"index_analyzer\" : \"{name}\",\n" +
+                "            \"search_analyzer\": \"standard\"\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"transform\": {\n" +
+                "      \"script\": \"if(ctx._source._lang instanceof String) { ctx._source['_autocomplete_' + ctx._source._lang] = autocomplete_fields.collect{ ctx._source[it] }; }\",\n" +
+                "      \"params\": {\n" +
+                "        \"autocomplete_fields\": [\"title\", \"content\"]\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        String doc = "{\n" +
+                "  \"_lang\": \"en\",\n" +
+                "  \"title\": \"elasticsearch dynamic template\",\n" +
+                "  \"content\": \"this is some content to reproduce the behavior\"\n" +
+                "}\n";
+        String searchSource = "{\n" +
+                "  \"query\": {\n" +
+                "    \"match_all\": { }\n" +
+                "  },\n" +
+                "  \"facets\" : {\n" +
+                "    \"all_autocomplete\" : {\n" +
+                "      \"terms\" : {\n" +
+                "        \"field\": \"_autocomplete_en\",\n" +
+                "        \"regex\": \"^s.*\", \n" +
+                "        \"size\": 5\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+        client().admin().indices().prepareCreate("test_dynamic_template").setSettings(setingsSource).get();
+
+        client().admin().indices().preparePutMapping("test_dynamic_template").setType("page").setSource(page_mapping).get();
+        ensureGreen();
+        for (int i = 0; i< 2; i++) {
+            client().prepareIndex("test_dynamic_template", "page").setSource(doc).get();
+            refresh();
+        }
+
+
+
+        SearchResponse response = client().prepareSearch("test_dynamic_template").setSource(searchSource).get();
+        assertThat(((TermsFacet)response.getFacets().facetsAsMap().get("all_autocomplete")).getEntries().size(), equalTo(1));
+
+
+    }
+
 
     @Test
     public void testDynamicMappingIntroductionPropagatesToAll() throws Exception {
