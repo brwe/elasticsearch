@@ -22,6 +22,7 @@ package org.elasticsearch.index.mapper.object;
 import com.google.common.collect.Maps;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.regex.Regex;
 import org.elasticsearch.index.mapper.ContentPath;
 import org.elasticsearch.index.mapper.MapperParsingException;
@@ -178,6 +179,7 @@ public class DynamicTemplate {
             } else if (value instanceof List) {
                 value = processList((List) value, name, dynamicType);
             } else if (value instanceof String) {
+                ESLoggerFactory.getRootLogger().info("XXX name is {}", name);
                 value = value.toString().replace("{name}", name).replace("{dynamic_type}", dynamicType).replace("{dynamicType}", dynamicType);
             }
             processedMap.put(key, value);

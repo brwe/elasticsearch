@@ -347,7 +347,7 @@ public class MapperService extends AbstractIndexComponent  {
                 if (result.hasConflicts()) {
                     // TODO: What should we do???
                     if (logger.isDebugEnabled()) {
-                        logger.debug("merging mapping for type [{}] resulted in conflicts: [{}]", mapper.type(), Arrays.toString(result.conflicts()));
+                        logger.info("merging mapping for type [{}] resulted in conflicts: [{}]", mapper.type(), Arrays.toString(result.conflicts()));
                     }
                 }
                 fieldDataService.onMappingUpdate();

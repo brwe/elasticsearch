@@ -143,8 +143,7 @@ public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest
                 "          \"match\" : \"_autocomplete_*\",\n" +
                 "          \"mapping\" : {\n" +
                 "            \"type\" : \"string\",\n" +
-                "            \"index_analyzer\" : \"{name}\",\n" +
-                "            \"search_analyzer\": \"standard\"\n" +
+                "            \"analyzer\" : \"{name}\"\n" +
                 "          }\n" +
                 "        }\n" +
                 "      }\n" +
