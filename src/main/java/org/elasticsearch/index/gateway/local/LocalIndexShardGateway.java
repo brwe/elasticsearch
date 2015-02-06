@@ -32,6 +32,7 @@ import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.engine.Engine;
+import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.gateway.IndexShardGateway;
 import org.elasticsearch.index.gateway.IndexShardGatewayRecoveryException;
 import org.elasticsearch.index.service.IndexService;
@@ -247,7 +248,13 @@ public class LocalIndexShardGateway extends AbstractIndexShardComponent implemen
                         break;
                     }
                     try {
-                        Engine.IndexingOperation potentialIndexOperation = indexShard.performRecoveryOperation(operation);
+                        Engine.IndexingOperation potentialIndexOperation;
+                        try {
+                            potentialIndexOperation = indexShard.performRecoveryOperation(operation);
+                        } catch (DuplicateIdException e) {
+                            potentialIndexOperation = e.getIndexOp();
+                            logger.info("DuplicateIdException for shard {} which is in state {} ", indexShard.shardId(), indexShard.state(), new DuplicateIdException());
+                        }
                         if (potentialIndexOperation != null && potentialIndexOperation.parsedDoc().mappingsModified()) {
                             if (!typesToUpdate.contains(potentialIndexOperation.docMapper().type())) {
                                 typesToUpdate.add(potentialIndexOperation.docMapper().type());

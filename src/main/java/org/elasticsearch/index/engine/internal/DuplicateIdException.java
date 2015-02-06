@@ -17,23 +17,30 @@
  * under the License.
  */
 
-package org.elasticsearch.transport;
+package org.elasticsearch.index.engine.internal;
 
-import org.elasticsearch.index.engine.internal.DuplicateIdException;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.index.engine.Engine;
+import org.elasticsearch.index.mapper.ParsedDocument;
 
 /**
- *
+ * Created by britta on 29.12.14.
  */
-public interface TransportRequestHandler<T extends TransportRequest> {
+public class DuplicateIdException extends Throwable {
+    private ParsedDocument parsedDoc = null;
+    private Engine.Create indexOperation;
+    private Engine.IndexingOperation indexOp;
 
-    T newInstance();
+    public DuplicateIdException setParsedDoc(ParsedDocument parsedDocument) {
+        this.parsedDoc=parsedDocument;
+        return this;
+    }
 
-    void messageReceived(T request, TransportChannel channel) throws Exception, DuplicateIdException;
+    public void setIndexOperation(Engine.Create indexOperation) {
+        this.indexOperation = indexOperation;
+    }
 
-    String executor();
-
-    /**
-     * See {@link org.elasticsearch.common.util.concurrent.AbstractRunnable#isForceExecution()}.
-     */
-    boolean isForceExecution();
+    public Engine.IndexingOperation getIndexOp() {
+        return indexOp;
+    }
 }

@@ -67,7 +67,6 @@ public class RestBulkAction extends BaseRestHandler {
 
         this.allowExplicitIndex = settings.getAsBoolean("rest.action.multi.allow_explicit_index", true);
     }
-
     @Override
     public void handleRequest(final RestRequest request, final RestChannel channel, final Client client) throws Exception {
         BulkRequest bulkRequest = Requests.bulkRequest();

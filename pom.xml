@@ -312,6 +312,11 @@
             <scope>compile</scope>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20141113</version>
+        </dependency>
 
         <!-- We don't use this since the publish pom is then messed up -->
         <!--

@@ -53,6 +53,7 @@ import org.elasticsearch.index.cache.id.IdCacheStats;
 import org.elasticsearch.index.codec.CodecService;
 import org.elasticsearch.index.deletionpolicy.SnapshotIndexCommit;
 import org.elasticsearch.index.engine.*;
+import org.elasticsearch.index.engine.internal.DuplicateIdException;
 import org.elasticsearch.index.fielddata.FieldDataStats;
 import org.elasticsearch.index.fielddata.IndexFieldDataService;
 import org.elasticsearch.index.fielddata.ShardFieldData;
@@ -378,15 +379,23 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
     }
 
     @Override
-    public ParsedDocument create(Engine.Create create) throws ElasticsearchException {
+    public ParsedDocument create(Engine.Create create) throws ElasticsearchException, DuplicateIdException {
+        DuplicateIdException ex = null;
         writeAllowed(create.origin());
         create = indexingService.preCreate(create);
         if (logger.isTraceEnabled()) {
             logger.trace("index [{}][{}]{}", create.type(), create.id(), create.docs());
         }
-        engine.create(create);
+         try {
+             engine.create(create);
+         } catch (DuplicateIdException e) {
+             ex = e;
+         }
         create.endTime(System.nanoTime());
         indexingService.postCreate(create);
+        if (ex != null) {
+            throw ex.setParsedDoc(create.parsedDoc());
+        }
         return create.parsedDoc();
     }
 
@@ -746,11 +755,12 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
      * Performs a single recovery operation, and returns the indexing operation (or null if its not an indexing operation)
      * that can then be used for mapping updates (for example) if needed.
      */
-    public Engine.IndexingOperation performRecoveryOperation(Translog.Operation operation) throws ElasticsearchException {
+    public Engine.IndexingOperation performRecoveryOperation(Translog.Operation operation) throws ElasticsearchException, DuplicateIdException {
         if (state != IndexShardState.RECOVERING) {
             throw new IndexShardNotRecoveringException(shardId, state);
         }
         Engine.IndexingOperation indexOperation = null;
+        DuplicateIdException ex = null;
         try {
             switch (operation.opType()) {
                 case CREATE:
@@ -759,7 +769,13 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
                             source(create.source()).type(create.type()).id(create.id())
                                     .routing(create.routing()).parent(create.parent()).timestamp(create.timestamp()).ttl(create.ttl()),
                             create.version(), create.versionType().versionTypeForReplicationAndRecovery(), Engine.Operation.Origin.RECOVERY, true, false);
-                    engine.create(engineCreate);
+                    try {
+                        engine.create(engineCreate);
+                    } catch (DuplicateIdException e) {
+                        ex= e;
+                        ex.setIndexOperation(engineCreate);
+                        logger.info("{}", ex);
+                    }
                     indexOperation = engineCreate;
                     break;
                 case SAVE:
@@ -800,6 +816,9 @@ public class InternalIndexShard extends AbstractIndexShardComponent implements I
             if (!hasIgnoreOnRecoveryException) {
                 throw e;
             }
+        }
+        if (ex != null ) {
+            throw ex;
         }
         return indexOperation;
     }

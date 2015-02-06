@@ -219,7 +219,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     protected static final BytesReference B_3 = new BytesArray(new byte[]{3});
 
     @Test
-    public void testSegments() throws Exception {
+    public void testSegments() throws Exception, DuplicateIdException {
         List<Segment> segments = engine.segments();
         assertThat(segments.isEmpty(), equalTo(true));
         assertThat(engine.segmentsStats().getCount(), equalTo(0l));
@@ -443,7 +443,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testSimpleOperations() throws Exception {
+    public void testSimpleOperations() throws Exception, DuplicateIdException {
         Engine.Searcher searchResult = engine.acquireSearcher("test");
         MatcherAssert.assertThat(searchResult, EngineSearcherTotalHitsMatcher.engineSearcherTotalHits(0));
         searchResult.close();
@@ -600,7 +600,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testSearchResultRelease() throws Exception {
+    public void testSearchResultRelease() throws Exception, DuplicateIdException {
         Engine.Searcher searchResult = engine.acquireSearcher("test");
         MatcherAssert.assertThat(searchResult, EngineSearcherTotalHitsMatcher.engineSearcherTotalHits(0));
         searchResult.close();
@@ -638,7 +638,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
     
     @Test
-    public void testFailEngineOnCorruption() {
+    public void testFailEngineOnCorruption() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocumentWithTextField(), Lucene.STANDARD_ANALYZER, B_1, false);
         engine.create(new Engine.Create(null, newUid("1"), doc));
         engine.flush(new Engine.Flush());
@@ -693,7 +693,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
 
 
     @Test
-    public void testSimpleRecover() throws Exception {
+    public void testSimpleRecover() throws Exception, DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocumentWithTextField(), Lucene.STANDARD_ANALYZER, B_1, false);
         engine.create(new Engine.Create(null, newUid("1"), doc));
         engine.flush(new Engine.Flush());
@@ -738,7 +738,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testRecoverWithOperationsBetweenPhase1AndPhase2() throws Exception {
+    public void testRecoverWithOperationsBetweenPhase1AndPhase2() throws Exception, DuplicateIdException {
         ParsedDocument doc1 = testParsedDocument("1", "1", "test", null, -1, -1, testDocumentWithTextField(), Lucene.STANDARD_ANALYZER, B_1, false);
         engine.create(new Engine.Create(null, newUid("1"), doc1));
         engine.flush(new Engine.Flush());
@@ -769,7 +769,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testRecoverWithOperationsBetweenPhase1AndPhase2AndPhase3() throws Exception {
+    public void testRecoverWithOperationsBetweenPhase1AndPhase2AndPhase3() throws Exception, DuplicateIdException {
         ParsedDocument doc1 = testParsedDocument("1", "1", "test", null, -1, -1, testDocumentWithTextField(), Lucene.STANDARD_ANALYZER, B_1, false);
         engine.create(new Engine.Create(null, newUid("1"), doc1));
         engine.flush(new Engine.Flush());
@@ -782,7 +782,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
             }
 
             @Override
-            public void phase2(Translog.Snapshot snapshot) throws EngineException {
+            public void phase2(Translog.Snapshot snapshot) throws EngineException, DuplicateIdException {
                 assertThat(snapshot.hasNext(), equalTo(true));
                 Translog.Create create = (Translog.Create) snapshot.next();
                 assertThat(snapshot.hasNext(), equalTo(false));
@@ -807,7 +807,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testVersioningNewCreate() {
+    public void testVersioningNewCreate() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocument(), Lucene.STANDARD_ANALYZER, B_1, false);
         Engine.Create create = new Engine.Create(null, newUid("1"), doc);
         engine.create(create);
@@ -819,7 +819,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testExternalVersioningNewCreate() {
+    public void testExternalVersioningNewCreate() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocument(), Lucene.STANDARD_ANALYZER, B_1, false);
         Engine.Create create = new Engine.Create(null, newUid("1"), doc, 12, VersionType.EXTERNAL, Engine.Operation.Origin.PRIMARY, 0);
         engine.create(create);
@@ -957,7 +957,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testVersioningDeleteConflict() {
+    public void testVersioningDeleteConflict() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocument(), Lucene.STANDARD_ANALYZER, B_1, false);
         Engine.Index index = new Engine.Index(null, newUid("1"), doc);
         engine.index(index);
@@ -1008,7 +1008,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testVersioningDeleteConflictWithFlush() {
+    public void testVersioningDeleteConflictWithFlush() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocument(), Lucene.STANDARD_ANALYZER, B_1, false);
         Engine.Index index = new Engine.Index(null, newUid("1"), doc);
         engine.index(index);
@@ -1065,7 +1065,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testVersioningCreateExistsException() {
+    public void testVersioningCreateExistsException() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocument(), Lucene.STANDARD_ANALYZER, B_1, false);
         Engine.Create create = new Engine.Create(null, newUid("1"), doc, Versions.MATCH_ANY, VersionType.INTERNAL, PRIMARY, 0);
         engine.create(create);
@@ -1081,7 +1081,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testVersioningCreateExistsExceptionWithFlush() {
+    public void testVersioningCreateExistsExceptionWithFlush() throws DuplicateIdException {
         ParsedDocument doc = testParsedDocument("1", "1", "test", null, -1, -1, testDocument(), Lucene.STANDARD_ANALYZER, B_1, false);
         Engine.Create create = new Engine.Create(null, newUid("1"), doc, Versions.MATCH_ANY, VersionType.INTERNAL, PRIMARY, 0);
         engine.create(create);
@@ -1246,7 +1246,7 @@ public class InternalEngineTests extends ElasticsearchTestCase {
     // sent to lucene.iw with log level TRACE:
 
     @Test
-    public void testIndexWriterInfoStream() {
+    public void testIndexWriterInfoStream() throws DuplicateIdException {
         MockAppender mockAppender = new MockAppender();
 
         Logger rootLogger = Logger.getRootLogger();
