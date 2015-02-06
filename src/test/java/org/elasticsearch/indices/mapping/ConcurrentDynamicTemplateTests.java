@@ -166,20 +166,12 @@ public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest
                 "          }\n" +
                 "        }\n" +
                 "      }\n" +
-                "    ],\n" +
-                "    \"transform\": {\n" +
-                "      \"script\": \"if(ctx._source._lang instanceof String) { ctx._source['_autocomplete_' + ctx._source._lang] = autocomplete_fields.collect{ ctx._source[it] }; }\",\n" +
-                "      \"params\": {\n" +
-                "        \"autocomplete_fields\": [\"title\", \"content\"]\n" +
-                "      }\n" +
-                "    }\n" +
+                "    ]"+
                 "  }\n" +
                 "}";
 
         String doc = "{\n" +
-                "  \"_lang\": \"en\",\n" +
-                "  \"title\": \"elasticsearch dynamic template\",\n" +
-                "  \"content\": \"this is some content to reproduce the behavior\"\n" +
+                "  \"_autocomplete_en\": \"this is some content to reproduce the behavior elasticsearch\"\n" +
                 "}\n";
         String searchSource = "{\n" +
                 "  \"query\": {\n" +
