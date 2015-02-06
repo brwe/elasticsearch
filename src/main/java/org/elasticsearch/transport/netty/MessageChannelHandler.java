@@ -274,7 +274,7 @@ public class MessageChannelHandler extends SimpleChannelUpstreamHandler {
             try {
                 handler.messageReceived(request, transportChannel);
             } catch (Throwable e) {
-                //if (transport.lifecycleState() == Lifecycle.State.STARTED) {
+                if (transport.lifecycleState() == Lifecycle.State.STARTED) {
                     // we can only send a response transport is started....
                     try {
                         transportChannel.sendResponse(e);
@@ -283,7 +283,7 @@ public class MessageChannelHandler extends SimpleChannelUpstreamHandler {
                         logger.warn("Actual Exception", e);
                     }
                 }
-            //}
+            }
         }
 
         @Override
