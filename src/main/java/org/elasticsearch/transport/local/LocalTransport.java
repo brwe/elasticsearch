@@ -255,7 +255,7 @@ public class LocalTransport extends AbstractLifecycleComponent<Transport> implem
                             //noinspection unchecked
                             handler.messageReceived(request, transportChannel);
                         } catch (Throwable e) {
-                            if (lifecycleState() == Lifecycle.State.STARTED) {
+                            //if (lifecycleState() == Lifecycle.State.STARTED) {
                                 // we can only send a response transport is started....
                                 try {
                                     transportChannel.sendResponse(e);
@@ -263,7 +263,7 @@ public class LocalTransport extends AbstractLifecycleComponent<Transport> implem
                                     logger.warn("Failed to send error message back to client for action [" + action + "]", e1);
                                     logger.warn("Actual Exception", e);
                                 }
-                            }
+                           // }
                         }
                     }
 
