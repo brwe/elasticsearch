@@ -112,18 +112,10 @@ public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest
                 "            \"asciifolding\"\n" +
                 "          ]\n" +
                 "        },\n" +
-                "        \"_autocomplete_de\": {\n" +
-                "          \"tokenizer\": \"standard\",\n" +
-                "          \"filter\": [\n" +
-                "            \"lowercase\",\n" +
-                "            \"stopwords_de_filter\"\n" +
-                "          ]\n" +
-                "        },\n" +
                 "        \"_autocomplete_en\": {\n" +
                 "          \"tokenizer\": \"standard\",\n" +
                 "          \"filter\": [\n" +
-                "            \"lowercase\",\n" +
-                "            \"stopwords_en_filter\"\n" +
+                "            \"lowercase\"\n" +
                 "          ]\n" +
                 "        }\n" +
                 "      },\n" +
@@ -134,17 +126,7 @@ public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest
                 "          \"max_gram\": 25,\n" +
                 "          \"token_chars\": [ \"letter\", \"digit\", \"symbol\", \"punctuation\" ]\n" +
                 "        }\n" +
-                "      },\n" +
-                "      \"filter\": {\n" +
-                "        \"stopwords_de_filter\": {\n" +
-                "          \"type\": \"stop\",\n" +
-                "          \"stopwords\": \"_german_\"\n" +
-                "        },\n" +
-                "        \"stopwords_en_filter\": {\n" +
-                "          \"type\": \"stop\",\n" +
-                "          \"stopwords\": \"_english_\"\n" +
-                "        }\n" +
-                "      }\n" +
+                "      }" +
                 "    }}\n" ;
 
         String page_mapping= "{\n" +
