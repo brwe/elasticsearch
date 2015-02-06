@@ -195,9 +195,9 @@ public class ConcurrentDynamicTemplateTests extends ElasticsearchIntegrationTest
                 "    }\n" +
                 "  }\n" +
                 "}";
-        client().admin().indices().prepareCreate("test_dynamic_template").setSettings(setingsSource).get();
+        client().admin().indices().prepareCreate("test_dynamic_template").setSettings(setingsSource).addMapping("page", page_mapping).get();
 
-        client().admin().indices().preparePutMapping("test_dynamic_template").setType("page").setSource(page_mapping).get();
+       // client().admin().indices().preparePutMapping("test_dynamic_template").setType("page").setSource(page_mapping).get();
         ensureGreen();
         for (int i = 0; i< 2; i++) {
             client().prepareIndex("test_dynamic_template", "page").setSource(doc).get();
