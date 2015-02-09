@@ -74,6 +74,7 @@ import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryAction
 import org.elasticsearch.action.admin.indices.warmer.delete.DeleteWarmerAction;
 import org.elasticsearch.action.admin.indices.warmer.get.GetWarmersAction;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerAction;
+import org.elasticsearch.action.allterms.AllTermsAction;
 import org.elasticsearch.action.bulk.BulkAction;
 import org.elasticsearch.action.count.CountAction;
 import org.elasticsearch.action.delete.DeleteAction;
@@ -327,6 +328,8 @@ final class ActionNames {
         builder.put(IndicesStore.ACTION_SHARD_EXISTS, "index/shard/exists");
 
         builder.put(PublishRiverClusterStateAction.ACTION_NAME, "river/state/publish");
+
+        builder.put(AllTermsAction.NAME, "data/read/allterms");
 
         return builder.build();
     }

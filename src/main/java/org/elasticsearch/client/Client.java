@@ -20,6 +20,9 @@
 package org.elasticsearch.client;
 
 import org.elasticsearch.action.*;
+import org.elasticsearch.action.allterms.AllTermsRequest;
+import org.elasticsearch.action.allterms.AllTermsRequestBuilder;
+import org.elasticsearch.action.allterms.AllTermsResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -579,6 +582,16 @@ public interface Client extends ElasticsearchClient<Client>, Releasable {
      */
     MultiTermVectorsRequestBuilder prepareMultiTermVectors();
 
+
+
+    /**
+     * An action that returns the term vectors for a specific document.
+     *
+     * @param request The term vector request
+     * @return The response future
+     */
+    AllTermsRequestBuilder prepareAllTerms();
+
     /**
      * Percolates a request returning the matches documents.
      */
@@ -653,4 +666,5 @@ public interface Client extends ElasticsearchClient<Client>, Releasable {
      */
     Settings settings();
 
+    ActionFuture<AllTermsResponse> allTerms(AllTermsRequest request, ActionListener<AllTermsResponse> listener);
 }

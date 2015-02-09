@@ -124,6 +124,10 @@ import org.elasticsearch.action.admin.indices.warmer.get.GetWarmersAction;
 import org.elasticsearch.action.admin.indices.warmer.get.TransportGetWarmersAction;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerAction;
 import org.elasticsearch.action.admin.indices.warmer.put.TransportPutWarmerAction;
+import org.elasticsearch.action.allterms.AllTermsAction;
+import org.elasticsearch.action.allterms.AllTermsShardRequest;
+import org.elasticsearch.action.allterms.TransportAllTermsAction;
+import org.elasticsearch.action.allterms.TransportAllTermsShardAction;
 import org.elasticsearch.action.bulk.BulkAction;
 import org.elasticsearch.action.bulk.TransportBulkAction;
 import org.elasticsearch.action.bulk.TransportShardBulkAction;
@@ -285,6 +289,7 @@ public class ActionModule extends AbstractModule {
         registerAction(TermVectorAction.INSTANCE, TransportSingleShardTermVectorAction.class);
         registerAction(MultiTermVectorsAction.INSTANCE, TransportMultiTermVectorsAction.class,
                 TransportSingleShardMultiTermsVectorAction.class);
+        registerAction(AllTermsAction.INSTANCE, TransportAllTermsAction.class, TransportAllTermsShardAction.class);
         registerAction(DeleteAction.INSTANCE, TransportDeleteAction.class,
                 TransportIndexDeleteAction.class, TransportShardDeleteAction.class);
         registerAction(CountAction.INSTANCE, TransportCountAction.class);

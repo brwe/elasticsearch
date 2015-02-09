@@ -20,6 +20,10 @@
 package org.elasticsearch.client.support;
 
 import org.elasticsearch.action.*;
+import org.elasticsearch.action.allterms.AllTermsAction;
+import org.elasticsearch.action.allterms.AllTermsRequest;
+import org.elasticsearch.action.allterms.AllTermsRequestBuilder;
+import org.elasticsearch.action.allterms.AllTermsResponse;
 import org.elasticsearch.action.bulk.BulkAction;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -440,8 +444,8 @@ public abstract class AbstractClient implements Client {
     }
 
     @Override
-    public TermVectorRequestBuilder prepareTermVector() {
-        return new TermVectorRequestBuilder(this);
+    public AllTermsRequestBuilder prepareAllTerms() {
+        return new AllTermsRequestBuilder(this);
     }
 
     @Override
@@ -462,6 +466,11 @@ public abstract class AbstractClient implements Client {
     @Override
     public MultiTermVectorsRequestBuilder prepareMultiTermVectors() {
         return new MultiTermVectorsRequestBuilder(this);
+    }
+
+    @Override
+    public TermVectorRequestBuilder prepareTermVector() {
+        return new TermVectorRequestBuilder(this);
     }
 
     @Override
@@ -522,5 +531,10 @@ public abstract class AbstractClient implements Client {
     @Override
     public ClearScrollRequestBuilder prepareClearScroll() {
         return new ClearScrollRequestBuilder(this);
+    }
+
+    @Override
+    public ActionFuture<AllTermsResponse> allTerms(AllTermsRequest request, ActionListener<AllTermsResponse> listener) {
+        return execute(AllTermsAction.INSTANCE, request);
     }
 }
