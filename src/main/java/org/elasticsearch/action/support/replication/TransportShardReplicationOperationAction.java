@@ -26,6 +26,10 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.UnavailableShardsException;
 import org.elasticsearch.action.WriteConsistencyLevel;
+import org.elasticsearch.action.bulk.BulkItemRequest;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkShardRequest;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.action.support.TransportActions;
 import org.elasticsearch.cluster.ClusterService;
@@ -471,7 +475,17 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                                 primaryOperationStarted.set(false);
                                 // we already marked it as started when we executed it (removed the listener) so pass false
                                 // to re-add to the cluster listener
-                                logger.trace("received an error from node the primary was assigned to ({}), scheduling a retry", exp.getMessage());
+                                logger.info("received an error from node the primary was assigned to ({}), scheduling a retry", exp.getMessage());
+                                logger.info("stack ", exp);
+                                logger.info("stack of cause ", exp.unwrapCause());
+                                if (request instanceof BulkShardRequest) {
+                                    BulkShardRequest br = (BulkShardRequest)request;
+                                    for (BulkItemRequest item : br.items()) {
+                                        if (item.request() instanceof IndexRequest) {
+                                            logger.info("resending doc id {}", ((IndexRequest) item.request()).id());
+                                        }
+                                    }
+                                }
                                 retry(null);
                             } else {
                                 listener.onFailure(exp);

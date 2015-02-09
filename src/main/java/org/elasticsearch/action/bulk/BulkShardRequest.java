@@ -56,7 +56,7 @@ public class BulkShardRequest extends ShardReplicationOperationRequest<BulkShard
         return shardId;
     }
 
-    BulkItemRequest[] items() {
+    public BulkItemRequest[] items() {
         return items;
     }
 

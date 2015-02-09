@@ -387,8 +387,8 @@ public class BulkIntegrationDuplicateIdsTests extends ElasticsearchIntegrationTe
                     for (SearchHit hit : dupIdResponse.getHits()) {
                         logger.info("Doc {} was found on shard {}", hit.getId(), hit.getShard().getShardId());
                     }
-                    logger.info("will not print anymore in case more duplicates are found.");
-                    found_duplicate_already = true;
+                   // logger.info("will not print anymore in case more duplicates are found.");
+                   // found_duplicate_already = true;
                 }
                 dupCounter++;
             }
