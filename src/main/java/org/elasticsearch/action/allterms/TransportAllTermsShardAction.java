@@ -19,10 +19,7 @@
 
 package org.elasticsearch.action.allterms;
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.index.*;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.ElasticsearchException;
@@ -149,11 +146,10 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                 if (lastTerm == null) {
                     return new AllTermsSingleShardResponse(terms);
                 }
-                spare.copyUTF8Bytes(lastTerm);
-                if (logger.isTraceEnabled()) {
-                    logger.trace("[{}], first term found is {}", shardId, spare.toString());
+                if (getDocFreq(termIters, lastTerm, request.field(), exhausted) >= request.minDocFreq()) {
+                    spare.copyUTF8Bytes(lastTerm);
+                    terms.add(spare.toString());
                 }
-                terms.add(spare.toString());
                 BytesRef blah = new BytesRef();
                 blah.copyBytes(lastTerm);
                 lastTerm = blah;
@@ -163,9 +159,11 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                     lastTerm = findMinimum(exhausted, termIters, shardId);
 
                     if (lastTerm != null) {
-                        spare.copyUTF8Bytes(lastTerm);
-                        terms.add(spare.toString());
 
+                        if (getDocFreq(termIters, lastTerm, request.field(), exhausted) >= request.minDocFreq()) {
+                            spare.copyUTF8Bytes(lastTerm);
+                            terms.add(spare.toString());
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -177,6 +175,34 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
         } finally {
             searcher.close();
         }
+    }
+
+    private long getDocFreq(List<TermsEnum> termIters, BytesRef lastTerm, String field, int[] exhausted) {
+        long docFreq = 0;
+        if (logger.isTraceEnabled()) {
+            CharsRefBuilder b = new CharsRefBuilder();
+            b.copyUTF8Bytes(lastTerm);
+            logger.trace("Compute doc freq for {}",b.toString());
+        }
+
+        for (int i = 0; i < termIters.size(); i++) {
+            if (exhausted[i] == 0) {
+                try {
+                    if (logger.isTraceEnabled()) {
+                        CharsRefBuilder b = new CharsRefBuilder();
+                        b.copyUTF8Bytes(termIters.get(i).term());
+                        logger.trace("Doc freq on seg {} for term {} is {}",i, b.toString(), termIters.get(i).docFreq());
+                    }
+
+                    if (termIters.get(i).term().compareTo(lastTerm) == 0) {
+                        docFreq += termIters.get(i).docFreq();
+                    }
+                } catch (IOException e) {
+
+                }
+            }
+        }
+        return docFreq;
     }
 
     private BytesRef findMinimum(int[] exhausted, List<TermsEnum> termIters, ShardId shardId) {

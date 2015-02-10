@@ -34,17 +34,19 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
     private String field;
 
     int size = 0;
+    private long minDocFreq = 0;
 
     AllTermsShardRequest() {
 
     }
 
-    AllTermsShardRequest(AllTermsRequest request, String index, int shardId, String field, int size, String from) {
+    AllTermsShardRequest(AllTermsRequest request, String index, int shardId, String field, int size, String from, long minDocFreq) {
         super(request, index);
         this.shardId = shardId;
         this.field = field;
         this.size = size;
         this.from=from;
+        this.minDocFreq = minDocFreq;
     }
 
     public int shardId() {
@@ -73,6 +75,7 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
         field = in.readString();
         size = in.readInt();
         from = in.readOptionalString();
+        minDocFreq = in.readLong();
     }
 
     @Override
@@ -82,6 +85,7 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
         out.writeString(field);
         out.writeInt(size);
         out.writeOptionalString(from);
+        out.writeLong(minDocFreq);
     }
 
     public String field() {
@@ -93,5 +97,9 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
     }
     public String from() {
         return from;
+    }
+
+    public long minDocFreq() {
+        return minDocFreq;
     }
 }

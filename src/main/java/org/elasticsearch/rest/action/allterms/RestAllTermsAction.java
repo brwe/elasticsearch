@@ -49,6 +49,7 @@ public class RestAllTermsAction extends BaseRestHandler {
         allTermsRequest.field(request.param("field"));
         allTermsRequest.size(request.paramAsInt("size", 10));
         allTermsRequest.from(request.param("from"));
+        allTermsRequest.minDocFreq(request.paramAsLong("min_doc_freq", 0));
 
         client.allTerms(allTermsRequest, new RestBuilderListener<AllTermsResponse>(channel) {
             @Override

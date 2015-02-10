@@ -59,7 +59,7 @@ public class TransportAllTermsAction extends HandledTransportAction<AllTermsRequ
         final AtomicArray<AllTermsSingleShardResponse> shardResponses = new AtomicArray<>(groupShardsIterator.size());
         final AtomicInteger shardCounter = new AtomicInteger(shardResponses.length());
         for(final ShardIterator shardIterator : groupShardsIterator) {
-            final AllTermsShardRequest shardRequest = new AllTermsShardRequest(request, request.indices()[0], shardIterator.shardId().id(), request.field(), request.size(), request.from());
+            final AllTermsShardRequest shardRequest = new AllTermsShardRequest(request, request.indices()[0], shardIterator.shardId().id(), request.field(), request.size(), request.from(), request.minDocFreq());
             shardAction.execute(shardRequest, new ActionListener<AllTermsSingleShardResponse>() {
                 @Override
                 public void onResponse(AllTermsSingleShardResponse response) {

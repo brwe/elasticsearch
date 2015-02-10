@@ -34,6 +34,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
     private String index;
     private int size;
     private String from;
+    private long minDocFreq;
 
     @Override
     public ActionRequestValidationException validate() {
@@ -52,6 +53,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         index = in.readString();
         size = in.readInt();
         from = in.readOptionalString();
+        minDocFreq = in.readLong();
 
     }
 
@@ -63,6 +65,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         out.writeString(index);
         out.writeInt(size);
         out.writeOptionalString(from);
+        out.writeLong(minDocFreq);
     }
 
     public void field(String field) {
@@ -77,10 +80,14 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         this.size = size;
     }
 
+    public void minDocFreq(long minDocFreq) {
+        this.minDocFreq = minDocFreq;
+    }
 
     public int size() {
         return size;
     }
+
     public String[] indices() {
         String[] indices = {index};
         return indices;
@@ -91,10 +98,14 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
     }
 
     public void from(String from) {
-        this.from=from;
+        this.from = from;
     }
 
     public String from() {
         return from;
+    }
+
+    public long minDocFreq() {
+        return minDocFreq;
     }
 }

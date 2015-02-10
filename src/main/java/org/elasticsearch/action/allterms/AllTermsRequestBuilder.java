@@ -46,6 +46,11 @@ public class AllTermsRequestBuilder extends ActionRequestBuilder<AllTermsRequest
         return this;
     }
 
+    public AllTermsRequestBuilder minDocFreq(long minDocFreq) {
+        request.minDocFreq(minDocFreq);
+        return this;
+    }
+
     @Override
     protected void doExecute(ActionListener<AllTermsResponse> listener) {
         client.allTerms(request, listener);
