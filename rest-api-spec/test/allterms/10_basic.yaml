@@ -1,0 +1,28 @@
+setup:
+  - do:
+      index:
+        index: testidx
+        type:  testtype
+        id:    testing_document
+        body:
+            "text" : "The quick brown fox is brown."
+  - do:
+      index:
+        index: testidx
+        type:  testtype
+        id:    testing_document
+        body:
+            "text" : "While the little snail is more of a light ochre."
+  - do:
+      indices.refresh: {}
+
+---
+"Basic tests for termvector get":
+
+  - do:
+      allterms:
+        index : testidx
+        field : text
+
+
+  - match: {terms: [a, brown, fox, is, light, little, more, ochre, of, quick]}

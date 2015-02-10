@@ -57,7 +57,7 @@ public class AllTermsResponse extends ActionResponse implements ToXContent {
     }
 
     static final class Fields {
-        static final XContentBuilderString TERMS = new XContentBuilderString("docs");
+        static final XContentBuilderString TERMS = new XContentBuilderString("terms");
     }
 
     @Override

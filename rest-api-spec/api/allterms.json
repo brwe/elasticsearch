@@ -1,0 +1,45 @@
+{
+  "allterms" : {
+    "documentation" : "http://www.elasticsearch.org/guide/en/elasticsearch/reference/1.4/docs-termvectors.html",
+    "methods" : ["GET"],
+    "url" : {
+      "path" : "/{index}/_allterms/{field}",
+      "paths" : ["/{index}/_allterms/{field}"],
+      "parts" : {
+        "index" : {
+         "type" : "string",
+         "description" : "The index in which the document resides.",
+         "required" : true
+        },
+        "field" : {
+           "type" : "string",
+           "description" : "The field for which we want to get the terms."
+         }
+      },
+      "params": {
+        "size" : {
+          "type" : "int",
+          "description" : "How many terms to return.",
+          "default" : 10,
+          "required" : false
+        },
+        "from" : {
+           "type" : "string",
+           "description" : "From where on we wnat to ahve the terms (which are sorted in lexicog).",
+           "default" : null,
+           "required" : false
+        },
+        "preference" : {
+          "type" : "string",
+          "description" : "Specify the node or shard the operation should be performed on (default: random).",
+          "required" : false
+        },
+        "routing" : {
+          "type" : "string",
+          "description" : "Specific routing value.",
+          "required" : false
+        }
+      }
+    }
+  }
+}

@@ -33,6 +33,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
     private String field;
     private String index;
     private int size;
+    private String from;
 
     @Override
     public ActionRequestValidationException validate() {
@@ -50,6 +51,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         field = in.readString();
         index = in.readString();
         size = in.readInt();
+        from = in.readOptionalString();
 
     }
 
@@ -60,6 +62,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         out.writeString(field);
         out.writeString(index);
         out.writeInt(size);
+        out.writeOptionalString(from);
     }
 
     public void field(String field) {
@@ -85,5 +88,9 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
 
     public String field() {
         return field;
+    }
+
+    public void from(String from) {
+        this.from=from;
     }
 }

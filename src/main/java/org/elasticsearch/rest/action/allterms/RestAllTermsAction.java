@@ -46,9 +46,9 @@ public class RestAllTermsAction extends BaseRestHandler {
     public void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
         final AllTermsRequest allTermsRequest = new AllTermsRequest();
         allTermsRequest.index(request.param("index"));
-        allTermsRequest.index(request.param("field"));
+        allTermsRequest.field(request.param("field"));
         allTermsRequest.size(request.paramAsInt("size", 10));
-        allTermsRequest.index(request.param("from"));
+        allTermsRequest.from(request.param("from"));
 
         client.allTerms(allTermsRequest, new RestBuilderListener<AllTermsResponse>(channel) {
             @Override
