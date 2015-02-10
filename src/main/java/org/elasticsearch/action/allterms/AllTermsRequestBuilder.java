@@ -22,6 +22,7 @@ package org.elasticsearch.action.allterms;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.ElasticsearchClient;
 import org.elasticsearch.common.Nullable;
 
 public class AllTermsRequestBuilder extends ActionRequestBuilder<AllTermsRequest, AllTermsResponse, AllTermsRequestBuilder, Client> {
@@ -48,5 +49,10 @@ public class AllTermsRequestBuilder extends ActionRequestBuilder<AllTermsRequest
     @Override
     protected void doExecute(ActionListener<AllTermsResponse> listener) {
         client.allTerms(request, listener);
+    }
+
+    public AllTermsRequestBuilder from(String from) {
+        request.from(from);
+        return this;
     }
 }

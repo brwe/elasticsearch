@@ -36,4 +36,21 @@ public class AllTermsTests extends ElasticsearchIntegrationTest {
         assertArrayEquals(response.allTerms.toArray(new String[2]), expected);
     }
 
+
+    @Test
+    public void testSimpleTestOneDocWithFrom() throws Exception {
+        client().prepareIndex("test", "type", "1").setSource("field", "foo bar").execute().actionGet();
+        client().prepareIndex("test", "type", "2").setSource("field", "I am sam bar").execute().actionGet();
+        client().prepareIndex("test", "type", "3").setSource("field", "blah blah").execute().actionGet();
+        client().prepareIndex("test", "type", "4").setSource("field", "I am blah blah foo bar sam bar").execute().actionGet();
+        refresh();
+        AllTermsResponse response = client().prepareAllTerms().index("test").field("field").size(10).from("blah").execute().actionGet(10000);
+        String[] expected = {"blah", "foo", "i", "sam"};
+        assertArrayEquals(response.allTerms.toArray(new String[4]), expected);
+
+        response = client().prepareAllTerms().index("test").field("field").size(10).from("ces").execute().actionGet(10000);
+        String [] expected2 = {"foo", "i", "sam"};
+        assertArrayEquals(response.allTerms.toArray(new String[3]), expected2);
+    }
+
 }

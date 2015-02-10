@@ -124,10 +124,19 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
             try {
                 //first find smallest term
                 for (int i = 0; i < termIters.size(); i++) {
-                    BytesRef curTerm = termIters.get(i).next();
+                    BytesRef curTerm = null;
+                    if (request.from() != null) {
+                        TermsEnum.SeekStatus seekStatus = termIters.get(i).seekCeil(new BytesRef(request.from()));
+                        if (seekStatus.equals(TermsEnum.SeekStatus.END) == false) {
+                            curTerm = termIters.get(i).term();
+                        }
+                    } else {
+                        curTerm = termIters.get(i).next();
+                    }
+
                     if (lastTerm == null) {
                         lastTerm = curTerm;
-                        if (lastTerm.length == 0) {
+                        if (lastTerm == null || lastTerm.length == 0) {
                             lastTerm = null;
                             exhausted[i] = 1;
                         }
@@ -141,7 +150,7 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                     return new AllTermsSingleShardResponse(terms);
                 }
                 spare.copyUTF8Bytes(lastTerm);
-                if(logger.isTraceEnabled()) {
+                if (logger.isTraceEnabled()) {
                     logger.trace("[{}], first term found is {}", shardId, spare.toString());
                 }
                 terms.add(spare.toString());
@@ -188,7 +197,7 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                 //it is actually smaller, so we add it
                 if (minTerm.compareTo(candidate) > 0) {
                     minTerm = candidate;
-                    if(logger.isTraceEnabled()) {
+                    if (logger.isTraceEnabled()) {
                         CharsRefBuilder toiString = new CharsRefBuilder();
                         toiString.copyUTF8Bytes(minTerm);
                         logger.trace("{} Setting min to  {} from segment {}", shardId, toiString.toString(), i);
@@ -198,7 +207,7 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
 
         }
         if (minTerm != null) {
-            if(logger.isTraceEnabled()) {
+            if (logger.isTraceEnabled()) {
                 CharsRefBuilder toiString = new CharsRefBuilder();
                 toiString.copyUTF8Bytes(minTerm);
                 logger.trace("{} final min term {}", shardId, toiString.toString());

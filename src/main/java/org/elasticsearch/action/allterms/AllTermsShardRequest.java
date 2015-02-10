@@ -27,6 +27,7 @@ import java.io.IOException;
 
 public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsShardRequest> {
 
+    private String from;
     private int shardId;
     private String preference;
 
@@ -38,11 +39,12 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
 
     }
 
-    AllTermsShardRequest(AllTermsRequest request, String index, int shardId, String field, int size) {
+    AllTermsShardRequest(AllTermsRequest request, String index, int shardId, String field, int size, String from) {
         super(request, index);
         this.shardId = shardId;
         this.field = field;
         this.size = size;
+        this.from=from;
     }
 
     public int shardId() {
@@ -70,6 +72,7 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
         preference = in.readOptionalString();
         field = in.readString();
         size = in.readInt();
+        from = in.readOptionalString();
     }
 
     @Override
@@ -78,6 +81,7 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
         out.writeOptionalString(preference);
         out.writeString(field);
         out.writeInt(size);
+        out.writeOptionalString(from);
     }
 
     public String field() {
@@ -86,5 +90,8 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
 
     public long size() {
         return size;
+    }
+    public String from() {
+        return from;
     }
 }

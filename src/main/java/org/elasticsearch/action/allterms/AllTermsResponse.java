@@ -52,55 +52,61 @@ public class AllTermsResponse extends ActionResponse implements ToXContent {
 
         //find the first twerm
         for (int j = 0; j < numResponses; j++) {
-            if (indices[j] < responses[j].shardTerms.size()) {
-                if (lastTerm == null) {
-                    lastTerm = responses[j].shardTerms.get(indices[j]);
-                    indices[j]++;
-                } else {
-                    if (responses[j].shardTerms.get(indices[j]).compareTo(lastTerm) == 0) {
-                        //move one further
+            if (responses[j] != null && responses[j].shardTerms != null) {
+                if (indices[j] < responses[j].shardTerms.size()) {
+                    if (lastTerm == null) {
+                        lastTerm = responses[j].shardTerms.get(indices[j]);
                         indices[j]++;
-                    }
-                    String candidate = responses[j].shardTerms.get(indices[j]);
-                    if (candidate == null) {
-                        continue;
-                    }
+                    } else {
+                        if (responses[j].shardTerms.get(indices[j]).compareTo(lastTerm) == 0) {
+                            //move one further
+                            indices[j]++;
+                        }
+                        if (indices[j] < responses[j].shardTerms.size()) {
+                            String candidate = responses[j].shardTerms.get(indices[j]);
+                            if (candidate == null) {
+                                continue;
+                            }
 
-                    if (candidate.compareTo(lastTerm) < 0) {
-                        lastTerm = candidate;
-                    }
+                            if (candidate.compareTo(lastTerm) < 0) {
+                                lastTerm = candidate;
+                            }
+                        }
 
+                    }
                 }
             }
         }
-        if (lastTerm!=null) {
+        if (lastTerm != null) {
             allTerms.add(lastTerm);
         }
         for (int i = 0; i < size; i++) {
 
             String curTerm = null;
             for (int j = 0; j < numResponses; j++) {
-                if (indices[j] < responses[j].shardTerms.size()) {
-                    if (lastTerm == null) {
-                        curTerm = responses[j].shardTerms.get(indices[j]);
-                        indices[j]++;
-                    } else {
-                        if (responses[j].shardTerms.get(indices[j]).compareTo(lastTerm) == 0) {
-                            //move one further
+                if (responses[j] != null && responses[j].shardTerms != null) {
+                    if (indices[j] < responses[j].shardTerms.size()) {
+                        if (lastTerm == null) {
+                            curTerm = responses[j].shardTerms.get(indices[j]);
                             indices[j]++;
-                            if (indices[j] >= responses[j].shardTerms.size()) {
+                        } else {
+                            if (responses[j].shardTerms.get(indices[j]).compareTo(lastTerm) == 0) {
+                                //move one further
+                                indices[j]++;
+                                if (indices[j] >= responses[j].shardTerms.size()) {
+                                    continue;
+                                }
+                            }
+                            String candidate = responses[j].shardTerms.get(indices[j]);
+                            if (candidate == null) {
                                 continue;
                             }
-                        }
-                        String candidate = responses[j].shardTerms.get(indices[j]);
-                        if (candidate == null) {
-                            continue;
-                        }
-                        if (curTerm == null) {
-                            curTerm = candidate;
-                        } else {
-                            if (candidate.compareTo(curTerm) < 0) {
+                            if (curTerm == null) {
                                 curTerm = candidate;
+                            } else {
+                                if (candidate.compareTo(curTerm) < 0) {
+                                    curTerm = candidate;
+                                }
                             }
                         }
                     }

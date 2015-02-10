@@ -93,4 +93,8 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
     public void from(String from) {
         this.from=from;
     }
+
+    public String from() {
+        return from;
+    }
 }
