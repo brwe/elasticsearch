@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.allterms;
 
+import org.apache.lucene.util.CollectionUtil;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -45,7 +46,7 @@ public class AllTermsResponse extends ActionResponse implements ToXContent {
                 allTerms.add(term);
             }
         }
-        Collections.sort(allTerms);
+        CollectionUtil.timSort(allTerms);
         allTerms = allTerms.subList(0, Math.min((int)size, allTerms.size()));
     }
 

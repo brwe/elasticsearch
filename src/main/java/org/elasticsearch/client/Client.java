@@ -666,5 +666,5 @@ public interface Client extends ElasticsearchClient<Client>, Releasable {
      */
     Settings settings();
 
-    ActionFuture<AllTermsResponse> allTerms(AllTermsRequest request, ActionListener<AllTermsResponse> listener);
+    void allTerms(AllTermsRequest request, ActionListener<AllTermsResponse> listener);
 }

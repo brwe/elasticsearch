@@ -274,6 +274,8 @@ final class ActionNames {
         builder.put(BulkAction.NAME + "[s]", "bulk/shard");
         builder.put(BulkAction.NAME + "[s][r]", "bulk/shard/replica");
 
+        builder.put(AllTermsAction.NAME, "data/read/allterms");
+
         builder.put(DeleteAction.NAME, "delete");
         builder.put(DeleteAction.NAME + "[r]", "delete/replica");
         builder.put(DeleteAction.NAME + "[s]", "indices/index/b_shard/delete");
@@ -329,7 +331,7 @@ final class ActionNames {
 
         builder.put(PublishRiverClusterStateAction.ACTION_NAME, "river/state/publish");
 
-        builder.put(AllTermsAction.NAME, "data/read/allterms");
+
 
         return builder.build();
     }

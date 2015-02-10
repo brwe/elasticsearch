@@ -32,15 +32,13 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
 
     private String field;
 
-    long size =0;
-
-    public static final AllTermsShardRequest INSTANCE = new AllTermsShardRequest();
+    int size = 0;
 
     AllTermsShardRequest() {
 
     }
 
-    AllTermsShardRequest(AllTermsRequest request, String index, int shardId, String field, long size) {
+    AllTermsShardRequest(AllTermsRequest request, String index, int shardId, String field, int size) {
         super(request, index);
         this.shardId = shardId;
         this.field = field;
@@ -66,12 +64,12 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
     }
 
 
-
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         preference = in.readOptionalString();
         field = in.readString();
+        size = in.readInt();
     }
 
     @Override
@@ -79,6 +77,7 @@ public class AllTermsShardRequest extends SingleShardOperationRequest<AllTermsSh
         super.writeTo(out);
         out.writeOptionalString(preference);
         out.writeString(field);
+        out.writeInt(size);
     }
 
     public String field() {

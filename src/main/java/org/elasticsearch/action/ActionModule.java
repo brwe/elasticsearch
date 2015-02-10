@@ -289,7 +289,7 @@ public class ActionModule extends AbstractModule {
         registerAction(TermVectorAction.INSTANCE, TransportSingleShardTermVectorAction.class);
         registerAction(MultiTermVectorsAction.INSTANCE, TransportMultiTermVectorsAction.class,
                 TransportSingleShardMultiTermsVectorAction.class);
-        registerAction(AllTermsAction.INSTANCE, TransportAllTermsAction.class, TransportAllTermsShardAction.class);
+
         registerAction(DeleteAction.INSTANCE, TransportDeleteAction.class,
                 TransportIndexDeleteAction.class, TransportShardDeleteAction.class);
         registerAction(CountAction.INSTANCE, TransportCountAction.class);
@@ -298,6 +298,8 @@ public class ActionModule extends AbstractModule {
         registerAction(UpdateAction.INSTANCE, TransportUpdateAction.class);
         registerAction(MultiGetAction.INSTANCE, TransportMultiGetAction.class,
                 TransportShardMultiGetAction.class);
+        registerAction(AllTermsAction.INSTANCE, TransportAllTermsAction.class,
+                TransportAllTermsShardAction.class);
         registerAction(BulkAction.INSTANCE, TransportBulkAction.class,
                 TransportShardBulkAction.class);
         registerAction(DeleteByQueryAction.INSTANCE, TransportDeleteByQueryAction.class,

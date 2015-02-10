@@ -121,13 +121,20 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
             try {
                 //first find smallest term
                 for (int i = 0; i < termIters.size(); i++) {
+                    BytesRef curTerm = termIters.get(i).next();
                     if (lastTerm == null) {
-                        lastTerm = termIters.get(i).term();
+                        lastTerm = curTerm;
+                        if (lastTerm.length ==0) {
+                            lastTerm = null;
+                        }
                     } else {
-                        if (lastTerm.compareTo(termIters.get(i).term()) > 0) {
-                            lastTerm = termIters.get(i).term();
+                        if (lastTerm.compareTo(curTerm) > 0) {
+                            lastTerm = curTerm;
                         }
                     }
+                }
+                if (lastTerm == null) {
+                    return new AllTermsSingleShardResponse(terms);
                 }
                 spare.copyUTF8Bytes(lastTerm);
                 terms.add(spare.toString());
@@ -141,7 +148,10 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                         BytesRef term;
                         //first, check if we have to move the iterator, might be the iterator currently stands on the last term
                         if (termIters.get(i).term().compareTo(lastTerm) == 0) {
+                            spare.copyUTF8Bytes(lastTerm);
+                            logger.info("lastTerm {}", spare.toString());
                             term = termIters.get(i).next();
+
 
                         } else {
                             //it must stand on one that is greater so we just get it
@@ -151,6 +161,8 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                             termIters.set(i, null);
                             exhaustedIters++;
                         } else {
+                            spare.copyUTF8Bytes(term);
+                            logger.info("term {}", spare.toString());
                             // we have not assigned anything yet
                             if (curTerm == null) {
                                 curTerm = term;
@@ -170,7 +182,6 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                     terms.add(spare.toString());
                 }
             } catch (IOException e) {
-                e.printStackTrace();
             }
 
             return new AllTermsSingleShardResponse(terms);

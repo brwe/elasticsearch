@@ -32,7 +32,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
     String preference;
     private String field;
     private String index;
-    private long size;
+    private int size;
 
     @Override
     public ActionRequestValidationException validate() {
@@ -49,6 +49,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         preference = in.readOptionalString();
         field = in.readString();
         index = in.readString();
+        size = in.readInt();
 
     }
 
@@ -58,6 +59,7 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         out.writeOptionalString(preference);
         out.writeString(field);
         out.writeString(index);
+        out.writeInt(size);
     }
 
     public void field(String field) {
@@ -68,12 +70,12 @@ public class AllTermsRequest extends ActionRequest<AllTermsRequest> {
         this.index = index;
     }
 
-    public void size(long size) {
+    public void size(int size) {
         this.size = size;
     }
 
 
-    public long size() {
+    public int size() {
         return size;
     }
     public String[] indices() {

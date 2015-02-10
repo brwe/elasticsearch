@@ -19,20 +19,20 @@
 
 package org.elasticsearch.action.allterms;
 
-import org.elasticsearch.action.termvector.AbstractTermVectorTests;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
-
-import java.util.List;
 
 public class AllTermsTests extends ElasticsearchIntegrationTest {
 
     @Test
     public void testSimpleTestOneDoc() throws Exception {
         client().prepareIndex("test", "type", "1").setSource("field", "foo bar").execute().actionGet();
+        client().prepareIndex("test", "type", "1").setSource("field", "I am sam bar").execute().actionGet();
+        client().prepareIndex("test", "type", "1").setSource("field", "blah blah").execute().actionGet();
+        client().prepareIndex("test", "type", "1").setSource("field", "I am blah blah foo bar sam bar").execute().actionGet();
         refresh();
-        AllTermsResponse response = client().prepareAllTerms().index("test").field("field").size(10).execute().actionGet(100000);
-        String[] expected = {"foo", "bar"};
+        AllTermsResponse response = client().prepareAllTerms().index("test").field("field").size(10).execute().actionGet(1000000);
+        String[] expected = {"am", "bar", "blah", "foo", "i", "sam"};
         assertArrayEquals(response.allTerms.toArray(new String[2]), expected);
     }
 

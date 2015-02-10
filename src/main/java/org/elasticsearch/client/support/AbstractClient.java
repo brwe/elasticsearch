@@ -534,7 +534,7 @@ public abstract class AbstractClient implements Client {
     }
 
     @Override
-    public ActionFuture<AllTermsResponse> allTerms(AllTermsRequest request, ActionListener<AllTermsResponse> listener) {
-        return execute(AllTermsAction.INSTANCE, request);
+    public void allTerms(AllTermsRequest request, ActionListener<AllTermsResponse> listener) {
+        execute(AllTermsAction.INSTANCE, request, listener);
     }
 }
