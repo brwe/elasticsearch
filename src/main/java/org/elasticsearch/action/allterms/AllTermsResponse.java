@@ -35,19 +35,84 @@ import java.util.List;
 
 public class AllTermsResponse extends ActionResponse implements ToXContent {
 
-    List<String> allTerms=new ArrayList<>();
+    List<String> allTerms = new ArrayList<>();
+
     public AllTermsResponse() {
 
     }
 
     public AllTermsResponse(AllTermsSingleShardResponse[] responses, long size) {
-        for(AllTermsSingleShardResponse singleShardResponse : responses) {
-            for(String term : singleShardResponse.shardTerms) {
-                allTerms.add(term);
+        int numResponses = responses.length;
+        int[] indices = new int[numResponses];
+        for (int i = 0; i < indices.length; i++) {
+            indices[i] = 0;
+        }
+
+        String lastTerm = null;
+
+        //find the first twerm
+        for (int j = 0; j < numResponses; j++) {
+            if (indices[j] < responses[j].shardTerms.size()) {
+                if (lastTerm == null) {
+                    lastTerm = responses[j].shardTerms.get(indices[j]);
+                    indices[j]++;
+                } else {
+                    if (responses[j].shardTerms.get(indices[j]).compareTo(lastTerm) == 0) {
+                        //move one further
+                        indices[j]++;
+                    }
+                    String candidate = responses[j].shardTerms.get(indices[j]);
+                    if (candidate == null) {
+                        continue;
+                    }
+
+                    if (candidate.compareTo(lastTerm) < 0) {
+                        lastTerm = candidate;
+                    }
+
+                }
             }
         }
-        CollectionUtil.timSort(allTerms);
-        allTerms = allTerms.subList(0, Math.min((int)size, allTerms.size()));
+        if (lastTerm!=null) {
+            allTerms.add(lastTerm);
+        }
+        for (int i = 0; i < size; i++) {
+
+            String curTerm = null;
+            for (int j = 0; j < numResponses; j++) {
+                if (indices[j] < responses[j].shardTerms.size()) {
+                    if (lastTerm == null) {
+                        curTerm = responses[j].shardTerms.get(indices[j]);
+                        indices[j]++;
+                    } else {
+                        if (responses[j].shardTerms.get(indices[j]).compareTo(lastTerm) == 0) {
+                            //move one further
+                            indices[j]++;
+                            if (indices[j] >= responses[j].shardTerms.size()) {
+                                continue;
+                            }
+                        }
+                        String candidate = responses[j].shardTerms.get(indices[j]);
+                        if (candidate == null) {
+                            continue;
+                        }
+                        if (curTerm == null) {
+                            curTerm = candidate;
+                        } else {
+                            if (candidate.compareTo(curTerm) < 0) {
+                                curTerm = candidate;
+                            }
+                        }
+                    }
+                }
+            }
+            if (curTerm != null) {
+                allTerms.add(curTerm);
+                lastTerm = curTerm;
+            } else {
+                break;
+            }
+        }
     }
 
     @Override

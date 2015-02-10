@@ -55,7 +55,6 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
     private static final String ACTION_NAME = AllTermsAction.NAME + "[s]";
 
 
-
     @Inject
     public TransportAllTermsShardAction(Settings settings, ClusterService clusterService, TransportService transportService,
                                         IndicesService indicesService, ThreadPool threadPool, ActionFilters actionFilters) {
@@ -118,17 +117,22 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
             }
             CharsRefBuilder spare = new CharsRefBuilder();
             BytesRef lastTerm = null;
+            int[] exhausted = new int[termIters.size()];
+            for (int i = 0; i < exhausted.length; i++) {
+                exhausted[i] = 0;
+            }
             try {
                 //first find smallest term
                 for (int i = 0; i < termIters.size(); i++) {
                     BytesRef curTerm = termIters.get(i).next();
                     if (lastTerm == null) {
                         lastTerm = curTerm;
-                        if (lastTerm.length ==0) {
+                        if (lastTerm.length == 0) {
                             lastTerm = null;
+                            exhausted[i] = 1;
                         }
                     } else {
-                        if (lastTerm.compareTo(curTerm) > 0) {
+                        if (curTerm.compareTo(lastTerm) < 0) {
                             lastTerm = curTerm;
                         }
                     }
@@ -137,56 +141,99 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                     return new AllTermsSingleShardResponse(terms);
                 }
                 spare.copyUTF8Bytes(lastTerm);
+                logger.trace("[{}], first term found is {}", shardId, spare.toString());
                 terms.add(spare.toString());
-                int exhaustedIters = 0;
-                while (terms.size() < request.size()) {
-                    BytesRef curTerm = null;
-                    for (int i = 0; i < termIters.size(); i++) {
-                        if (termIters.get(i) == null) {
-                            continue;
-                        }
-                        BytesRef term;
-                        //first, check if we have to move the iterator, might be the iterator currently stands on the last term
-                        if (termIters.get(i).term().compareTo(lastTerm) == 0) {
-                            spare.copyUTF8Bytes(lastTerm);
-                            logger.info("lastTerm {}", spare.toString());
-                            term = termIters.get(i).next();
+                BytesRef blah = new BytesRef();
+                blah.copyBytes(lastTerm);
+                lastTerm = blah;
 
+                while (terms.size() < request.size() && lastTerm != null) {
+                    moveIterators(exhausted, termIters, lastTerm, shardId);
+                    lastTerm = findMinimum(exhausted, termIters, shardId);
 
-                        } else {
-                            //it must stand on one that is greater so we just get it
-                            term = termIters.get(i).term();
-                        }
-                        if (term == null) {
-                            termIters.set(i, null);
-                            exhaustedIters++;
-                        } else {
-                            spare.copyUTF8Bytes(term);
-                            logger.info("term {}", spare.toString());
-                            // we have not assigned anything yet
-                            if (curTerm == null) {
-                                curTerm = term;
-                            } else {
-                                //it is actually smaller, so we add it
-                                if (curTerm.compareTo(term) < 0) {
-                                    curTerm = term;
-                                }
-                            }
-                        }
+                    if (lastTerm != null) {
+                        spare.copyUTF8Bytes(lastTerm);
+                        terms.add(spare.toString());
+
                     }
-                    lastTerm = curTerm;
-                    if (exhaustedIters == termIters.size()) {
-                        break;
-                    }
-                    spare.copyUTF8Bytes(lastTerm);
-                    terms.add(spare.toString());
                 }
             } catch (IOException e) {
             }
 
+            logger.trace("[{}], final terms list: {}", shardId, terms);
+
             return new AllTermsSingleShardResponse(terms);
         } finally {
             searcher.close();
+        }
+    }
+
+    private BytesRef findMinimum(int[] exhausted, List<TermsEnum> termIters, ShardId shardId) {
+        BytesRef minTerm = null;
+        for (int i = 0; i < termIters.size(); i++) {
+            if (exhausted[i] == 1) {
+                continue;
+            }
+            BytesRef candidate = null;
+            try {
+                candidate = termIters.get(i).term();
+            } catch (IOException e) {
+            }
+            if (minTerm == null) {
+                minTerm = candidate;
+
+            } else {
+                //it is actually smaller, so we add it
+                if (minTerm.compareTo(candidate) > 0) {
+                    minTerm = candidate;
+                    CharsRefBuilder toiString = new CharsRefBuilder();
+                    toiString.copyUTF8Bytes(minTerm);
+                    logger.trace("{} Setting min to  {} from segment {}", shardId, toiString.toString(), i);
+                }
+            }
+
+        }
+        if (minTerm != null) {
+            CharsRefBuilder toiString = new CharsRefBuilder();
+            toiString.copyUTF8Bytes(minTerm);
+            logger.trace("{} final min term {}", shardId, toiString.toString());
+            BytesRef ret = new BytesRef();
+            ret.copyBytes(minTerm);
+            return ret;
+        }
+        return null;
+    }
+
+    private void moveIterators(int[] exhausted, List<TermsEnum> termIters, BytesRef lastTerm, ShardId shardId) {
+
+        try {
+            for (int i = 0; i < termIters.size(); i++) {
+                if (exhausted[i] == 1) {
+                    continue;
+                }
+                CharsRefBuilder toiString = new CharsRefBuilder();
+                toiString.copyUTF8Bytes(lastTerm);
+                logger.trace("{} lastTerm is {}", shardId, toiString.toString());
+                BytesRef candidate;
+                if (termIters.get(i).term().compareTo(lastTerm) == 0) {
+                    candidate = termIters.get(i).next();
+
+                    logger.trace("{} Moving segment {}", shardId, i);
+                } else {
+                    //it must stand on one that is greater so we just get it
+                    candidate = termIters.get(i).term();
+                    logger.trace("{} Not moving segment {}", shardId, i);
+                }
+                if (candidate == null) {
+                    exhausted[i] = 1;
+                } else {
+                    toiString = new CharsRefBuilder();
+                    toiString.copyUTF8Bytes(candidate.clone());
+                    logger.trace("{} Segment is now on {}", shardId, toiString.toString());
+                }
+            }
+        } catch (IOException e) {
+
         }
     }
 }

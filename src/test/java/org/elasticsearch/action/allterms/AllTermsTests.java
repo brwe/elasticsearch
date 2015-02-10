@@ -27,9 +27,9 @@ public class AllTermsTests extends ElasticsearchIntegrationTest {
     @Test
     public void testSimpleTestOneDoc() throws Exception {
         client().prepareIndex("test", "type", "1").setSource("field", "foo bar").execute().actionGet();
-        client().prepareIndex("test", "type", "1").setSource("field", "I am sam bar").execute().actionGet();
-        client().prepareIndex("test", "type", "1").setSource("field", "blah blah").execute().actionGet();
-        client().prepareIndex("test", "type", "1").setSource("field", "I am blah blah foo bar sam bar").execute().actionGet();
+        client().prepareIndex("test", "type", "2").setSource("field", "I am sam bar").execute().actionGet();
+        client().prepareIndex("test", "type", "3").setSource("field", "blah blah").execute().actionGet();
+        client().prepareIndex("test", "type", "4").setSource("field", "I am blah blah foo bar sam bar").execute().actionGet();
         refresh();
         AllTermsResponse response = client().prepareAllTerms().index("test").field("field").size(10).execute().actionGet(1000000);
         String[] expected = {"am", "bar", "blah", "foo", "i", "sam"};
