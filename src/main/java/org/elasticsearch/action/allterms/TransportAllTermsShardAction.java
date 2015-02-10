@@ -141,7 +141,9 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                     return new AllTermsSingleShardResponse(terms);
                 }
                 spare.copyUTF8Bytes(lastTerm);
-                logger.trace("[{}], first term found is {}", shardId, spare.toString());
+                if(logger.isTraceEnabled()) {
+                    logger.trace("[{}], first term found is {}", shardId, spare.toString());
+                }
                 terms.add(spare.toString());
                 BytesRef blah = new BytesRef();
                 blah.copyBytes(lastTerm);
@@ -186,17 +188,21 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
                 //it is actually smaller, so we add it
                 if (minTerm.compareTo(candidate) > 0) {
                     minTerm = candidate;
-                    CharsRefBuilder toiString = new CharsRefBuilder();
-                    toiString.copyUTF8Bytes(minTerm);
-                    logger.trace("{} Setting min to  {} from segment {}", shardId, toiString.toString(), i);
+                    if(logger.isTraceEnabled()) {
+                        CharsRefBuilder toiString = new CharsRefBuilder();
+                        toiString.copyUTF8Bytes(minTerm);
+                        logger.trace("{} Setting min to  {} from segment {}", shardId, toiString.toString(), i);
+                    }
                 }
             }
 
         }
         if (minTerm != null) {
-            CharsRefBuilder toiString = new CharsRefBuilder();
-            toiString.copyUTF8Bytes(minTerm);
-            logger.trace("{} final min term {}", shardId, toiString.toString());
+            if(logger.isTraceEnabled()) {
+                CharsRefBuilder toiString = new CharsRefBuilder();
+                toiString.copyUTF8Bytes(minTerm);
+                logger.trace("{} final min term {}", shardId, toiString.toString());
+            }
             BytesRef ret = new BytesRef();
             ret.copyBytes(minTerm);
             return ret;
