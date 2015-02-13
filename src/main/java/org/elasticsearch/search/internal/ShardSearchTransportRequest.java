@@ -45,7 +45,7 @@ public class ShardSearchTransportRequest extends TransportRequest implements Sha
 
     private OriginalIndices originalIndices;
 
-    private ShardSearchLocalRequest shardSearchLocalRequest;
+    ShardSearchLocalRequest shardSearchLocalRequest;
 
     public ShardSearchTransportRequest(){
     }

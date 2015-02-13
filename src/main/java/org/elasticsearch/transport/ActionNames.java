@@ -265,6 +265,7 @@ final class ActionNames {
         builder.put(SearchServiceTransportAction.QUERY_FETCH_SCROLL_ACTION_NAME, "search/phase/query+fetch/scroll");
         builder.put(SearchServiceTransportAction.FETCH_ID_ACTION_NAME, "search/phase/fetch/id");
         builder.put(SearchServiceTransportAction.SCAN_ACTION_NAME, "search/phase/scan");
+        builder.put(SearchServiceTransportAction.MATRIX_SCAN_ACTION_NAME, "search/phase/matrix");
         builder.put(SearchServiceTransportAction.SCAN_SCROLL_ACTION_NAME, "search/phase/scan/scroll");
 
         addShardAction(SuggestAction.NAME, "suggest", builder);

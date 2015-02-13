@@ -78,6 +78,7 @@ public abstract class SearchContext implements Releasable {
 
     private static ThreadLocal<SearchContext> current = new ThreadLocal<>();
     public final static int DEFAULT_TERMINATE_AFTER = 0;
+    private String[] dictionary;
 
     public static void setCurrent(SearchContext value) {
         current.set(value);
@@ -381,6 +382,14 @@ public abstract class SearchContext implements Releasable {
 
     public boolean hasAnalyzedTextFields() {
         return analyzedTextFields() != null;
+    }
+
+    public void setDictionary(String[] dictionary) {
+        this.dictionary = dictionary;
+    }
+
+    public String[] getDictionary() {
+        return dictionary;
     }
 
     /**

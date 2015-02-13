@@ -51,9 +51,9 @@ import static org.elasticsearch.action.search.type.TransportSearchHelper.interna
  */
 public class TransportSearchScrollScanAction extends AbstractComponent {
 
-    private final ClusterService clusterService;
-    private final SearchServiceTransportAction searchService;
-    private final SearchPhaseController searchPhaseController;
+    protected final ClusterService clusterService;
+    protected final SearchServiceTransportAction searchService;
+    protected final SearchPhaseController searchPhaseController;
 
     @Inject
     public TransportSearchScrollScanAction(Settings settings, ClusterService clusterService,
@@ -68,23 +68,23 @@ public class TransportSearchScrollScanAction extends AbstractComponent {
         new AsyncAction(request, scrollId, listener).start();
     }
 
-    private class AsyncAction extends AbstractAsyncAction {
+    class AsyncAction extends AbstractAsyncAction {
 
-        private final SearchScrollRequest request;
+        final SearchScrollRequest request;
 
-        private final ActionListener<SearchResponse> listener;
+        final ActionListener<SearchResponse> listener;
 
-        private final ParsedScrollId scrollId;
+        final ParsedScrollId scrollId;
 
-        private final DiscoveryNodes nodes;
+        final DiscoveryNodes nodes;
 
         private volatile AtomicArray<ShardSearchFailure> shardFailures;
-        private final AtomicArray<QueryFetchSearchResult> queryFetchResults;
+        final AtomicArray<QueryFetchSearchResult> queryFetchResults;
 
-        private final AtomicInteger successfulOps;
-        private final AtomicInteger counter;
+        final AtomicInteger successfulOps;
+        final AtomicInteger counter;
 
-        private AsyncAction(SearchScrollRequest request, ParsedScrollId scrollId, ActionListener<SearchResponse> listener) {
+        AsyncAction(SearchScrollRequest request, ParsedScrollId scrollId, ActionListener<SearchResponse> listener) {
             this.request = request;
             this.listener = listener;
             this.scrollId = scrollId;

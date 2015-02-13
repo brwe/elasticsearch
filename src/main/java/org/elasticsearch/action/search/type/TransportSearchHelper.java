@@ -36,9 +36,11 @@ import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
 import org.elasticsearch.search.SearchPhaseResult;
 import org.elasticsearch.search.internal.InternalScrollSearchRequest;
+import org.elasticsearch.search.internal.ShardMatrixScanTransportRequest;
 import org.elasticsearch.search.internal.ShardSearchTransportRequest;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,6 +50,10 @@ public abstract class TransportSearchHelper {
 
     public static ShardSearchTransportRequest internalSearchRequest(ShardRouting shardRouting, int numberOfShards, SearchRequest request, String[] filteringAliases, long nowInMillis, boolean useSlowScroll) {
         return new ShardSearchTransportRequest(request, shardRouting, numberOfShards, useSlowScroll, filteringAliases, nowInMillis);
+    }
+
+    public static ShardMatrixScanTransportRequest internalMatrixScanRequest(ShardRouting shardRouting, int numberOfShards, SearchRequest request, String[] filteringAliases, long nowInMillis, boolean useSlowScroll, String[] dictionary) {
+        return new ShardMatrixScanTransportRequest(request, shardRouting, numberOfShards, useSlowScroll, filteringAliases, nowInMillis, dictionary);
     }
 
     public static InternalScrollSearchRequest internalScrollSearchRequest(long id, SearchScrollRequest request) {
@@ -60,6 +66,8 @@ public abstract class TransportSearchHelper {
         } else if (searchType == SearchType.QUERY_AND_FETCH || searchType == SearchType.DFS_QUERY_AND_FETCH) {
             return buildScrollId(ParsedScrollId.QUERY_AND_FETCH_TYPE, searchPhaseResults, attributes);
         } else if (searchType == SearchType.SCAN) {
+            return buildScrollId(ParsedScrollId.SCAN, searchPhaseResults, attributes);
+        } else if (searchType == SearchType.MATRIX) {
             return buildScrollId(ParsedScrollId.SCAN, searchPhaseResults, attributes);
         } else {
             throw new ElasticsearchIllegalStateException();

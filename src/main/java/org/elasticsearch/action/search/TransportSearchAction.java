@@ -49,6 +49,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
     private final TransportSearchQueryAndFetchAction queryAndFetchAction;
     private final TransportSearchScanAction scanAction;
     private final TransportSearchCountAction countAction;
+    private final TransportSearchScanMatrixAction matrixAction;
     private final boolean optimizeSingleShard;
 
     @Inject
@@ -59,7 +60,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
                                  TransportSearchDfsQueryAndFetchAction dfsQueryAndFetchAction,
                                  TransportSearchQueryAndFetchAction queryAndFetchAction,
                                  TransportSearchScanAction scanAction,
-                                 TransportSearchCountAction countAction, ActionFilters actionFilters) {
+                                 TransportSearchCountAction countAction,
+                                 TransportSearchScanMatrixAction matrixAction,ActionFilters actionFilters) {
         super(settings, SearchAction.NAME, threadPool, transportService, actionFilters);
         this.clusterService = clusterService;
         this.dfsQueryThenFetchAction = dfsQueryThenFetchAction;
@@ -68,6 +70,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
         this.queryAndFetchAction = queryAndFetchAction;
         this.scanAction = scanAction;
         this.countAction = countAction;
+        this.matrixAction = matrixAction;
 
         this.optimizeSingleShard = componentSettings.getAsBoolean("optimize_single_shard", true);
 
@@ -77,7 +80,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
     @Override
     protected void doExecute(SearchRequest searchRequest, ActionListener<SearchResponse> listener) {
         // optimize search type for cases where there is only one shard group to search on
-        if (optimizeSingleShard && searchRequest.searchType() != SCAN && searchRequest.searchType() != COUNT) {
+        if (optimizeSingleShard && searchRequest.searchType() != SCAN && searchRequest.searchType() != COUNT && searchRequest.searchType() != MATRIX) {
             try {
                 ClusterState clusterState = clusterService.state();
                 String[] concreteIndices = clusterState.metaData().concreteIndices(searchRequest.indicesOptions(), searchRequest.indices());
@@ -106,6 +109,8 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
             scanAction.execute(searchRequest, listener);
         } else if (searchRequest.searchType() == SearchType.COUNT) {
             countAction.execute(searchRequest, listener);
+        } else if (searchRequest.searchType() == SearchType.MATRIX) {
+            matrixAction.execute(searchRequest, listener);
         }
     }
 

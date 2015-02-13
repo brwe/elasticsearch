@@ -37,6 +37,7 @@ import org.elasticsearch.search.SearchService;
 import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.fetch.*;
 import org.elasticsearch.search.internal.InternalScrollSearchRequest;
+import org.elasticsearch.search.internal.ShardMatrixScanTransportRequest;
 import org.elasticsearch.search.internal.ShardSearchTransportRequest;
 import org.elasticsearch.search.query.QuerySearchRequest;
 import org.elasticsearch.search.query.QuerySearchResult;
@@ -68,6 +69,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
     public static final String FETCH_ID_ACTION_NAME = "indices:data/read/search[phase/fetch/id]";
     public static final String SCAN_ACTION_NAME = "indices:data/read/search[phase/scan]";
     public static final String SCAN_SCROLL_ACTION_NAME = "indices:data/read/search[phase/scan/scroll]";
+    public static final String MATRIX_SCAN_ACTION_NAME = "indices:data/read/search[phase/scan/matrix]";
 
     static final class FreeContextResponseHandler implements TransportResponseHandler<SearchFreeContextResponse> {
 
@@ -133,6 +135,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
         transportService.registerHandler(FETCH_ID_SCROLL_ACTION_NAME, new ScrollFetchByIdTransportHandler());
         transportService.registerHandler(FETCH_ID_ACTION_NAME, new SearchFetchByIdTransportHandler());
         transportService.registerHandler(SCAN_ACTION_NAME, new SearchScanTransportHandler());
+        transportService.registerHandler(MATRIX_SCAN_ACTION_NAME, new MatrixScanTransportHandler());
         transportService.registerHandler(SCAN_SCROLL_ACTION_NAME, new SearchScanScrollTransportHandler());
     }
 
@@ -511,6 +514,41 @@ public class SearchServiceTransportAction extends AbstractComponent {
             });
         }
     }
+
+    public void sendExecuteMatrixScan(DiscoveryNode node, final ShardSearchTransportRequest request, final SearchServiceListener<QuerySearchResult> listener) {
+        if (clusterService.state().nodes().localNodeId().equals(node.id())) {
+            execute(new Callable<QuerySearchResult>() {
+                @Override
+                public QuerySearchResult call() throws Exception {
+                    return searchService.executeMatrixScan(request);
+                }
+            }, listener);
+        } else {
+            transportService.sendRequest(node, MATRIX_SCAN_ACTION_NAME, request, new BaseTransportResponseHandler<QuerySearchResult>() {
+
+                @Override
+                public QuerySearchResult newInstance() {
+                    return new QuerySearchResult();
+                }
+
+                @Override
+                public void handleResponse(QuerySearchResult response) {
+                    listener.onResult(response);
+                }
+
+                @Override
+                public void handleException(TransportException exp) {
+                    listener.onFailure(exp);
+                }
+
+                @Override
+                public String executor() {
+                    return ThreadPool.Names.SAME;
+                }
+            });
+        }
+    }
+
 
     public void sendExecuteScan(DiscoveryNode node, final InternalScrollSearchRequest request, final SearchServiceListener<QueryFetchSearchResult> listener) {
         if (clusterService.state().nodes().localNodeId().equals(node.id())) {
@@ -918,6 +956,25 @@ public class SearchServiceTransportAction extends AbstractComponent {
         @Override
         public void messageReceived(ShardSearchTransportRequest request, TransportChannel channel) throws Exception {
             QuerySearchResult result = searchService.executeScan(request);
+            channel.sendResponse(result);
+        }
+
+        @Override
+        public String executor() {
+            return ThreadPool.Names.SEARCH;
+        }
+    }
+
+    private class MatrixScanTransportHandler extends BaseTransportRequestHandler<ShardSearchTransportRequest> {
+
+        @Override
+        public ShardSearchTransportRequest newInstance() {
+            return new ShardMatrixScanTransportRequest();
+        }
+
+        @Override
+        public void messageReceived(ShardSearchTransportRequest request, TransportChannel channel) throws Exception {
+            QuerySearchResult result = searchService.executeMatrixScan(request);
             channel.sendResponse(result);
         }
 

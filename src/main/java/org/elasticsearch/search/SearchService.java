@@ -232,6 +232,33 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
         }
     }
 
+    public QuerySearchResult executeMatrixScan(ShardSearchRequest request) throws ElasticsearchException {
+        final SearchContext context = createAndPutContext(request);
+        context.setDictionary(((ShardMatrixScanTransportRequest) request).getDictionary());
+        try {
+            if (context.aggregations() != null) {
+                throw new ElasticsearchIllegalArgumentException("aggregations are not supported with search_type=scan");
+            }
+            assert context.searchType() == SearchType.MATRIX;
+            context.searchType(SearchType.COUNT); // move to COUNT, and then, when scrolling, move to SCAN
+            assert context.searchType() == SearchType.COUNT;
+
+            if (context.scroll() == null) {
+                throw new ElasticsearchException("Scroll must be provided when scanning...");
+            }
+            contextProcessing(context);
+            queryPhase.execute(context);
+            contextProcessedSuccessfully(context);
+            return context.queryResult();
+        } catch (Throwable e) {
+            logger.trace("Scan phase failed", e);
+            freeContext(context.id());
+            throw ExceptionsHelper.convertToRuntime(e);
+        } finally {
+            cleanContext(context);
+        }
+    }
+
     public ScrollQueryFetchSearchResult executeScan(InternalScrollSearchRequest request) throws ElasticsearchException {
         final SearchContext context = findContext(request.id());
         contextProcessing(context);

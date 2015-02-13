@@ -58,7 +58,12 @@ public enum SearchType {
     /**
      * Only counts the results, will still execute facets and the like.
      */
-    COUNT((byte) 5);
+    COUNT((byte) 5),
+
+    /**
+     * Scan matrix rows
+     */
+    MATRIX((byte) 6);
 
     /**
      * The default search type ({@link #QUERY_THEN_FETCH}.
@@ -94,6 +99,8 @@ public enum SearchType {
             return SCAN;
         } else if (id == 5) {
             return COUNT;
+        } else if (id == 6) {
+            return MATRIX;
         } else {
             throw new ElasticsearchIllegalArgumentException("No search type for [" + id + "]");
         }
@@ -120,6 +127,8 @@ public enum SearchType {
             return SearchType.SCAN;
         } else if ("count".equals(searchType)) {
             return SearchType.COUNT;
+        } else if ("matrix".equals(searchType)) {
+            return SearchType.MATRIX;
         } else {
             throw new ElasticsearchIllegalArgumentException("No search type for [" + searchType + "]");
         }

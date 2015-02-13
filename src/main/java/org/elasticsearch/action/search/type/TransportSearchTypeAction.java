@@ -101,6 +101,7 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
 
         protected final boolean useSlowScroll;
 
+
         protected BaseAsyncAction(SearchRequest request, ActionListener<SearchResponse> listener) {
             this.request = request;
             this.listener = listener;
@@ -146,6 +147,7 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
             }
             request.beforeStart();
             int shardIndex = -1;
+            //
             for (final ShardIterator shardIt : shardsIts) {
                 shardIndex++;
                 final ShardRouting shard = shardIt.nextOrNull();
