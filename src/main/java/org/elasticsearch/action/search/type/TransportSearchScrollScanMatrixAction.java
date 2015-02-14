@@ -35,10 +35,15 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
 import org.elasticsearch.search.action.SearchServiceListener;
 import org.elasticsearch.search.action.SearchServiceTransportAction;
+import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.controller.SearchPhaseController;
+import org.elasticsearch.search.facet.InternalFacets;
+import org.elasticsearch.search.fetch.MatrixScanResult;
+import org.elasticsearch.search.fetch.MatrixScrollQueryFetchSearchResult;
 import org.elasticsearch.search.fetch.QueryFetchSearchResult;
 import org.elasticsearch.search.internal.InternalSearchHits;
 import org.elasticsearch.search.internal.InternalSearchResponse;
+import org.elasticsearch.search.suggest.Suggest;
 
 import java.io.IOException;
 import java.util.List;
@@ -80,7 +85,7 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
         final DiscoveryNodes nodes;
 
         private volatile AtomicArray<ShardSearchFailure> shardFailures;
-        final AtomicArray<QueryFetchSearchResult> queryFetchResults;
+        final AtomicArray<MatrixScanResult> matrixScanResult;
 
         final AtomicInteger successfulOps;
         final AtomicInteger counter;
@@ -93,7 +98,7 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
             this.successfulOps = new AtomicInteger(scrollId.getContext().length);
             this.counter = new AtomicInteger(scrollId.getContext().length);
 
-            this.queryFetchResults = new AtomicArray<>(scrollId.getContext().length);
+            this.matrixScanResult = new AtomicArray<>(scrollId.getContext().length);
         }
 
         protected final ShardSearchFailure[] buildShardFailures() {
@@ -119,7 +124,7 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
 
         public void start() {
             if (scrollId.getContext().length == 0) {
-                final InternalSearchResponse internalResponse = new InternalSearchResponse(new InternalSearchHits(InternalSearchHits.EMPTY, Long.parseLong(this.scrollId.getAttributes().get("total_hits")), 0.0f), null, null, null, false, null);
+                final InternalSearchResponse internalResponse = new InternalSearchResponse(new InternalSearchHits(InternalSearchHits.EMPTY, Long.parseLong(this.scrollId.getAttributes().get("total_hits")), 0.0f), null, null, null, null, false, null);
                 listener.onResponse(new SearchResponse(internalResponse, request.scrollId(), 0, 0, 0l, buildShardFailures()));
                 return;
             }
@@ -157,10 +162,10 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
         }
 
         void executePhase(final int shardIndex, DiscoveryNode node, final long searchId) {
-            searchService.sendExecuteMatrixScan(node, internalMatrixScrollSearchRequest(searchId, request), new SearchServiceListener<QueryFetchSearchResult>() {
+            searchService.sendExecuteMatrixScan(node, internalMatrixScrollSearchRequest(searchId, request), new SearchServiceListener<MatrixScanResult>() {
                 @Override
-                public void onResult(QueryFetchSearchResult result) {
-                    queryFetchResults.set(shardIndex, result);
+                public void onResult(MatrixScanResult result) {
+                    matrixScanResult.set(shardIndex, result);
                     if (counter.decrementAndGet() == 0) {
                         finishHim();
                     }
@@ -197,36 +202,12 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
         }
 
         private void innerFinishHim() throws IOException {
-            int numberOfHits = 0;
-            for (AtomicArray.Entry<QueryFetchSearchResult> entry : queryFetchResults.asList()) {
-                numberOfHits += entry.value.queryResult().topDocs().scoreDocs.length;
-            }
-            ScoreDoc[] docs = new ScoreDoc[numberOfHits];
-            int counter = 0;
-            for (AtomicArray.Entry<QueryFetchSearchResult> entry : queryFetchResults.asList()) {
-                ScoreDoc[] scoreDocs = entry.value.queryResult().topDocs().scoreDocs;
-                for (ScoreDoc scoreDoc : scoreDocs) {
-                    scoreDoc.shardIndex = entry.index;
-                    docs[counter++] = scoreDoc;
-                }
-            }
-            final InternalSearchResponse internalResponse = searchPhaseController.merge(docs, queryFetchResults, queryFetchResults);
-            ((InternalSearchHits) internalResponse.hits()).totalHits = Long.parseLong(this.scrollId.getAttributes().get("total_hits"));
 
-
-            for (AtomicArray.Entry<QueryFetchSearchResult> entry : queryFetchResults.asList()) {
-                if (entry.value.queryResult().topDocs().scoreDocs.length < entry.value.queryResult().size()) {
-                    // we found more than we want for this round, remove this from our scrolling
-                    queryFetchResults.set(entry.index, null);
-                }
+            MatrixScanResult result = null;
+            if (matrixScanResult.length() != 0) {
+                result = matrixScanResult.get(0);
             }
-
-            String scrollId = null;
-            if (request.scroll() != null) {
-                // we rebuild the scroll id since we remove shards that we finished scrolling on
-                scrollId = TransportSearchHelper.buildScrollId(this.scrollId.getType(), queryFetchResults, this.scrollId.getAttributes()); // continue moving the total_hits
-            }
-            listener.onResponse(new SearchResponse(internalResponse, scrollId, this.scrollId.getContext().length, successfulOps.get(),
+            listener.onResponse(new SearchResponse(new InternalSearchResponse(InternalSearchHits.empty(), null, null, null,  result, false, false), scrollId.getSource(), this.scrollId.getContext().length, successfulOps.get(),
                     buildTookInMillis(), buildShardFailures()));
         }
     }

@@ -37,6 +37,7 @@ import org.elasticsearch.index.termvectors.ShardTermVectorService;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchParseElement;
 import org.elasticsearch.search.fetch.FetchSubPhase;
+import org.elasticsearch.search.fetch.MatrixScanResult;
 import org.elasticsearch.search.internal.InternalSearchHit;
 import org.elasticsearch.search.internal.InternalSearchHitField;
 import org.elasticsearch.search.internal.SearchContext;
@@ -113,77 +114,71 @@ public class AnalyzedTextFetchSubPhase implements FetchSubPhase {
     @Override
     public void hitExecute(SearchContext context, HitContext hitContext) throws ElasticsearchException {
 
-        logger.info("dictionary is: {}", context.getDictionary());
-        if (context.getDictionary() == null || context.getDictionary().length == 0) {
-            for (AnalyzedTextContext.AnalyzedTextField field : context.analyzedTextFields().fields()) {
-                if (hitContext.hit().fieldsOrNull() == null) {
-                    hitContext.hit().fields(new HashMap<String, SearchHitField>(2));
-                }
-                SearchHitField hitField = hitContext.hit().fields().get(field.name());
-                if (hitField == null) {
-                    hitField = new InternalSearchHitField(field.name(), new ArrayList<>(2));
-                    hitContext.hit().fields().put(field.name(), hitField);
-                }
-                String[] text = new String[0];
-
-                ShardTermVectorService termVectorsService = context.termVectorService(context.shardTarget().shardId());
-                TermVectorResponse termVectorsResponse = termVectorsService.getTermVector(new TermVectorRequest(context.shardTarget().index(), hitContext.hit().type(), hitContext.hit().getId()).termStatistics(true), context.shardTarget().index());
-                try {
-                    if (termVectorsResponse.isExists() && termVectorsResponse.getFields().size() != 0) {
-
-                        String tokenCountField = field.getTokenCountField();
-                        if (tokenCountField != null) {
-                            FieldMapper mapper = context.mapperService().smartNameFieldMapper(tokenCountField);
-                            if (mapper != null) {
-                                AtomicFieldData data = context.fieldData().getForField(mapper).load(hitContext.readerContext());
-                                ScriptDocValues values = data.getScriptValues();
-                                values.setNextDocId(hitContext.docId());
-                                text = new String[((Number) values.getValues().get(0)).intValue()];
-                            }
-                        }
-                        final CharsRefBuilder spare = new CharsRefBuilder();
-                        Terms terms = termVectorsResponse.getFields().terms(field.name());
-                        TermsEnum termIter = terms.iterator(null);
-                        BytesRef term = termIter.next();
-                        DocsAndPositionsEnum posEnum;
-                        while (term != null) {
-                            float idf = (float) terms.getDocCount() / termIter.docFreq();
-                            spare.copyUTF8Bytes(term);
-                            if (logger.isTraceEnabled()) {
-                                logger.trace("term: {}, idfthreshold: {}, idf: {}", spare.toString(), field.getIdfThreshold(), Math.log(idf));
-                                logger.trace("term: {}, dfthreshold: {}, df: {}", spare.toString(), field.getDfThreshold(), termIter.docFreq());
-                            }
-                            if ((idf > field.getIdfThreshold()) && (termIter.docFreq() > field.getDfThreshold())) {
-                                posEnum = termIter.docsAndPositions(null, null);
-                                for (int i = 0; i < posEnum.freq(); i++) {
-                                    int pos = posEnum.nextPosition();
-                                    text = add(text, spare.toString(), pos);
-                                }
-                            }
-                            term = termIter.next();
-                        }
-                        List<String> cleanText = new ArrayList<>(text.length);
-                        for (String s : text) {
-                            if (s != null) {
-                                cleanText.add(s);
-                            }
-                        }
-                        hitField.values().addAll(cleanText);
-                    }
-                } catch (IOException e) {
-                }
-            }
-        } else {
+        for (AnalyzedTextContext.AnalyzedTextField field : context.analyzedTextFields().fields()) {
             if (hitContext.hit().fieldsOrNull() == null) {
                 hitContext.hit().fields(new HashMap<String, SearchHitField>(2));
             }
-            SearchHitField hitField = hitContext.hit().fields().get("term");
+            SearchHitField hitField = hitContext.hit().fields().get(field.name());
             if (hitField == null) {
-                hitField = new InternalSearchHitField("term", new ArrayList<>(2));
-                hitContext.hit().fields().put("term", hitField);
+                hitField = new InternalSearchHitField(field.name(), new ArrayList<>(2));
+                hitContext.hit().fields().put(field.name(), hitField);
             }
-            hitField.values().add("here be a vector");
+            String[] text = new String[0];
+
+            ShardTermVectorService termVectorsService = context.termVectorService(context.shardTarget().shardId());
+            TermVectorResponse termVectorsResponse = termVectorsService.getTermVector(new TermVectorRequest(context.shardTarget().index(), hitContext.hit().type(), hitContext.hit().getId()).termStatistics(true), context.shardTarget().index());
+            try {
+                if (termVectorsResponse.isExists() && termVectorsResponse.getFields().size() != 0) {
+
+                    String tokenCountField = field.getTokenCountField();
+                    if (tokenCountField != null) {
+                        FieldMapper mapper = context.mapperService().smartNameFieldMapper(tokenCountField);
+                        if (mapper != null) {
+                            AtomicFieldData data = context.fieldData().getForField(mapper).load(hitContext.readerContext());
+                            ScriptDocValues values = data.getScriptValues();
+                            values.setNextDocId(hitContext.docId());
+                            text = new String[((Number) values.getValues().get(0)).intValue()];
+                        }
+                    }
+                    final CharsRefBuilder spare = new CharsRefBuilder();
+                    Terms terms = termVectorsResponse.getFields().terms(field.name());
+                    TermsEnum termIter = terms.iterator(null);
+                    BytesRef term = termIter.next();
+                    DocsAndPositionsEnum posEnum;
+                    while (term != null) {
+                        float idf = (float) terms.getDocCount() / termIter.docFreq();
+                        spare.copyUTF8Bytes(term);
+                        if (logger.isTraceEnabled()) {
+                            logger.trace("term: {}, idfthreshold: {}, idf: {}", spare.toString(), field.getIdfThreshold(), Math.log(idf));
+                            logger.trace("term: {}, dfthreshold: {}, df: {}", spare.toString(), field.getDfThreshold(), termIter.docFreq());
+                        }
+                        if ((idf > field.getIdfThreshold()) && (termIter.docFreq() > field.getDfThreshold())) {
+                            posEnum = termIter.docsAndPositions(null, null);
+                            for (int i = 0; i < posEnum.freq(); i++) {
+                                int pos = posEnum.nextPosition();
+                                text = add(text, spare.toString(), pos);
+                            }
+                        }
+                        term = termIter.next();
+                    }
+                    List<String> cleanText = new ArrayList<>(text.length);
+                    for (String s : text) {
+                        if (s != null) {
+                            cleanText.add(s);
+                        }
+                    }
+                    hitField.values().addAll(cleanText);
+                }
+            } catch (IOException e) {
+            }
         }
+
+    }
+
+    public void matrixScanExecute(SearchContext context, MatrixScanResult matrixScanResult) throws ElasticsearchException {
+        logger.info("dictionary is: {}", context.getDictionary());
+        matrixScanResult.test= "here be vectors";
+
     }
 
     private String[] add(String[] text, String s, int pos) {

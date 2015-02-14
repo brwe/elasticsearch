@@ -410,7 +410,7 @@ public class SearchPhaseController extends AbstractComponent {
 
         InternalSearchHits searchHits = new InternalSearchHits(hits.toArray(new InternalSearchHit[hits.size()]), totalHits, maxScore);
 
-        return new InternalSearchResponse(searchHits, facets, aggregations, suggest, timedOut, terminatedEarly);
+        return new InternalSearchResponse(searchHits, facets, aggregations, suggest, null, timedOut, terminatedEarly);
     }
 
 }

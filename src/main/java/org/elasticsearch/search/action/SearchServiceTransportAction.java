@@ -587,24 +587,24 @@ public class SearchServiceTransportAction extends AbstractComponent {
         }
     }
 
-    public void sendExecuteMatrixScan(DiscoveryNode node, final InternalMatrixScrollSearchRequest request, final SearchServiceListener<QueryFetchSearchResult> listener) {
+    public void sendExecuteMatrixScan(DiscoveryNode node, final InternalMatrixScrollSearchRequest request, final SearchServiceListener<MatrixScanResult> listener) {
         if (clusterService.state().nodes().localNodeId().equals(node.id())) {
-            execute(new Callable<QueryFetchSearchResult>() {
+            execute(new Callable<MatrixScanResult>() {
                 @Override
-                public QueryFetchSearchResult call() throws Exception {
+                public MatrixScanResult call() throws Exception {
                     return searchService.executeMatrixScan(request).result();
                 }
             }, listener);
         } else {
-            transportService.sendRequest(node, MATRIX_SCAN_SCROLL_ACTION_NAME, request, new BaseTransportResponseHandler<ScrollQueryFetchSearchResult>() {
+            transportService.sendRequest(node, MATRIX_SCAN_SCROLL_ACTION_NAME, request, new BaseTransportResponseHandler<MatrixScrollQueryFetchSearchResult>() {
 
                 @Override
-                public ScrollQueryFetchSearchResult newInstance() {
-                    return new ScrollQueryFetchSearchResult();
+                public MatrixScrollQueryFetchSearchResult newInstance() {
+                    return new MatrixScrollQueryFetchSearchResult();
                 }
 
                 @Override
-                public void handleResponse(ScrollQueryFetchSearchResult response) {
+                public void handleResponse(MatrixScrollQueryFetchSearchResult response) {
                     listener.onResult(response.result());
                 }
 
@@ -1050,7 +1050,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(InternalMatrixScrollSearchRequest request, TransportChannel channel) throws Exception {
-            ScrollQueryFetchSearchResult result = searchService.executeMatrixScan(request);
+            MatrixScrollQueryFetchSearchResult result = searchService.executeMatrixScan(request);
             channel.sendResponse(result);
         }
 

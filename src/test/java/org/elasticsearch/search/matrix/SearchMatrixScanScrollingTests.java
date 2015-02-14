@@ -76,29 +76,18 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                 .setTrackScores(trackScores).setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [{\"field\":\"test_field\",\"idf_threshold\": 0, \"df_threshold\": 0}]}"))).get();
         assertHitCount(searchResponse, numberOfDocs);
         try {
-            assertHitCount(searchResponse, numberOfDocs);
-
-            // start scrolling, until we get not results
-            while (true) {
+            searchResponse = client().prepareSearchScroll(searchResponse.getScrollId()).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
+            assertHitCount(searchResponse, 0);
+            assertNotNull(searchResponse.getMatrixRows());
+            assertThat(searchResponse.getMatrixRows().test, equalTo("here be vectors"));
+            for (int i=0; i<10; i++) {
                 searchResponse = client().prepareSearchScroll(searchResponse.getScrollId()).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
-                assertHitCount(searchResponse, numberOfDocs);
+                assertHitCount(searchResponse, 0);
+                assertNotNull(searchResponse.getMatrixRows());
+                assertThat(searchResponse.getMatrixRows().matrixScanResult().test, equalTo("here be vectors"));
 
-                for (SearchHit hit : searchResponse.getHits()) {
-                    assertThat(hit.id() + "should not exist in the result set", ids.contains(hit.id()), equalTo(false));
-                    ids.add(hit.id());
-                    if (trackScores) {
-                        assertThat(hit.getScore(), greaterThan(0.0f));
-                    } else {
-                        assertThat(hit.getScore(), equalTo(0.0f));
-                    }
-                    assertThat((String)hit.field("term").getValue(), equalTo("here be a vector"));
-                }
-                if (searchResponse.getHits().hits().length == 0) {
-                    break;
-                }
             }
 
-            assertThat(expectedIds, equalTo(ids));
         } finally {
             clearScroll(searchResponse.getScrollId());
         }

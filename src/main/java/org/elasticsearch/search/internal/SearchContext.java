@@ -55,6 +55,7 @@ import org.elasticsearch.search.aggregations.SearchContextAggregations;
 import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.facet.SearchContextFacets;
 import org.elasticsearch.search.fetch.FetchSearchResult;
+import org.elasticsearch.search.fetch.MatrixScanResult;
 import org.elasticsearch.search.fetch.analyzed_text.AnalyzedTextContext;
 import org.elasticsearch.search.fetch.fielddata.FieldDataFieldsContext;
 import org.elasticsearch.search.fetch.partial.PartialFieldsContext;
@@ -339,6 +340,8 @@ public abstract class SearchContext implements Releasable {
     public abstract QuerySearchResult queryResult();
 
     public abstract FetchSearchResult fetchResult();
+
+    public abstract MatrixScanResult matrixScanResult();
 
     /**
      * Schedule the release of a resource. The time when {@link Releasable#release()} will be called on this object

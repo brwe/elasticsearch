@@ -125,6 +125,8 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
 
     private final FetchPhase fetchPhase;
 
+    private final MatrixScanPhase matrixScanPhase;
+
     private final IndicesQueryCache indicesQueryCache;
 
     private final long defaultKeepAlive;
@@ -139,7 +141,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
 
     @Inject
     public SearchService(Settings settings, ClusterService clusterService, IndicesService indicesService, IndicesLifecycle indicesLifecycle, IndicesWarmer indicesWarmer, ThreadPool threadPool,
-                         ScriptService scriptService, CacheRecycler cacheRecycler, PageCacheRecycler pageCacheRecycler, BigArrays bigArrays, DfsPhase dfsPhase, QueryPhase queryPhase, FetchPhase fetchPhase,
+                         ScriptService scriptService, CacheRecycler cacheRecycler, PageCacheRecycler pageCacheRecycler, BigArrays bigArrays, DfsPhase dfsPhase, QueryPhase queryPhase, FetchPhase fetchPhase, MatrixScanPhase matrixScanPhase,
                          IndicesQueryCache indicesQueryCache) {
         super(settings);
         this.threadPool = threadPool;
@@ -154,6 +156,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
         this.queryPhase = queryPhase;
         this.fetchPhase = fetchPhase;
         this.indicesQueryCache = indicesQueryCache;
+        this.matrixScanPhase = matrixScanPhase;
 
         TimeValue keepAliveInterval = componentSettings.getAsTime(KEEPALIVE_INTERVAL_COMPONENENT_KEY, timeValueMinutes(1));
         // we can have 5 minutes here, since we make sure to clean with search requests and when shard/index closes
@@ -287,7 +290,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
         }
     }
 
-    public ScrollQueryFetchSearchResult executeMatrixScan(InternalMatrixScrollSearchRequest request) throws ElasticsearchException {
+    public MatrixScrollQueryFetchSearchResult executeMatrixScan(InternalMatrixScrollSearchRequest request) throws ElasticsearchException {
         final SearchContext context = findContext(request.id());
         contextProcessing(context);
         try {
@@ -297,15 +300,13 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
                 context.searchType(SearchType.SCAN);
                 context.from(0);
             }
-            queryPhase.execute(context);
-            shortcutDocIdsToLoadForScanning(context);
-            fetchPhase.execute(context);
-            if (context.scroll() == null || context.fetchResult().hits().hits().length < context.size()) {
+            matrixScanPhase.execute(context);
+            if (context.scroll() == null) {
                 freeContext(request.id());
             } else {
                 contextProcessedSuccessfully(context);
             }
-            return new ScrollQueryFetchSearchResult(new QueryFetchSearchResult(context.queryResult(), context.fetchResult()), context.shardTarget());
+            return new MatrixScrollQueryFetchSearchResult(context.matrixScanResult(), context.shardTarget());
         } catch (Throwable e) {
             logger.trace("Scan phase failed", e);
             freeContext(context.id());

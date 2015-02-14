@@ -58,6 +58,7 @@ import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.facet.SearchContextFacets;
 import org.elasticsearch.search.fetch.FetchSearchResult;
 import org.elasticsearch.search.fetch.FetchSubPhase;
+import org.elasticsearch.search.fetch.MatrixScanResult;
 import org.elasticsearch.search.fetch.fielddata.FieldDataFieldsContext;
 import org.elasticsearch.search.fetch.partial.PartialFieldsContext;
 import org.elasticsearch.search.fetch.script.ScriptFieldsContext;
@@ -678,6 +679,11 @@ public class PercolateContext extends SearchContext {
 
     @Override
     public FetchSearchResult fetchResult() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public MatrixScanResult matrixScanResult() {
         throw new UnsupportedOperationException();
     }
 

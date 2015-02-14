@@ -28,6 +28,7 @@ import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.facet.Facets;
+import org.elasticsearch.search.fetch.MatrixScanResult;
 import org.elasticsearch.search.internal.InternalSearchResponse;
 import org.elasticsearch.search.suggest.Suggest;
 
@@ -107,6 +108,10 @@ public class SearchResponse extends ActionResponse implements StatusToXContent {
 
     public Suggest getSuggest() {
         return internalResponse.suggest();
+    }
+
+    public MatrixScanResult getMatrixRows() {
+        return internalResponse.getMatrixRows();
     }
 
     /**

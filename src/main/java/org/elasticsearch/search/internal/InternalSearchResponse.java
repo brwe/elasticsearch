@@ -30,10 +30,12 @@ import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.InternalAggregations;
 import org.elasticsearch.search.facet.Facets;
 import org.elasticsearch.search.facet.InternalFacets;
+import org.elasticsearch.search.fetch.MatrixScanResult;
 import org.elasticsearch.search.suggest.Suggest;
 
 import java.io.IOException;
 
+import static org.elasticsearch.search.fetch.MatrixScrollQueryFetchSearchResult.readMatrixScanResult;
 import static org.elasticsearch.search.internal.InternalSearchHits.readSearchHits;
 
 /**
@@ -42,7 +44,7 @@ import static org.elasticsearch.search.internal.InternalSearchHits.readSearchHit
 public class InternalSearchResponse implements Streamable, ToXContent {
 
     public static InternalSearchResponse empty() {
-        return new InternalSearchResponse(InternalSearchHits.empty(), null, null, null, false, null);
+        return new InternalSearchResponse(InternalSearchHits.empty(), null, null, null, null, false, null);
     }
 
     private InternalSearchHits hits;
@@ -50,6 +52,12 @@ public class InternalSearchResponse implements Streamable, ToXContent {
     private InternalFacets facets;
 
     private InternalAggregations aggregations;
+
+    public MatrixScanResult getMatrixRows() {
+        return matrixScan;
+    }
+
+    private MatrixScanResult matrixScan;
 
     private Suggest suggest;
 
@@ -60,13 +68,14 @@ public class InternalSearchResponse implements Streamable, ToXContent {
     private InternalSearchResponse() {
     }
 
-    public InternalSearchResponse(InternalSearchHits hits, InternalFacets facets, InternalAggregations aggregations, Suggest suggest, boolean timedOut, Boolean terminatedEarly) {
+    public InternalSearchResponse(InternalSearchHits hits, InternalFacets facets, InternalAggregations aggregations, Suggest suggest, MatrixScanResult matrixScanResult, boolean timedOut, Boolean terminatedEarly) {
         this.hits = hits;
         this.facets = facets;
         this.aggregations = aggregations;
         this.suggest = suggest;
         this.timedOut = timedOut;
         this.terminatedEarly = terminatedEarly;
+        this.matrixScan = matrixScanResult;
     }
 
     public boolean timedOut() {
@@ -105,6 +114,9 @@ public class InternalSearchResponse implements Streamable, ToXContent {
         if (suggest != null) {
             suggest.toXContent(builder, params);
         }
+        if (matrixScan != null) {
+            matrixScan.toXContent(builder, params);
+        }
         return builder;
     }
 
@@ -125,6 +137,9 @@ public class InternalSearchResponse implements Streamable, ToXContent {
         }
         if (in.readBoolean()) {
             suggest = Suggest.readSuggest(Suggest.Fields.SUGGEST, in);
+        }
+        if (in.readBoolean()) {
+            matrixScan = readMatrixScanResult(in);
         }
         timedOut = in.readBoolean();
 
@@ -153,6 +168,12 @@ public class InternalSearchResponse implements Streamable, ToXContent {
         } else {
             out.writeBoolean(true);
             suggest.writeTo(out);
+        }
+        if (matrixScan == null) {
+            out.writeBoolean(false);
+        } else {
+            out.writeBoolean(true);
+            matrixScan.writeTo(out);
         }
         out.writeBoolean(timedOut);
 
