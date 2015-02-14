@@ -36,6 +36,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.SearchService;
 import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.fetch.*;
+import org.elasticsearch.search.internal.InternalMatrixScrollSearchRequest;
 import org.elasticsearch.search.internal.InternalScrollSearchRequest;
 import org.elasticsearch.search.internal.ShardMatrixScanTransportRequest;
 import org.elasticsearch.search.internal.ShardSearchTransportRequest;
@@ -70,6 +71,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
     public static final String SCAN_ACTION_NAME = "indices:data/read/search[phase/scan]";
     public static final String SCAN_SCROLL_ACTION_NAME = "indices:data/read/search[phase/scan/scroll]";
     public static final String MATRIX_SCAN_ACTION_NAME = "indices:data/read/search[phase/scan/matrix]";
+    public static final String MATRIX_SCAN_SCROLL_ACTION_NAME = "indices:data/read/search[phase/scan/scroll/matrix]";
 
     static final class FreeContextResponseHandler implements TransportResponseHandler<SearchFreeContextResponse> {
 
@@ -137,6 +139,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
         transportService.registerHandler(SCAN_ACTION_NAME, new SearchScanTransportHandler());
         transportService.registerHandler(MATRIX_SCAN_ACTION_NAME, new MatrixScanTransportHandler());
         transportService.registerHandler(SCAN_SCROLL_ACTION_NAME, new SearchScanScrollTransportHandler());
+        transportService.registerHandler(MATRIX_SCAN_SCROLL_ACTION_NAME, new SearchMatixScanScrollTransportHandler());
     }
 
     public void sendFreeContext(DiscoveryNode node, final long contextId, SearchRequest request) {
@@ -584,6 +587,41 @@ public class SearchServiceTransportAction extends AbstractComponent {
         }
     }
 
+    public void sendExecuteMatrixScan(DiscoveryNode node, final InternalMatrixScrollSearchRequest request, final SearchServiceListener<QueryFetchSearchResult> listener) {
+        if (clusterService.state().nodes().localNodeId().equals(node.id())) {
+            execute(new Callable<QueryFetchSearchResult>() {
+                @Override
+                public QueryFetchSearchResult call() throws Exception {
+                    return searchService.executeMatrixScan(request).result();
+                }
+            }, listener);
+        } else {
+            transportService.sendRequest(node, MATRIX_SCAN_SCROLL_ACTION_NAME, request, new BaseTransportResponseHandler<ScrollQueryFetchSearchResult>() {
+
+                @Override
+                public ScrollQueryFetchSearchResult newInstance() {
+                    return new ScrollQueryFetchSearchResult();
+                }
+
+                @Override
+                public void handleResponse(ScrollQueryFetchSearchResult response) {
+                    listener.onResult(response.result());
+                }
+
+                @Override
+                public void handleException(TransportException exp) {
+                    listener.onFailure(exp);
+                }
+
+                @Override
+                public String executor() {
+                    return ThreadPool.Names.SAME;
+                }
+            });
+        }
+    }
+
+
     private <T> void execute(final Callable<? extends T> callable, final SearchServiceListener<T> listener) {
         try {
             threadPool.executor(ThreadPool.Names.SEARCH).execute(new Runnable() {
@@ -994,6 +1032,25 @@ public class SearchServiceTransportAction extends AbstractComponent {
         @Override
         public void messageReceived(InternalScrollSearchRequest request, TransportChannel channel) throws Exception {
             ScrollQueryFetchSearchResult result = searchService.executeScan(request);
+            channel.sendResponse(result);
+        }
+
+        @Override
+        public String executor() {
+            return ThreadPool.Names.SEARCH;
+        }
+    }
+
+    private class SearchMatixScanScrollTransportHandler extends BaseTransportRequestHandler<InternalMatrixScrollSearchRequest> {
+
+        @Override
+        public InternalMatrixScrollSearchRequest newInstance() {
+            return new InternalMatrixScrollSearchRequest();
+        }
+
+        @Override
+        public void messageReceived(InternalMatrixScrollSearchRequest request, TransportChannel channel) throws Exception {
+            ScrollQueryFetchSearchResult result = searchService.executeMatrixScan(request);
             channel.sendResponse(result);
         }
 

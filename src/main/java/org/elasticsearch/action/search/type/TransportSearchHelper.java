@@ -35,6 +35,7 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
 import org.elasticsearch.search.SearchPhaseResult;
+import org.elasticsearch.search.internal.InternalMatrixScrollSearchRequest;
 import org.elasticsearch.search.internal.InternalScrollSearchRequest;
 import org.elasticsearch.search.internal.ShardMatrixScanTransportRequest;
 import org.elasticsearch.search.internal.ShardSearchTransportRequest;
@@ -60,6 +61,10 @@ public abstract class TransportSearchHelper {
         return new InternalScrollSearchRequest(request, id);
     }
 
+    public static InternalMatrixScrollSearchRequest internalMatrixScrollSearchRequest(long id, SearchScrollRequest request) {
+        return new InternalMatrixScrollSearchRequest(request, id);
+    }
+
     public static String buildScrollId(SearchType searchType, AtomicArray<? extends SearchPhaseResult> searchPhaseResults, @Nullable Map<String, String> attributes) throws IOException {
         if (searchType == SearchType.DFS_QUERY_THEN_FETCH || searchType == SearchType.QUERY_THEN_FETCH) {
             return buildScrollId(ParsedScrollId.QUERY_THEN_FETCH_TYPE, searchPhaseResults, attributes);
@@ -68,7 +73,7 @@ public abstract class TransportSearchHelper {
         } else if (searchType == SearchType.SCAN) {
             return buildScrollId(ParsedScrollId.SCAN, searchPhaseResults, attributes);
         } else if (searchType == SearchType.MATRIX) {
-            return buildScrollId(ParsedScrollId.SCAN, searchPhaseResults, attributes);
+            return buildScrollId(ParsedScrollId.MATRIX, searchPhaseResults, attributes);
         } else {
             throw new ElasticsearchIllegalStateException();
         }

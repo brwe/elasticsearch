@@ -354,6 +354,11 @@ public abstract class AbstractClient implements Client {
     }
 
     @Override
+    public void matrixSearchScroll(final MatrixSearchScrollRequest request, final ActionListener<SearchResponse> listener) {
+        execute(MatrixSearchScrollAction.INSTANCE, request, listener);
+    }
+
+    @Override
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {
         return new SearchScrollRequestBuilder(this, scrollId);
     }

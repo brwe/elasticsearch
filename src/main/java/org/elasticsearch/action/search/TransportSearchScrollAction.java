@@ -21,10 +21,7 @@ package org.elasticsearch.action.search;
 
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.search.type.ParsedScrollId;
-import org.elasticsearch.action.search.type.TransportSearchScrollQueryAndFetchAction;
-import org.elasticsearch.action.search.type.TransportSearchScrollQueryThenFetchAction;
-import org.elasticsearch.action.search.type.TransportSearchScrollScanAction;
+import org.elasticsearch.action.search.type.*;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.action.support.TransportAction;
@@ -48,16 +45,18 @@ public class TransportSearchScrollAction extends HandledTransportAction<SearchSc
     private final TransportSearchScrollQueryAndFetchAction queryAndFetchAction;
 
     private final TransportSearchScrollScanAction scanAction;
+    private final TransportSearchScrollScanMatrixAction matrixScanAction;
 
     @Inject
     public TransportSearchScrollAction(Settings settings, ThreadPool threadPool, TransportService transportService,
                                        TransportSearchScrollQueryThenFetchAction queryThenFetchAction,
                                        TransportSearchScrollQueryAndFetchAction queryAndFetchAction,
-                                       TransportSearchScrollScanAction scanAction, ActionFilters actionFilters) {
+                                       TransportSearchScrollScanAction scanAction, TransportSearchScrollScanMatrixAction matrixScanAction, ActionFilters actionFilters) {
         super(settings, SearchScrollAction.NAME, threadPool, transportService, actionFilters);
         this.queryThenFetchAction = queryThenFetchAction;
         this.queryAndFetchAction = queryAndFetchAction;
         this.scanAction = scanAction;
+        this.matrixScanAction = matrixScanAction;
     }
 
     @Override
@@ -70,7 +69,9 @@ public class TransportSearchScrollAction extends HandledTransportAction<SearchSc
                 queryAndFetchAction.execute(request, scrollId, listener);
             } else if (scrollId.getType().equals(SCAN)) {
                 scanAction.execute(request, scrollId, listener);
-            } else {
+            } else if (scrollId.getType().equals(MATRIX)) {
+                matrixScanAction.execute(request, scrollId, listener);
+            }else {
                 throw new ElasticsearchIllegalArgumentException("Scroll id type [" + scrollId.getType() + "] unrecognized");
             }
         } catch (Throwable e) {

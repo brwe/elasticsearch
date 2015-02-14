@@ -20,8 +20,10 @@
 package org.elasticsearch.search.matrix;
 
 import com.google.common.collect.Sets;
+import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -68,14 +70,10 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
         }
 
         refresh();
-
-        SearchResponse searchResponse = client().prepareSearch()
-                .setSearchType(SearchType.MATRIX)
-                .setQuery(matchAllQuery())
+        SearchResponse searchResponse = client().prepareSearch("test").setTypes("type1").setSearchType(SearchType.MATRIX)
                 .setSize(size)
                 .setScroll(TimeValue.timeValueMinutes(2))
-                .setTrackScores(trackScores)
-                .execute().actionGet();
+                .setTrackScores(trackScores).setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [{\"field\":\"test_field\",\"idf_threshold\": 0, \"df_threshold\": 0}]}"))).get();
         assertHitCount(searchResponse, numberOfDocs);
         try {
             assertHitCount(searchResponse, numberOfDocs);
@@ -93,6 +91,7 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                     } else {
                         assertThat(hit.getScore(), equalTo(0.0f));
                     }
+                    assertThat((String)hit.field("term").getValue(), equalTo("here be a vector"));
                 }
                 if (searchResponse.getHits().hits().length == 0) {
                     break;

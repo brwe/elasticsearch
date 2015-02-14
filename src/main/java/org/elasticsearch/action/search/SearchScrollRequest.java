@@ -37,8 +37,8 @@ import static org.elasticsearch.search.Scroll.readScroll;
  */
 public class SearchScrollRequest extends ActionRequest<SearchScrollRequest> {
 
-    private String scrollId;
-    private Scroll scroll;
+    String scrollId;
+    Scroll scroll;
 
     public SearchScrollRequest() {
     }

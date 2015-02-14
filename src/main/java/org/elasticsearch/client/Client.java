@@ -492,6 +492,8 @@ public interface Client extends ElasticsearchClient<Client>, Releasable {
      */
     void searchScroll(SearchScrollRequest request, ActionListener<SearchResponse> listener);
 
+    void matrixSearchScroll(MatrixSearchScrollRequest request, ActionListener<SearchResponse> listener);
+
     /**
      * A search scroll request to continue searching a previous scrollable search request.
      */

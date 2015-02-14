@@ -32,52 +32,25 @@ import static org.elasticsearch.search.Scroll.readScroll;
 /**
  *
  */
-public class InternalScrollSearchRequest extends TransportRequest {
+public class InternalMatrixScrollSearchRequest extends InternalScrollSearchRequest {
 
-    long id;
 
-    Scroll scroll;
 
-    public InternalScrollSearchRequest() {
+    public InternalMatrixScrollSearchRequest() {
     }
 
-    public InternalScrollSearchRequest(SearchScrollRequest request, long id) {
-        super(request);
-        this.id = id;
-        this.scroll = request.scroll();
-    }
+    public InternalMatrixScrollSearchRequest(SearchScrollRequest request, long id) {
+        super(request, id);
 
-    public long id() {
-        return id;
-    }
-
-    public Scroll scroll() {
-        return scroll;
-    }
-
-    public InternalScrollSearchRequest scroll(Scroll scroll) {
-        this.scroll = scroll;
-        return this;
     }
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        id = in.readLong();
-        if (in.readBoolean()) {
-            scroll = readScroll(in);
-        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeLong(id);
-        if (scroll == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            scroll.writeTo(out);
-        }
     }
 }

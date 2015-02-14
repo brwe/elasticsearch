@@ -287,6 +287,36 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
         }
     }
 
+    public ScrollQueryFetchSearchResult executeMatrixScan(InternalMatrixScrollSearchRequest request) throws ElasticsearchException {
+        final SearchContext context = findContext(request.id());
+        contextProcessing(context);
+        try {
+            processScroll(request, context);
+            if (context.searchType() == SearchType.COUNT) {
+                // first scanning, reset the from to 0
+                context.searchType(SearchType.SCAN);
+                context.from(0);
+            }
+            queryPhase.execute(context);
+            shortcutDocIdsToLoadForScanning(context);
+            fetchPhase.execute(context);
+            if (context.scroll() == null || context.fetchResult().hits().hits().length < context.size()) {
+                freeContext(request.id());
+            } else {
+                contextProcessedSuccessfully(context);
+            }
+            return new ScrollQueryFetchSearchResult(new QueryFetchSearchResult(context.queryResult(), context.fetchResult()), context.shardTarget());
+        } catch (Throwable e) {
+            logger.trace("Scan phase failed", e);
+            freeContext(context.id());
+            throw ExceptionsHelper.convertToRuntime(e);
+        } finally {
+            cleanContext(context);
+        }
+    }
+
+
+
     public QuerySearchResultProvider executeQueryPhase(ShardSearchRequest request) throws ElasticsearchException {
         final SearchContext context = createAndPutContext(request);
         try {

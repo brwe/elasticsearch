@@ -17,67 +17,44 @@
  * under the License.
  */
 
-package org.elasticsearch.search.internal;
+package org.elasticsearch.action.search;
 
-import org.elasticsearch.action.search.SearchScrollRequest;
+import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.search.Scroll;
-import org.elasticsearch.transport.TransportRequest;
 
 import java.io.IOException;
 
-import static org.elasticsearch.search.Scroll.readScroll;
+import static org.elasticsearch.action.ValidateActions.addValidationError;
 
 /**
  *
  */
-public class InternalScrollSearchRequest extends TransportRequest {
+public class MatrixSearchScrollRequest extends SearchScrollRequest {
 
-    long id;
-
-    Scroll scroll;
-
-    public InternalScrollSearchRequest() {
+    public MatrixSearchScrollRequest() {
     }
 
-    public InternalScrollSearchRequest(SearchScrollRequest request, long id) {
-        super(request);
-        this.id = id;
-        this.scroll = request.scroll();
+    public MatrixSearchScrollRequest(String scrollId) {
+        this.scrollId = scrollId;
     }
 
-    public long id() {
-        return id;
-    }
-
-    public Scroll scroll() {
-        return scroll;
-    }
-
-    public InternalScrollSearchRequest scroll(Scroll scroll) {
-        this.scroll = scroll;
-        return this;
+    @Override
+    public ActionRequestValidationException validate() {
+        ActionRequestValidationException validationException = null;
+        if (scrollId == null) {
+            validationException = addValidationError("scrollId is missing", validationException);
+        }
+        return validationException;
     }
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        id = in.readLong();
-        if (in.readBoolean()) {
-            scroll = readScroll(in);
-        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeLong(id);
-        if (scroll == null) {
-            out.writeBoolean(false);
-        } else {
-            out.writeBoolean(true);
-            scroll.writeTo(out);
-        }
     }
 }
