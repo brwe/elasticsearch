@@ -300,6 +300,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
                 context.searchType(SearchType.SCAN);
                 context.from(0);
             }
+            context.setMatrixFrom(request.getMatrixFrom());
             matrixScanPhase.execute(context);
             if (context.scroll() == null) {
                 freeContext(request.id());

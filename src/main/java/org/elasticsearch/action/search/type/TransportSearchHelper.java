@@ -25,6 +25,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.ElasticsearchIllegalStateException;
+import org.elasticsearch.action.search.MatrixSearchScrollRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.search.SearchType;
@@ -61,7 +62,7 @@ public abstract class TransportSearchHelper {
         return new InternalScrollSearchRequest(request, id);
     }
 
-    public static InternalMatrixScrollSearchRequest internalMatrixScrollSearchRequest(long id, SearchScrollRequest request) {
+    public static InternalMatrixScrollSearchRequest internalMatrixScrollSearchRequest(long id, MatrixSearchScrollRequest request) {
         return new InternalMatrixScrollSearchRequest(request, id);
     }
 

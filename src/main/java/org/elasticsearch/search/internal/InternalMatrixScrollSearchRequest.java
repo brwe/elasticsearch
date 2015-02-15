@@ -19,6 +19,7 @@
 
 package org.elasticsearch.search.internal;
 
+import org.elasticsearch.action.search.MatrixSearchScrollRequest;
 import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -35,22 +36,29 @@ import static org.elasticsearch.search.Scroll.readScroll;
 public class InternalMatrixScrollSearchRequest extends InternalScrollSearchRequest {
 
 
+    private String matrixFrom;
 
     public InternalMatrixScrollSearchRequest() {
     }
 
-    public InternalMatrixScrollSearchRequest(SearchScrollRequest request, long id) {
+    public InternalMatrixScrollSearchRequest(MatrixSearchScrollRequest request, long id) {
         super(request, id);
-
+        matrixFrom = request.from();
     }
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
+        matrixFrom = in.readOptionalString();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
+        out.writeOptionalString(matrixFrom);
+    }
+
+    public String getMatrixFrom() {
+        return matrixFrom;
     }
 }

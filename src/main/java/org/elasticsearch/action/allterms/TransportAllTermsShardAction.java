@@ -24,9 +24,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.support.ActionFilters;
-import org.elasticsearch.action.support.TransportActions;
 import org.elasticsearch.action.support.single.shard.TransportShardSingleOperationAction;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
@@ -38,7 +36,6 @@ import org.elasticsearch.index.service.IndexService;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.shard.service.IndexShard;
 import org.elasticsearch.indices.IndicesService;
-import org.elasticsearch.search.facet.terms.strings.HashedAggregator;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -136,29 +133,7 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
         }
         try {
             //first find smallest term
-            for (int i = 0; i < termIters.size(); i++) {
-                BytesRef curTerm = null;
-                if (from != null) {
-                    TermsEnum.SeekStatus seekStatus = termIters.get(i).seekCeil(new BytesRef(from));
-                    if (seekStatus.equals(TermsEnum.SeekStatus.END) == false) {
-                        curTerm = termIters.get(i).term();
-                    }
-                } else {
-                    curTerm = termIters.get(i).next();
-                }
-
-                if (lastTerm == null) {
-                    lastTerm = curTerm;
-                    if (lastTerm == null || lastTerm.length == 0) {
-                        lastTerm = null;
-                        exhausted[i] = 1;
-                    }
-                } else {
-                    if (curTerm.compareTo(lastTerm) < 0) {
-                        lastTerm = curTerm;
-                    }
-                }
-            }
+            lastTerm = findInitialMinimum(from, termIters, lastTerm, exhausted);
             if (lastTerm == null) {
                 return true;
             }
@@ -185,6 +160,37 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
         } catch (IOException e) {
         }
         return false;
+    }
+
+    private static BytesRef findInitialMinimum(String from, List<TermsEnum> termIters, BytesRef lastTerm, int[] exhausted) throws IOException {
+        for (int i = 0; i < termIters.size(); i++) {
+            BytesRef curTerm = null;
+            if (from != null) {
+                TermsEnum.SeekStatus seekStatus = termIters.get(i).seekCeil(new BytesRef(from));
+                if (seekStatus.equals(TermsEnum.SeekStatus.END) == false) {
+                    curTerm = termIters.get(i).term();
+                } else {
+                    exhausted[i] = 1;
+                }
+            } else {
+                curTerm = termIters.get(i).next();
+            }
+
+            if (lastTerm == null) {
+                lastTerm = curTerm;
+                if (lastTerm == null || lastTerm.length == 0) {
+                    lastTerm = null;
+                    exhausted[i] = 1;
+                }
+            } else {
+                if (curTerm != null) {
+                    if (curTerm.compareTo(lastTerm) < 0) {
+                        lastTerm = curTerm;
+                    }
+                }
+            }
+        }
+        return lastTerm;
     }
 
     private static long getDocFreq(List<TermsEnum> termIters, BytesRef lastTerm, String field, int[] exhausted) {

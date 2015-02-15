@@ -90,6 +90,7 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
             Set<String> words = new HashSet<>();
             String from = null;
             while(true) {
+                Set<String> curSet = new HashSet<String>();
                 searchResponse = client().prepareMatrixSearchScroll(searchResponse.getScrollId(), from, numWords).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
                 assertHitCount(searchResponse, 0);
                 assertNotNull(searchResponse.getMatrixRows());
@@ -100,9 +101,10 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                 }
 
                 for (Tuple<String, long[]> postingList : searchResponse.getMatrixRows().getPostingLists()) {
-                    words.add(postingList.v1());
+                    curSet.add(postingList.v1());
                 }
-                assertFalse(words.contains(from));
+                assertFalse(curSet.contains(from));
+                words.addAll(curSet);
                 from = searchResponse.getMatrixRows().getPostingLists().get(searchResponse.getMatrixRows().getPostingLists().size()-1).v1();
 
             }
