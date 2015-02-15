@@ -29,14 +29,18 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
+import javax.naming.CompositeName;
 import java.util.Set;
 
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertHitCount;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
 public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest {
+
+    public static final String[] letters = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
 
     @Test
     public void testRandomized() throws Exception {
@@ -62,7 +66,8 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                     routing = "2";
                 }
             }
-            client().prepareIndex("test", "type1", id).setRouting(routing).setSource("field", i).execute().actionGet();
+
+            client().prepareIndex("test", "type1", id).setRouting(routing).setSource("field", letters[randomInt(letters.length -1)]).execute().actionGet();
             // make some segments
             if (i % 10 == 0) {
                 client().admin().indices().prepareFlush().execute().actionGet();
@@ -79,14 +84,14 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
             searchResponse = client().prepareSearchScroll(searchResponse.getScrollId()).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
             assertHitCount(searchResponse, 0);
             assertNotNull(searchResponse.getMatrixRows());
-            assertThat(searchResponse.getMatrixRows().test, equalTo("here be vectors"));
-            for (int i=0; i<10; i++) {
+            assertThat(searchResponse.getMatrixRows().getPostingLists().size(), lessThanOrEqualTo(letters.length));
+           /* for (int i = 0; i < 10; i++) {
                 searchResponse = client().prepareSearchScroll(searchResponse.getScrollId()).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
                 assertHitCount(searchResponse, 0);
                 assertNotNull(searchResponse.getMatrixRows());
-                assertThat(searchResponse.getMatrixRows().matrixScanResult().test, equalTo("here be vectors"));
+                assertThat(searchResponse.getMatrixRows().getPostingLists().size(), lessThanOrEqualTo(letters.length));
 
-            }
+            }*/
 
         } finally {
             clearScroll(searchResponse.getScrollId());

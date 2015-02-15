@@ -25,14 +25,17 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.allterms.AllTermsShardRequest;
 import org.elasticsearch.action.termvector.TermVectorRequest;
 import org.elasticsearch.action.termvector.TermVectorResponse;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.fielddata.AtomicFieldData;
 import org.elasticsearch.index.fielddata.ScriptDocValues;
 import org.elasticsearch.index.mapper.FieldMapper;
+import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.termvectors.ShardTermVectorService;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchParseElement;
@@ -47,6 +50,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.elasticsearch.action.allterms.TransportAllTermsShardAction.getTerms;
 
 /**
  * Query sub phase which pulls data from term vectors (using the cache if
@@ -177,7 +182,11 @@ public class AnalyzedTextFetchSubPhase implements FetchSubPhase {
 
     public void matrixScanExecute(SearchContext context, MatrixScanResult matrixScanResult) throws ElasticsearchException {
         logger.info("dictionary is: {}", context.getDictionary());
-        matrixScanResult.test= "here be vectors";
+        List<String> terms = new ArrayList<>();
+        getTerms("field", null, 1000, 0, context.indexShard().shardId(), terms, context.searcher());
+        for (String term : terms) {
+            matrixScanResult.addRow(term, new long[0]);
+        }
 
     }
 

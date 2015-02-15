@@ -46,6 +46,8 @@ import org.elasticsearch.search.internal.InternalSearchResponse;
 import org.elasticsearch.search.suggest.Suggest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -202,13 +204,62 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
         }
 
         private void innerFinishHim() throws IOException {
-
-            MatrixScanResult result = null;
+            MatrixScanResult finalResult = new MatrixScanResult(0, null);
             if (matrixScanResult.length() != 0) {
-                result = matrixScanResult.get(0);
+
+                boolean done = false;
+                List<List<Tuple<String, long[]>>> iterators = getIterators(matrixScanResult);
+                int[] index = new int[iterators.size()];
+                while (true) {
+                    String term = getMinimum(iterators, index);
+                    if (term == null) {
+                        break;
+                    }
+                    finalResult.addRow(term, new long[0]);
+                    move(iterators, index, term);
+                }
             }
-            listener.onResponse(new SearchResponse(new InternalSearchResponse(InternalSearchHits.empty(), null, null, null,  result, false, false), scrollId.getSource(), this.scrollId.getContext().length, successfulOps.get(),
+            listener.onResponse(new SearchResponse(new InternalSearchResponse(InternalSearchHits.empty(), null, null, null, finalResult, false, false), scrollId.getSource(), this.scrollId.getContext().length, successfulOps.get(),
                     buildTookInMillis(), buildShardFailures()));
+        }
+
+        private void move(List<List<Tuple<String, long[]>>> iterators, int[] index, String term) {
+            for (int i = 0; i < iterators.size(); i++) {
+                if (iterators.get(i).size() > index[i]) {
+                    String other = iterators.get(i).get(index[i]).v1();
+                    if (term.compareTo(other) == 0) {
+                        index[i] = index[i] + 1;
+                    }
+                }
+            }
+        }
+
+        private String getMinimum(List<List<Tuple<String, long[]>>> iterators, int[] index) {
+
+            String minTerm = null;
+            for (int i = 0; i < iterators.size(); i++) {
+                if (index[i] < iterators.get(i).size()) {
+                    String other = iterators.get(i).get(index[i]).v1();
+                    if (minTerm == null) {
+                        minTerm = other;
+                    } else {
+                        if (minTerm.compareTo(other) > 0) {
+                            minTerm = other;
+                        }
+                    }
+                }
+            }
+            return minTerm;
+        }
+
+        private List<List<Tuple<String, long[]>>> getIterators(AtomicArray<MatrixScanResult> matrixScanResults) {
+
+            ArrayList<List<Tuple<String, long[]>>> iterators = new ArrayList<>();
+            iterators.ensureCapacity(matrixScanResults.length());
+            for (AtomicArray.Entry<MatrixScanResult> matrixScanResult : matrixScanResults.asList()) {
+                iterators.add(matrixScanResult.value.shardTarget().getShardId(), matrixScanResult.value.getPostingLists());
+            }
+            return iterators;
         }
     }
 }

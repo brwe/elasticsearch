@@ -19,6 +19,7 @@
 
 package org.elasticsearch.search.fetch;
 
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.ToXContent;
@@ -28,6 +29,9 @@ import org.elasticsearch.search.internal.InternalSearchHits;
 import org.elasticsearch.transport.TransportResponse;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import static org.elasticsearch.search.internal.InternalSearchHits.StreamContext;
 
@@ -42,7 +46,7 @@ public class MatrixScanResult extends TransportResponse {
     // client side counter
     private transient int counter;
 
-    public String test = "";
+    List<Tuple<String, long[]>> postingLists = new ArrayList<>();
 
     public MatrixScanResult() {
 
@@ -90,17 +94,38 @@ public class MatrixScanResult extends TransportResponse {
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         id = in.readLong();
-        test = in.readString();
+        long numberOfRows = in.readLong();
+
+        postingLists = new ArrayList<>();
+        for (int i = 0; i < numberOfRows; i++) {
+            postingLists.add(new Tuple<>(in.readString(), in.readLongArray()));
+        }
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeLong(id);
-        out.writeString(test);
+        if (postingLists != null) {
+            out.writeLong(postingLists.size());
+            for (Tuple<String, long[]> entry : postingLists) {
+                out.writeString(entry.v1());
+                out.writeLongArray(entry.v2());
+            }
+        } else {
+            out.writeLong(0);
+        }
     }
 
     public void toXContent(XContentBuilder builder, ToXContent.Params params) throws IOException {
-        builder.field("test", test);
+        builder.field("not implemented", "yet");
+    }
+
+    public void addRow(String term, long[] list) {
+        postingLists.add(new Tuple<>(term, list));
+    }
+
+    public List<Tuple<String, long[]>> getPostingLists() {
+        return postingLists;
     }
 }
