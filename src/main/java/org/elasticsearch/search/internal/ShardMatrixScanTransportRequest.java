@@ -34,6 +34,8 @@ import java.io.IOException;
  */
 public class ShardMatrixScanTransportRequest extends ShardSearchTransportRequest {
 
+    private String field;
+
     public ShardMatrixScanTransportRequest() {
 
     }
@@ -45,9 +47,10 @@ public class ShardMatrixScanTransportRequest extends ShardSearchTransportRequest
     private String[] dictionary;
 
     public ShardMatrixScanTransportRequest(SearchRequest searchRequest, ShardRouting shardRouting, int numberOfShards,
-                                           boolean useSlowScroll, String[] filteringAliases, long nowInMillis, String[] dictionary) {
+                                           boolean useSlowScroll, String[] filteringAliases, long nowInMillis, String[] dictionary, String field) {
         super(searchRequest, shardRouting, numberOfShards, useSlowScroll, filteringAliases, nowInMillis);
         this.dictionary=dictionary;
+        this.field = field;
     }
 
 
@@ -55,11 +58,17 @@ public class ShardMatrixScanTransportRequest extends ShardSearchTransportRequest
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         dictionary= in.readStringArray();
+        field = in.readString();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeStringArray(dictionary);
+        out.writeString(field);
+    }
+
+    public String field() {
+        return field;
     }
 }

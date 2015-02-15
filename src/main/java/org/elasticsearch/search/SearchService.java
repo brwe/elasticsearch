@@ -238,6 +238,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
     public QuerySearchResult executeMatrixScan(ShardSearchRequest request) throws ElasticsearchException {
         final SearchContext context = createAndPutContext(request);
         context.setDictionary(((ShardMatrixScanTransportRequest) request).getDictionary());
+        context.setMatrixField(((ShardMatrixScanTransportRequest) request).field());
         try {
             if (context.aggregations() != null) {
                 throw new ElasticsearchIllegalArgumentException("aggregations are not supported with search_type=scan");

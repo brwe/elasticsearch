@@ -82,6 +82,12 @@ public abstract class SearchContext implements Releasable {
     private String[] dictionary;
     private String matrixFrom;
 
+    public void setMatrixField(String matrixField) {
+        this.matrixField = matrixField;
+    }
+
+    private String matrixField;
+
     public static void setCurrent(SearchContext value) {
         current.set(value);
         QueryParseContext.setTypes(value.types());
@@ -402,6 +408,10 @@ public abstract class SearchContext implements Releasable {
 
     public String getMatrixFrom() {
         return matrixFrom;
+    }
+
+    public String getMatrixField() {
+        return matrixField;
     }
 
     /**

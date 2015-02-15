@@ -72,7 +72,7 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
 
             String text = letters[randomInt(letters.length -1)];
             indexedWords.add(text);
-            client().prepareIndex("test", "type1", id).setRouting(routing).setSource("field", text).execute().actionGet();
+            client().prepareIndex("test", "type1", id).setRouting(routing).setSource("text", text).execute().actionGet();
             // make some segments
             if (i % 10 == 0) {
                 client().admin().indices().prepareFlush().execute().actionGet();

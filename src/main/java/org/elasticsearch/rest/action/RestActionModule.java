@@ -100,10 +100,7 @@ import org.elasticsearch.rest.action.percolate.RestPercolateAction;
 import org.elasticsearch.rest.action.script.RestDeleteIndexedScriptAction;
 import org.elasticsearch.rest.action.script.RestGetIndexedScriptAction;
 import org.elasticsearch.rest.action.script.RestPutIndexedScriptAction;
-import org.elasticsearch.rest.action.search.RestClearScrollAction;
-import org.elasticsearch.rest.action.search.RestMultiSearchAction;
-import org.elasticsearch.rest.action.search.RestSearchAction;
-import org.elasticsearch.rest.action.search.RestSearchScrollAction;
+import org.elasticsearch.rest.action.search.*;
 import org.elasticsearch.rest.action.suggest.RestSuggestAction;
 import org.elasticsearch.rest.action.template.RestDeleteSearchTemplateAction;
 import org.elasticsearch.rest.action.template.RestGetSearchTemplateAction;
@@ -214,6 +211,7 @@ public class RestActionModule extends AbstractModule {
 
         bind(RestSearchAction.class).asEagerSingleton();
         bind(RestSearchScrollAction.class).asEagerSingleton();
+        bind(RestSearchScrollMatrixAction.class).asEagerSingleton();
         bind(RestClearScrollAction.class).asEagerSingleton();
         bind(RestMultiSearchAction.class).asEagerSingleton();
 

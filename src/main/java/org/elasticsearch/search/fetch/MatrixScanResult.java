@@ -118,7 +118,11 @@ public class MatrixScanResult extends TransportResponse {
     }
 
     public void toXContent(XContentBuilder builder, ToXContent.Params params) throws IOException {
-        builder.field("not implemented", "yet");
+        builder.startObject("words");
+        for (Tuple<String, long[]> postingList : postingLists) {
+            builder.field(postingList.v1(), postingList.v2());
+        }
+        builder.endObject();
     }
 
     public void addRow(String term, long[] list) {

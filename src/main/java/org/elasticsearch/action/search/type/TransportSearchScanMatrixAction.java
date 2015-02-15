@@ -117,7 +117,7 @@ public class TransportSearchScanMatrixAction extends TransportSearchTypeAction {
                 } else {
                     String[] filteringAliases = clusterState.metaData().filteringAliases(shard.index(), request.indices());
                     // here send the dictionary to the shards...but how?
-                    sendExecuteFirstPhase(node, internalMatrixScanRequest(shard, shardsIts.size(), request, filteringAliases, startTime(), useSlowScroll, dictionary), new SearchServiceListener<QuerySearchResult>() {
+                    sendExecuteFirstPhase(node, internalMatrixScanRequest(shard, shardsIts.size(), request, filteringAliases, startTime(), useSlowScroll, dictionary, "text"), new SearchServiceListener<QuerySearchResult>() {
                         @Override
                         public void onResult(QuerySearchResult result) {
                             onFirstPhaseResult(shardIndex, shard, result, shardIt);

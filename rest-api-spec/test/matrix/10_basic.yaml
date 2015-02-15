@@ -1,0 +1,53 @@
+---
+"Basic scan":
+  - do:
+      indices.create:
+        index: test_scroll
+  - do:
+      index:
+        index:  test_scroll
+        type:   test
+        id:     42
+        body:   { text: "bar1 bar2" }
+
+  - do:
+      index:
+        index:  test_scroll
+        type:   test
+        id:     43
+        body:   { text: "bar3 bar2" }
+
+  - do:
+      indices.refresh: {}
+
+  - do:
+      search:
+        index: test_scroll
+        search_type: matrix
+        size: 1
+        scroll: 1m
+        body:
+          query:
+            match_all: {}
+
+  - set: {_scroll_id: scroll_id}
+  - match: {hits.total:      2    }
+  - length: {hits.hits:      0    }
+
+  - do:
+      matrix:
+        scroll_id: $scroll_id
+        scroll: 1m
+        size: 10
+        from: bar1
+
+  - set: {_scroll_id: scroll_id}
+  - is_false: words.bar1
+  - match: {words.bar2:      []    }
+  - match: {words.bar3:      []    }
+ 
+  - do:
+        clear_scroll:
+          scroll_id: $scroll_id
+
+

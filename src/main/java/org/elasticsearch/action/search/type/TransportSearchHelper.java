@@ -54,8 +54,8 @@ public abstract class TransportSearchHelper {
         return new ShardSearchTransportRequest(request, shardRouting, numberOfShards, useSlowScroll, filteringAliases, nowInMillis);
     }
 
-    public static ShardMatrixScanTransportRequest internalMatrixScanRequest(ShardRouting shardRouting, int numberOfShards, SearchRequest request, String[] filteringAliases, long nowInMillis, boolean useSlowScroll, String[] dictionary) {
-        return new ShardMatrixScanTransportRequest(request, shardRouting, numberOfShards, useSlowScroll, filteringAliases, nowInMillis, dictionary);
+    public static ShardMatrixScanTransportRequest internalMatrixScanRequest(ShardRouting shardRouting, int numberOfShards, SearchRequest request, String[] filteringAliases, long nowInMillis, boolean useSlowScroll, String[] dictionary, String field) {
+        return new ShardMatrixScanTransportRequest(request, shardRouting, numberOfShards, useSlowScroll, filteringAliases, nowInMillis, dictionary, field);
     }
 
     public static InternalScrollSearchRequest internalScrollSearchRequest(long id, SearchScrollRequest request) {
