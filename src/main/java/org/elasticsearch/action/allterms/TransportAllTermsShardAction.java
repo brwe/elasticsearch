@@ -136,11 +136,6 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
         try {
             //first find smallest term
             lastTerm = findInitialMinimum(from, termIters, lastTerm, exhausted, includeFrom);
-            if (lastTerm != null) {
-                CharsRefBuilder ref = new CharsRefBuilder();
-                ref.copyUTF8Bytes(lastTerm);
-                ESLoggerFactory.getRootLogger().info("{}", ref.toString());
-            }
             if (lastTerm == null) {
                 return true;
             }

@@ -16,6 +16,12 @@
         type:   test
         id:     43
         body:   { text: "bar3 bar2" }
+  - do:
+      index:
+        index:  test_scroll
+        type:   test
+        id:     43
+        body:   { text: "bar4 bar3" }
 
   - do:
       indices.refresh: {}
@@ -38,13 +44,27 @@
       matrix:
         scroll_id: $scroll_id
         scroll: 1m
-        size: 10
+        size: 2
         from: bar1
 
   - set: {_scroll_id: scroll_id}
   - is_false: words.bar1
   - match: {words.bar2:      []    }
   - match: {words.bar3:      []    }
+  
+  - do:
+      matrix:
+        scroll_id: $scroll_id
+        scroll: 1m
+        size: 2
+        from: bar3
+
+  - set: {_scroll_id: scroll_id}
+  - is_false: words.bar1
+  - is_false: words.bar2
+  - is_false: words.bar3
+  - match: {words.bar4:      []    }
+
  
   - do:
         clear_scroll:

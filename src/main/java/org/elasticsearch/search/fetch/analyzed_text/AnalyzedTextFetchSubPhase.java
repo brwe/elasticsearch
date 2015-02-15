@@ -182,7 +182,6 @@ public class AnalyzedTextFetchSubPhase implements FetchSubPhase {
     }
 
     public void matrixScanExecute(SearchContext context, MatrixScanResult matrixScanResult) throws ElasticsearchException {
-        logger.info("dictionary is: {}", context.getDictionary());
         List<String> terms = new ArrayList<>();
         getTerms(context.getMatrixField(), context.getMatrixFrom(), 1000, 0, context.indexShard().shardId(), terms, context.searcher());
         for (String term : terms) {

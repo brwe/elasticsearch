@@ -24,6 +24,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.search.SearchPhaseResult;
 import org.elasticsearch.search.SearchShardTarget;
 import org.elasticsearch.search.internal.InternalSearchHits;
 import org.elasticsearch.transport.TransportResponse;
@@ -38,7 +39,7 @@ import static org.elasticsearch.search.internal.InternalSearchHits.StreamContext
 /**
  *
  */
-public class MatrixScanResult extends TransportResponse {
+public class MatrixScanResult extends TransportResponse implements SearchPhaseResult {
 
     private long id;
     private SearchShardTarget shardTarget;

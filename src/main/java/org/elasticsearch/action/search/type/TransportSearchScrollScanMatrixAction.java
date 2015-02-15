@@ -217,7 +217,12 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
                     move(iterators, index, term);
                 }
             }
-            listener.onResponse(new SearchResponse(new InternalSearchResponse(InternalSearchHits.empty(), null, null, null, finalResult, false, false), scrollId.getSource(), this.scrollId.getContext().length, successfulOps.get(),
+            String scrollId = null;
+            if (request.scrollId() != null) {
+                // we rebuild the scroll id since we remove shards that we finished scrolling on
+                scrollId = TransportSearchHelper.buildScrollId(this.scrollId.getType(), matrixScanResult, this.scrollId.getAttributes()); // continue moving the total_hits
+            }
+            listener.onResponse(new SearchResponse(new InternalSearchResponse(InternalSearchHits.empty(), null, null, null, finalResult, false, false), scrollId, this.scrollId.getContext().length, successfulOps.get(),
                     buildTookInMillis(), buildShardFailures()));
         }
 

@@ -35,22 +35,14 @@ public class MatrixSearchScrollRequest extends SearchScrollRequest {
     private String from;
     private int size;
 
+
     public MatrixSearchScrollRequest() {
     }
 
     public MatrixSearchScrollRequest(String scrollId, String from, int size) {
-        this.scrollId = scrollId;
+        super(scrollId);
         this.from = from;
         this.size = size;
-    }
-
-    @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = null;
-        if (scrollId == null) {
-            validationException = addValidationError("scrollId is missing", validationException);
-        }
-        return validationException;
     }
 
     @Override

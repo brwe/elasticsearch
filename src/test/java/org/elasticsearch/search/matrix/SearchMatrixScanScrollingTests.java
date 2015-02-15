@@ -92,6 +92,7 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
             while(true) {
                 Set<String> curSet = new HashSet<>();
                 searchResponse = client().prepareMatrixSearchScroll(searchResponse.getScrollId(), from, numWords).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
+                logger.info("scrolling with id {}", searchResponse.getScrollId());
                 assertHitCount(searchResponse, 0);
                 assertNotNull(searchResponse.getMatrixRows());
                 assertThat(searchResponse.getMatrixRows().getPostingLists().size(), lessThanOrEqualTo(numWords));
