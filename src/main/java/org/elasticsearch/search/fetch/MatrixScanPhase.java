@@ -78,6 +78,7 @@ public class MatrixScanPhase implements SearchPhase {
 
     public void execute(SearchContext context) {
         MatrixScanResult result = context.matrixScanResult();
+        result.clear();
         analyzedTextFetchSubPhase.matrixScanExecute(context, result);
 
     }

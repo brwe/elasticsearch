@@ -22,6 +22,7 @@ package org.elasticsearch.action.allterms;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.support.ActionFilters;
@@ -30,6 +31,7 @@ import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.routing.ShardIterator;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.service.IndexService;
@@ -100,19 +102,19 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
 
     public static void getTerms(String field, String from, int size, long minDocFreq, ShardId shardId, List<String> terms, IndexSearcher searcher) {
         IndexReader topLevelReader = searcher.getIndexReader();
-        getTerms( field, from, size, minDocFreq, shardId, terms,topLevelReader);
+        getTerms(field, from, size, minDocFreq, shardId, terms, topLevelReader, false);
     }
 
     public static void getTerms(String field, String from, int size, long minDocFreq, ShardId shardId, List<String> terms, Engine.Searcher searcher) {
         IndexReader topLevelReader = searcher.reader();
         try {
-            if (getTerms(field, from, size, minDocFreq, shardId, terms, topLevelReader)) return;
+            if (getTerms(field, from, size, minDocFreq, shardId, terms, topLevelReader, true)) return;
         } finally {
             searcher.close();
         }
     }
 
-    protected static boolean getTerms(String field, String from, int size, long minDocFreq, ShardId shardId, List<String> terms, IndexReader topLevelReader) {
+    protected static boolean getTerms(String field, String from, int size, long minDocFreq, ShardId shardId, List<String> terms, IndexReader topLevelReader, boolean includeFrom) {
         List<AtomicReaderContext> leaves = topLevelReader.leaves();
         if (leaves.size() == 0) {
             return true;
@@ -133,7 +135,12 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
         }
         try {
             //first find smallest term
-            lastTerm = findInitialMinimum(from, termIters, lastTerm, exhausted);
+            lastTerm = findInitialMinimum(from, termIters, lastTerm, exhausted, includeFrom);
+            if (lastTerm != null) {
+                CharsRefBuilder ref = new CharsRefBuilder();
+                ref.copyUTF8Bytes(lastTerm);
+                ESLoggerFactory.getRootLogger().info("{}", ref.toString());
+            }
             if (lastTerm == null) {
                 return true;
             }
@@ -162,12 +169,17 @@ public class TransportAllTermsShardAction extends TransportShardSingleOperationA
         return false;
     }
 
-    private static BytesRef findInitialMinimum(String from, List<TermsEnum> termIters, BytesRef lastTerm, int[] exhausted) throws IOException {
+    private static BytesRef findInitialMinimum(String from, List<TermsEnum> termIters, BytesRef lastTerm, int[] exhausted, boolean includeFrom) throws IOException {
         for (int i = 0; i < termIters.size(); i++) {
             BytesRef curTerm = null;
             if (from != null) {
                 TermsEnum.SeekStatus seekStatus = termIters.get(i).seekCeil(new BytesRef(from));
-                if (seekStatus.equals(TermsEnum.SeekStatus.END) == false) {
+                if (seekStatus.equals(TermsEnum.SeekStatus.FOUND) == true && (includeFrom == false)) {
+                    curTerm = termIters.get(i).next();
+                    if (curTerm == null) {
+                        exhausted[i] = 1;
+                    }
+                } else if (seekStatus.equals(TermsEnum.SeekStatus.END) == false) {
                     curTerm = termIters.get(i).term();
                 } else {
                     exhausted[i] = 1;

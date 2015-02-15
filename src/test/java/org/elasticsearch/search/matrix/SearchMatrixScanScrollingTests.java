@@ -85,12 +85,12 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                 .setScroll(TimeValue.timeValueMinutes(2))
                 .setTrackScores(trackScores).setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [{\"field\":\"test_field\",\"idf_threshold\": 0, \"df_threshold\": 0}]}"))).get();
         assertHitCount(searchResponse, numberOfDocs);
-        int numWords = randomInt(10);
+        int numWords = randomInt(10)+1;
         try {
             Set<String> words = new HashSet<>();
             String from = null;
             while(true) {
-                Set<String> curSet = new HashSet<String>();
+                Set<String> curSet = new HashSet<>();
                 searchResponse = client().prepareMatrixSearchScroll(searchResponse.getScrollId(), from, numWords).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
                 assertHitCount(searchResponse, 0);
                 assertNotNull(searchResponse.getMatrixRows());

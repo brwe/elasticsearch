@@ -128,4 +128,8 @@ public class MatrixScanResult extends TransportResponse {
     public List<Tuple<String, long[]>> getPostingLists() {
         return postingLists;
     }
+
+    public void clear() {
+        postingLists.clear();
+    }
 }
