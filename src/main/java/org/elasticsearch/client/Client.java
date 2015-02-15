@@ -500,6 +500,11 @@ public interface Client extends ElasticsearchClient<Client>, Releasable {
     SearchScrollRequestBuilder prepareSearchScroll(String scrollId);
 
     /**
+     * A search scroll request to continue searching a previous scrollable search request.
+     */
+    MatrixSearchScrollRequestBuilder prepareMatrixSearchScroll(String scrollId, String from, int size);
+
+    /**
      * Performs multiple search requests.
      */
     ActionFuture<MultiSearchResponse> multiSearch(MultiSearchRequest request);

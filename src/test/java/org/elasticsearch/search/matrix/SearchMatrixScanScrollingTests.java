@@ -24,12 +24,15 @@ import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.junit.Test;
 
 import javax.naming.CompositeName;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
@@ -50,7 +53,7 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
     private void testScroll(long numberOfDocs, int size, boolean unbalanced, boolean trackScores) throws Exception {
         createIndex("test");
         ensureGreen();
-
+        Set<String> indexedWords = new HashSet<>();
         Set<String> ids = Sets.newHashSet();
         Set<String> expectedIds = Sets.newHashSet();
         for (int i = 0; i < numberOfDocs; i++) {
@@ -67,7 +70,9 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                 }
             }
 
-            client().prepareIndex("test", "type1", id).setRouting(routing).setSource("field", letters[randomInt(letters.length -1)]).execute().actionGet();
+            String text = letters[randomInt(letters.length -1)];
+            indexedWords.add(text);
+            client().prepareIndex("test", "type1", id).setRouting(routing).setSource("field", text).execute().actionGet();
             // make some segments
             if (i % 10 == 0) {
                 client().admin().indices().prepareFlush().execute().actionGet();
@@ -80,19 +85,31 @@ public class SearchMatrixScanScrollingTests extends ElasticsearchIntegrationTest
                 .setScroll(TimeValue.timeValueMinutes(2))
                 .setTrackScores(trackScores).setSource(new BytesArray(new BytesRef("{\"query\":{\"match_all\":{}},\"analyzed_text\": [{\"field\":\"test_field\",\"idf_threshold\": 0, \"df_threshold\": 0}]}"))).get();
         assertHitCount(searchResponse, numberOfDocs);
+        int numWords = randomInt(10);
         try {
-            searchResponse = client().prepareSearchScroll(searchResponse.getScrollId()).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
-            assertHitCount(searchResponse, 0);
-            assertNotNull(searchResponse.getMatrixRows());
-            assertThat(searchResponse.getMatrixRows().getPostingLists().size(), lessThanOrEqualTo(letters.length));
-           /* for (int i = 0; i < 10; i++) {
-                searchResponse = client().prepareSearchScroll(searchResponse.getScrollId()).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
+            Set<String> words = new HashSet<>();
+            String from = null;
+            while(true) {
+                searchResponse = client().prepareMatrixSearchScroll(searchResponse.getScrollId(), from, numWords).setScroll(TimeValue.timeValueMinutes(2)).execute().actionGet();
                 assertHitCount(searchResponse, 0);
                 assertNotNull(searchResponse.getMatrixRows());
-                assertThat(searchResponse.getMatrixRows().getPostingLists().size(), lessThanOrEqualTo(letters.length));
+                assertThat(searchResponse.getMatrixRows().getPostingLists().size(), lessThanOrEqualTo(numWords));
 
-            }*/
+                if (searchResponse.getMatrixRows().getPostingLists().size() == 0) {
+                    break;
+                }
 
+                for (Tuple<String, long[]> postingList : searchResponse.getMatrixRows().getPostingLists()) {
+                    words.add(postingList.v1());
+                }
+                assertFalse(words.contains(from));
+                from = searchResponse.getMatrixRows().getPostingLists().get(searchResponse.getMatrixRows().getPostingLists().size()-1).v1();
+
+            }
+            assertThat(words.size(), equalTo(indexedWords.size()));
+            for (String word : words) {
+                assertTrue(indexedWords.contains(word));
+            }
         } finally {
             clearScroll(searchResponse.getScrollId());
         }

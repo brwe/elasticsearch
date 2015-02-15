@@ -32,11 +32,16 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
  */
 public class MatrixSearchScrollRequest extends SearchScrollRequest {
 
+    private String from;
+    private int size;
+
     public MatrixSearchScrollRequest() {
     }
 
-    public MatrixSearchScrollRequest(String scrollId) {
+    public MatrixSearchScrollRequest(String scrollId, String from, int size) {
         this.scrollId = scrollId;
+        this.from = from;
+        this.size = size;
     }
 
     @Override
@@ -51,10 +56,23 @@ public class MatrixSearchScrollRequest extends SearchScrollRequest {
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
+        this.from = in.readOptionalString();
+        this.size = in.readInt();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
+        out.writeOptionalString(from);
+        out.writeInt(size);
+    }
+
+    public String from() {
+        return from;
+
+    }
+    public int size() {
+        return size;
+
     }
 }

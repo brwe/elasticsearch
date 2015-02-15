@@ -70,7 +70,7 @@ public class TransportSearchScrollAction extends HandledTransportAction<SearchSc
             } else if (scrollId.getType().equals(SCAN)) {
                 scanAction.execute(request, scrollId, listener);
             } else if (scrollId.getType().equals(MATRIX)) {
-                matrixScanAction.execute(request, scrollId, listener);
+                matrixScanAction.execute((MatrixSearchScrollRequest)request, scrollId, listener);
             }else {
                 throw new ElasticsearchIllegalArgumentException("Scroll id type [" + scrollId.getType() + "] unrecognized");
             }

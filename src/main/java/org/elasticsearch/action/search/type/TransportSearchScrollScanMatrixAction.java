@@ -21,10 +21,7 @@ package org.elasticsearch.action.search.type;
 
 import org.apache.lucene.search.ScoreDoc;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.search.ReduceSearchPhaseException;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchScrollRequest;
-import org.elasticsearch.action.search.ShardSearchFailure;
+import org.elasticsearch.action.search.*;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
@@ -72,13 +69,14 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
         this.searchPhaseController = searchPhaseController;
     }
 
-    public void execute(SearchScrollRequest request, ParsedScrollId scrollId, ActionListener<SearchResponse> listener) {
+    public void execute(MatrixSearchScrollRequest request, ParsedScrollId scrollId, ActionListener<SearchResponse> listener) {
+
         new AsyncAction(request, scrollId, listener).start();
     }
 
     class AsyncAction extends AbstractAsyncAction {
 
-        final SearchScrollRequest request;
+        final MatrixSearchScrollRequest request;
 
         final ActionListener<SearchResponse> listener;
 
@@ -92,8 +90,8 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
         final AtomicInteger successfulOps;
         final AtomicInteger counter;
 
-        AsyncAction(SearchScrollRequest request, ParsedScrollId scrollId, ActionListener<SearchResponse> listener) {
-            this.request = request;
+        AsyncAction(MatrixSearchScrollRequest request, ParsedScrollId scrollId, ActionListener<SearchResponse> listener) {
+            this.request = (MatrixSearchScrollRequest)request;
             this.listener = listener;
             this.scrollId = scrollId;
             this.nodes = clusterService.state().nodes();
@@ -210,7 +208,7 @@ public class TransportSearchScrollScanMatrixAction extends AbstractComponent {
                 boolean done = false;
                 List<List<Tuple<String, long[]>>> iterators = getIterators(matrixScanResult);
                 int[] index = new int[iterators.size()];
-                while (true) {
+                while (true && (finalResult.getPostingLists().size() < request.size())) {
                     String term = getMinimum(iterators, index);
                     if (term == null) {
                         break;

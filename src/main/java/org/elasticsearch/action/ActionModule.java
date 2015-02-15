@@ -316,7 +316,10 @@ public class ActionModule extends AbstractModule {
                 TransportSearchScrollQueryThenFetchAction.class,
                 TransportSearchScrollQueryAndFetchAction.class
         );
-        registerAction(MultiSearchAction.INSTANCE, TransportMultiSearchAction.class);
+
+        registerAction(MatrixSearchScrollAction.INSTANCE, TransportSearchScrollMatrixAction.class);
+
+                registerAction(MultiSearchAction.INSTANCE, TransportMultiSearchAction.class);
         registerAction(MoreLikeThisAction.INSTANCE, TransportMoreLikeThisAction.class);
         registerAction(PercolateAction.INSTANCE, TransportPercolateAction.class);
         registerAction(MultiPercolateAction.INSTANCE, TransportMultiPercolateAction.class, TransportShardMultiPercolateAction.class);

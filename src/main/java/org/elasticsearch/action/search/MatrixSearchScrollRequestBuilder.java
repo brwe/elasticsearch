@@ -34,8 +34,8 @@ public class MatrixSearchScrollRequestBuilder extends ActionRequestBuilder<Matri
         super(client, new MatrixSearchScrollRequest());
     }
 
-    public MatrixSearchScrollRequestBuilder(Client client, String scrollId) {
-        super(client, new MatrixSearchScrollRequest(scrollId));
+    public MatrixSearchScrollRequestBuilder(Client client, String scrollId, String from, int size) {
+        super(client, new MatrixSearchScrollRequest(scrollId, from, size));
     }
 
     /**
