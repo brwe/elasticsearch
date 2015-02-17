@@ -26,6 +26,10 @@ import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.UnavailableShardsException;
 import org.elasticsearch.action.WriteConsistencyLevel;
+import org.elasticsearch.action.bulk.BulkItemRequest;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkShardRequest;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.support.TransportAction;
 import org.elasticsearch.action.support.TransportActions;
 import org.elasticsearch.cluster.ClusterService;
@@ -347,7 +351,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                 ClusterBlockException blockException = checkGlobalBlock(observer.observedState(), request);
                 if (blockException != null) {
                     if (blockException.retryable()) {
-                        logger.trace("cluster is blocked ({}), scheduling a retry", blockException.getMessage());
+                        logger.info("cluster is blocked ({}), scheduling a retry", blockException.getMessage());
                         retry(blockException);
                         return false;
                     } else {
@@ -361,7 +365,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                 blockException = checkRequestBlock(observer.observedState(), request);
                 if (blockException != null) {
                     if (blockException.retryable()) {
-                        logger.trace("cluster is blocked ({}), scheduling a retry", blockException.getMessage());
+                        logger.info("cluster is blocked ({}), scheduling a retry", blockException.getMessage());
                         retry(blockException);
                         return false;
                     } else {
@@ -376,8 +380,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
 
             // no shardIt, might be in the case between index gateway recovery and shardIt initialization
             if (shardIt.size() == 0) {
-                logger.trace("no shard instances known for shard [{}], scheduling a retry", shardIt.shardId());
-
+                logger.info("no shard instances known for shard [{}], scheduling a retry", shardIt.shardId());
                 retry(null);
                 return false;
             }
@@ -391,7 +394,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                     continue;
                 }
                 if (!shard.active() || !observer.observedState().nodes().nodeExists(shard.currentNodeId())) {
-                    logger.trace("primary shard [{}] is not yet active or we do not know the node it is assigned to [{}], scheduling a retry.", shard.shardId(), shard.currentNodeId());
+                    logger.info("primary shard [{}] is not yet active or we do not know the node it is assigned to [{}], scheduling a retry.", shard.shardId(), shard.currentNodeId());
                     retry(null);
                     return false;
                 }
@@ -411,7 +414,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                     }
 
                     if (shardIt.sizeActive() < requiredNumber) {
-                        logger.trace("not enough active copies of shard [{}] to meet write consistency of [{}] (have {}, needed {}), scheduling a retry.",
+                        logger.info("not enough active copies of shard [{}] to meet write consistency of [{}] (have {}, needed {}), scheduling a retry.",
                                 shard.shardId(), consistencyLevel, shardIt.sizeActive(), requiredNumber);
                         retry(null);
                         return false;
@@ -424,6 +427,8 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
 
                 foundPrimary = true;
                 if (shard.currentNodeId().equals(observer.observedState().nodes().localNodeId())) {
+                    logger.info("indexing docs locally (node {})", shard.currentNodeId());
+                    printDocs(shard);
                     try {
                         if (request.operationThreaded()) {
                             request.beforeLocalFork();
@@ -445,6 +450,8 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                     }
                 } else {
                     DiscoveryNode node = observer.observedState().nodes().get(shard.currentNodeId());
+                    logger.info("sending docs to node {}", node.name());
+                    printDocs(shard);
                     transportService.sendRequest(node, actionName, request, transportOptions, new BaseTransportResponseHandler<Response>() {
 
                         @Override
@@ -470,7 +477,10 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                                 primaryOperationStarted.set(false);
                                 // we already marked it as started when we executed it (removed the listener) so pass false
                                 // to re-add to the cluster listener
-                                logger.trace("received an error from node the primary was assigned to ({}), scheduling a retry", exp.getMessage());
+                                logger.info("received an error from node the primary was assigned to ({}), scheduling a retry", exp.getMessage(), shard.currentNodeId());
+                                logger.info("stack ", exp);
+                                logger.info("stack of cause ", exp.unwrapCause());
+                                printDocs(shard);
                                 retry(null);
                             } else {
                                 listener.onFailure(exp);
@@ -482,11 +492,29 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
             }
             // we won't find a primary if there are no shards in the shard iterator, retry...
             if (!foundPrimary) {
-                logger.trace("couldn't find a eligible primary shard, scheduling for retry.");
+                logger.info("couldn't find a eligible primary shard, scheduling for retry.");
                 retry(null);
                 return false;
             }
             return true;
+        }
+
+        private void printDocs(ShardRouting shard) {
+            if (request instanceof BulkShardRequest) {
+                BulkShardRequest br = (BulkShardRequest)request;
+                for (BulkItemRequest item : br.items()) {
+
+
+                    if (item.request() instanceof IndexRequest) {
+                        if (shard != null) {
+                            logger.info("sending doc id {} to node {}", ((IndexRequest) item.request()).id(), shard.currentNodeId());
+                        }
+                        else {
+                            logger.info("sending doc id {}", ((IndexRequest) item.request()).id(), shard.currentNodeId());
+                        }
+                    }
+                }
+            }
         }
 
         void retry(@Nullable final Throwable failure) {
@@ -539,7 +567,8 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
                 // shard has not been allocated yet, retry it here
                 if (retryPrimaryException(e)) {
                     primaryOperationStarted.set(false);
-                    logger.trace("had an error while performing operation on primary ({}), scheduling a retry.", e.getMessage());
+                    logger.info("had an error while performing operation on primary ({}), scheduling a retry.", e.getMessage());
+                    printDocs(shard);
                     retry(e);
                     return;
                 }
