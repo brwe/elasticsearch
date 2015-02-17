@@ -313,6 +313,7 @@ public class TransportService extends AbstractLifecycleComponent<TransportServic
 
         @Override
         public void raiseNodeDisconnected(final DiscoveryNode node) {
+            final Exception e = new Exception("test exception to figure out what triggered disconnect");
             try {
                 for (final TransportConnectionListener connectionListener : connectionListeners) {
                     threadPool.generic().execute(new Runnable() {
@@ -332,7 +333,7 @@ public class TransportService extends AbstractLifecycleComponent<TransportServic
                             threadPool.generic().execute(new Runnable() {
                                 @Override
                                 public void run() {
-                                    holderToNotify.handler().handleException(new NodeDisconnectedException(node, holderToNotify.action()));
+                                    holderToNotify.handler().handleException(new NodeDisconnectedException(node, holderToNotify.action(), e));
                                 }
                             });
                         }

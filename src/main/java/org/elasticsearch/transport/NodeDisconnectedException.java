@@ -30,10 +30,8 @@ public class NodeDisconnectedException extends ConnectTransportException {
         super(node, "disconnected", action, null);
     }
 
-    // stack trace is meaningless...
-
-    @Override
-    public Throwable fillInStackTrace() {
-        return null;
+    public NodeDisconnectedException(DiscoveryNode node, String action, Exception e) {
+        super(node, "disconnected", action, e);
     }
+
 }

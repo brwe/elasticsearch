@@ -341,6 +341,7 @@
             <optional>true</optional>
         </dependency>
 
+
         <!-- We don't use this since the publish pom is then messed up -->
         <!--
         <dependency>
