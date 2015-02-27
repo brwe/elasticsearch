@@ -195,7 +195,9 @@ public abstract class MetaDataStateFormat<T> {
         return new SimpleFSDirectory(dir);
     }
 
-    private void cleanupOldFiles(String prefix, String fileName, File[] locations) throws IOException {
+
+    protected void cleanupOldFiles(String prefix, String fileName, File[] locations) throws IOException {
+
         // now clean up the old files
         for (File dataLocation : locations) {
             final File[] files = new File(dataLocation, STATE_DIR_NAME).listFiles();

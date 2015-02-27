@@ -19,8 +19,10 @@
 
 package org.elasticsearch.gateway.local.state.meta;
 
+import com.carrotsearch.hppc.cursors.IntObjectCursor;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.ClusterChangedEvent;
@@ -29,7 +31,9 @@ import org.elasticsearch.cluster.ClusterStateListener;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.node.DiscoveryNode;
+import org.elasticsearch.cluster.routing.*;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.Preconditions;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.Streams;
@@ -47,6 +51,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -174,7 +179,8 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
     @Override
     public void clusterChanged(ClusterChangedEvent event) {
         final ClusterState state = event.state();
-        if (state.blocks().disableStatePersistence()) {
+        if (state.blocks().disableStatePersistence()
+                || event.newMaster()) {
             // reset the current metadata, we need to start fresh...
             this.currentMetaData = null;
             return;
@@ -184,8 +190,8 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
         // we don't check if metaData changed, since we might be called several times and we need to check dangling...
 
         boolean success = true;
-        // only applied to master node, writing the global and index level states
-        if (state.nodes().localNode().masterNode()) {
+        // write the state if this node is a master eligible node or if it is a data node and has shards allocated on it
+        if (state.nodes().localNode().masterNode() || state.nodes().localNode().dataNode()) {
             // check if the global state changed?
             if (currentMetaData == null || !MetaData.isGlobalStateEquals(currentMetaData, newMetaData)) {
                 try {
@@ -197,6 +203,22 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
 
             // check and write changes in indices
             for (IndexMetaData indexMetaData : newMetaData) {
+
+                boolean shardsAllocatedOnThisNodeInLastClusterState = true;
+                if (isDataOnlyNode(state)) {
+                    boolean shardsCurrentlyAllocatedOnThisNode = shardsAllocatedOnLocalNode(state, indexMetaData);
+                    shardsAllocatedOnThisNodeInLastClusterState = shardsAllocatedOnLocalNode(event.previousState(), indexMetaData);
+
+                    if (shardsCurrentlyAllocatedOnThisNode == false) {
+                        // remove the index state for this index if it is only a data node
+                        // only delete if the last shard was removed
+                        if (shardsAllocatedOnThisNodeInLastClusterState) {
+                            removeIndexState(indexMetaData);
+                        }
+                        // nothing left to do, we do not write the index state for data only nodes if they do not have shards allocated on them
+                        continue;
+                    }
+                }
                 String writeReason = null;
                 IndexMetaData currentIndexMetaData;
                 if (currentMetaData == null) {
@@ -209,6 +231,9 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
                     writeReason = "freshly created";
                 } else if (currentIndexMetaData.version() != indexMetaData.version()) {
                     writeReason = "version changed from [" + currentIndexMetaData.version() + "] to [" + indexMetaData.version() + "]";
+                } else if (shardsAllocatedOnThisNodeInLastClusterState == false && isDataOnlyNode(state)) {
+                    // shard was newly allocated because it was not allocated in last cluster state but is now
+                    writeReason = "shard allocated on data only node";
                 }
 
                 // we update the writeReason only if we really need to write it
@@ -310,6 +335,43 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
 
         if (success) {
             currentMetaData = newMetaData;
+        }
+    }
+
+    protected boolean shardsAllocatedOnLocalNode(ClusterState state, IndexMetaData indexMetaData) {
+        boolean shardsAllocatedOnThisNode = false;
+        IndexRoutingTable indexRoutingTable = state.getRoutingTable().index(indexMetaData.index());
+        if (indexRoutingTable == null) {
+            // nothing allocated ?
+            return false;
+        }
+        // iterate over shards and see if one is on our node
+        for (IntObjectCursor it : indexRoutingTable.shards()) {
+            IndexShardRoutingTable shardRoutingTable = (IndexShardRoutingTable) it.value;
+            for (ShardRouting shardRouting : shardRoutingTable.shards()) {
+                if (shardRouting.currentNodeId() != null && shardRouting.currentNodeId().equals(state.nodes().localNode().getId())) {
+                    shardsAllocatedOnThisNode = true;
+                }
+            }
+        }
+        return shardsAllocatedOnThisNode;
+    }
+
+    protected boolean isDataOnlyNode(ClusterState state) {
+        return ((state.nodes().localNode().masterNode() == false) && (state.nodes().localNode().dataNode() == true));
+    }
+
+    private void removeIndexState(IndexMetaData indexMetaData) {
+        final MetaDataStateFormat<IndexMetaData> writer = indexStateFormat(format, formatParams, true);
+        try {
+            Path[] locations = nodeEnv.indexPaths(new Index(indexMetaData.index()));
+            Preconditions.checkArgument(locations != null, "Locations must not be null");
+            Preconditions.checkArgument(locations.length > 0, "One or more locations required");
+            writer.cleanupOldFiles(INDEX_STATE_FILE_PREFIX, null, locations);
+            logger.debug("successfully deleted state for {}", indexMetaData.getIndex());
+        } catch (Throwable ex) {
+            logger.warn("[{}]: failed to delete index state", ex, indexMetaData.index());
+           // and now what?
         }
     }
 

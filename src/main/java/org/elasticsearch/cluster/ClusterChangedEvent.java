@@ -165,4 +165,16 @@ public class ClusterChangedEvent {
     public boolean nodesChanged() {
         return nodesRemoved() || nodesAdded();
     }
+
+    public boolean newMaster() {
+        String oldMaster = previousState().getNodes().masterNodeId();
+        String newMaster = state().getNodes().masterNodeId();
+        if (oldMaster == null && newMaster == null) {
+            return false;
+        }
+        if (oldMaster == null && newMaster != null) {
+            return true;
+        }
+        return previousState().getNodes().masterNodeId().equals(state().getNodes().masterNodeId()) == false;
+    }
 }
