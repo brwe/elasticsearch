@@ -371,7 +371,10 @@ public class InternalClusterService extends AbstractLifecycleComponent<ClusterSe
             }
             ClusterState newClusterState;
             try {
+
                 newClusterState = updateTask.execute(previousClusterState);
+                logger.debug("previous cluster state version: {}", previousClusterState.version());
+                logger.debug("new      cluster state version: {}", newClusterState.version());
             } catch (Throwable e) {
                 if (logger.isTraceEnabled()) {
                     StringBuilder sb = new StringBuilder("failed to execute cluster state update, state:\nversion [").append(previousClusterState.version()).append("], source [").append(source).append("]\n");

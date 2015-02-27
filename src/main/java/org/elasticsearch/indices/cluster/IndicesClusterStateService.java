@@ -22,6 +22,7 @@ package org.elasticsearch.indices.cluster;
 import com.carrotsearch.hppc.IntOpenHashSet;
 import com.carrotsearch.hppc.ObjectContainer;
 import com.carrotsearch.hppc.cursors.ObjectCursor;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalStateException;
@@ -217,6 +218,10 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
     }
 
     private void applyDeletedIndices(final ClusterChangedEvent event) {
+        if (event.newMaster()) {
+            // if a new master sent the cluster state we do not delete indices immediately because they might be dangling
+            return;
+        }
         final ClusterState previousState = event.previousState();
         final String localNodeId = event.state().nodes().localNodeId();
         assert localNodeId != null;

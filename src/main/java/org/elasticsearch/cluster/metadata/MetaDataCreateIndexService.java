@@ -203,6 +203,7 @@ public class MetaDataCreateIndexService extends AbstractComponent {
             }
         }
         request.settings(updatedSettingsBuilder.build());
+       // logger.info("ceating index ", new Exception("test exception"));
 
         clusterService.submitStateUpdateTask("create-index [" + request.index() + "], cause [" + request.cause() + "]", Priority.URGENT, new AckedClusterStateUpdateTask<ClusterStateUpdateResponse>(request, listener) {
 
