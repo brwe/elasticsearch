@@ -180,8 +180,9 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
     public void clusterChanged(ClusterChangedEvent event) {
         final ClusterState state = event.state();
         if (state.blocks().disableStatePersistence()
-                || event.newMaster()) {
+                || resetBecauseNewMaster(event)) {
             // reset the current metadata, we need to start fresh...
+            logger.debug("reset currentMetaData because {}", (state.blocks().disableStatePersistence()?" state persistance disabled":" new master"));
             this.currentMetaData = null;
             return;
         }
@@ -242,6 +243,7 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
                 }
 
                 try {
+                    logger.debug("write index state");
                     writeIndex(writeReason, indexMetaData, currentIndexMetaData);
                 } catch (Throwable e) {
                     success = false;
@@ -338,6 +340,11 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
         }
     }
 
+    private boolean resetBecauseNewMaster(ClusterChangedEvent event) {
+        // we reset also if there is a new master but only if we have not already reset
+        return (event.newMaster() && currentMetaData != null);
+    }
+
     protected boolean shardsAllocatedOnLocalNode(ClusterState state, IndexMetaData indexMetaData) {
         boolean shardsAllocatedOnThisNode = false;
         IndexRoutingTable indexRoutingTable = state.getRoutingTable().index(indexMetaData.index());
@@ -364,7 +371,7 @@ public class LocalGatewayMetaState extends AbstractComponent implements ClusterS
     private void removeIndexState(IndexMetaData indexMetaData) {
         final MetaDataStateFormat<IndexMetaData> writer = indexStateFormat(format, formatParams, true);
         try {
-            Path[] locations = nodeEnv.indexPaths(new Index(indexMetaData.index()));
+            File[] locations = nodeEnv.indexLocations(new Index(indexMetaData.index()));
             Preconditions.checkArgument(locations != null, "Locations must not be null");
             Preconditions.checkArgument(locations.length > 0, "One or more locations required");
             writer.cleanupOldFiles(INDEX_STATE_FILE_PREFIX, null, locations);

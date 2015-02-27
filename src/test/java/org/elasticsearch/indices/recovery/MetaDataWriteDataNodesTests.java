@@ -26,7 +26,7 @@ import org.elasticsearch.cluster.routing.allocation.decider.FilterAllocationDeci
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.gateway.GatewayMetaState;
+import org.elasticsearch.gateway.local.state.meta.LocalGatewayMetaState;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.elasticsearch.test.ElasticsearchIntegrationTest.ClusterScope;
 import org.elasticsearch.test.InternalTestCluster;
@@ -262,9 +262,9 @@ public class MetaDataWriteDataNodesTests extends ElasticsearchIntegrationTest {
     public void testDanglingOnDataMasterNodes() throws Exception {
         // this test checks that regular dangling indices still works
         startMasterNode("master_node", false);
-        String dataPathBlue = newTempDirPath().toString();
-        String dataPathRed = newTempDirPath().toString();
-        String dataPathGreen = newTempDirPath().toString();
+        String dataPathBlue = newTempDir().toString();
+        String dataPathRed = newTempDir().toString();
+        String dataPathGreen = newTempDir().toString();
         startDataMasterNode("blue_node", "blue", dataPathBlue);
         startDataMasterNode("red_node", "red", dataPathRed);
         startDataMasterNode("green_node", "green", dataPathGreen);
@@ -344,18 +344,20 @@ public class MetaDataWriteDataNodesTests extends ElasticsearchIntegrationTest {
 
     private void startDataNode(String name, String color, boolean newDataPath) {
         ImmutableSettings.Builder settingsBuilder = ImmutableSettings.builder()
+                .put("gateway.type", "local")
                 .put("node.data", true)
                 .put("node.master", false)
                 .put("node.color", color)
                 .put("node.name", name);
         if (newDataPath) {
-            settingsBuilder.put("path.data", newTempDirPath().toString());
+            settingsBuilder.put("path.data", newTempDir().toString());
         }
         internalCluster().startNode(settingsBuilder.build());
     }
 
     private void startDataMasterNode(String name, String color, String explicitDataPath) {
         ImmutableSettings.Builder settingsBuilder = ImmutableSettings.builder()
+                .put("gateway.type", "local")
                 .put("node.data", true)
                 .put("node.master", true)
                 .put("node.color", color)
@@ -368,11 +370,12 @@ public class MetaDataWriteDataNodesTests extends ElasticsearchIntegrationTest {
 
     private void startMasterNode(String name, boolean newDataPath) {
         ImmutableSettings.Builder settingsBuilder = ImmutableSettings.builder()
+                .put("gateway.type", "local")
                 .put("node.data", false)
                 .put("node.master", true)
                 .put("node.name", name);
         if (newDataPath) {
-            settingsBuilder.put("path.data", newTempDirPath().toString());
+            settingsBuilder.put("path.data", newTempDir().toString());
         }
         internalCluster().startNode(settingsBuilder.build());
     }
@@ -390,7 +393,7 @@ public class MetaDataWriteDataNodesTests extends ElasticsearchIntegrationTest {
     }
 
     private void assertMetaState(String nodeName, String indexName, boolean shouldBe) throws Exception {
-        GatewayMetaState redNodeMetaState = ((InternalTestCluster) cluster()).getInstance(GatewayMetaState.class, nodeName);
+        LocalGatewayMetaState redNodeMetaState = ((InternalTestCluster) cluster()).getInstance(LocalGatewayMetaState.class, nodeName);
         MetaData redNodeMetaData = redNodeMetaState.loadMetaState();
         ImmutableOpenMap<String, IndexMetaData> indices = redNodeMetaData.getIndices();
         boolean inMetaSate = false;

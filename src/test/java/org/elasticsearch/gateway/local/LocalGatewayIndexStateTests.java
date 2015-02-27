@@ -335,6 +335,7 @@ public class LocalGatewayIndexStateTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @TestLogging("gateway:TRACE")
     public void testDanglingIndicesAutoImportYes() throws Exception {
         Settings settings = settingsBuilder()
                 .put("gateway.type", "local").put("gateway.local.auto_import_dangled", "yes")
