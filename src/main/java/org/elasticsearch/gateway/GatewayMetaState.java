@@ -195,8 +195,9 @@ public class GatewayMetaState extends AbstractComponent implements ClusterStateL
     public void clusterChanged(ClusterChangedEvent event) {
         final ClusterState state = event.state();
         if (state.blocks().disableStatePersistence()
-                || event.newMaster()) {
+                || resetBecauseNewMaster(event)) {
             // reset the current metadata, we need to start fresh...
+            logger.debug("reset currentMetaData because {}", (state.blocks().disableStatePersistence()?" state persistance disabled":" new master"));
             this.currentMetaData = null;
             return;
         }
@@ -360,6 +361,11 @@ public class GatewayMetaState extends AbstractComponent implements ClusterStateL
         if (success) {
             currentMetaData = newMetaData;
         }
+    }
+
+    private boolean resetBecauseNewMaster(ClusterChangedEvent event) {
+        // we reset also if there is a new master but only if we have not already reset
+        return (event.newMaster() && currentMetaData != null);
     }
 
     protected boolean shardsAllocatedOnLocalNode(ClusterState state, IndexMetaData indexMetaData) {

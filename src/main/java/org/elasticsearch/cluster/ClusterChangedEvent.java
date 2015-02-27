@@ -175,6 +175,6 @@ public class ClusterChangedEvent {
         if (oldMaster == null && newMaster != null) {
             return true;
         }
-        return previousState().getNodes().masterNodeId().equals(state().getNodes().masterNodeId()) == false;
+        return oldMaster.equals(newMaster) == false;
     }
 }

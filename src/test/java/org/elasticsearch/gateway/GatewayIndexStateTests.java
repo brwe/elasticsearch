@@ -37,6 +37,7 @@ import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.elasticsearch.test.ElasticsearchIntegrationTest.ClusterScope;
 import org.elasticsearch.test.InternalTestCluster;
 import org.elasticsearch.test.InternalTestCluster.RestartCallback;
+import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.junit.Test;
 
 import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
@@ -332,6 +333,7 @@ public class GatewayIndexStateTests extends ElasticsearchIntegrationTest {
     }
 
     @Test
+    @TestLogging("gateway:TRACE")
     public void testDanglingIndicesAutoImportYes() throws Exception {
         Settings settings = settingsBuilder()
                 .put(GatewayMetaState.GATEWAY_AUTO_IMPORT_DANGLED, "yes")
