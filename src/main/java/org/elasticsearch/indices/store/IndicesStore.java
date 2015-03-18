@@ -62,7 +62,7 @@ public class IndicesStore extends AbstractComponent implements ClusterStateListe
 
     public static final String ACTION_SHARD_EXISTS = "internal:index/shard/exists";
 
-    private static final EnumSet<IndexShardState> ACTIVE_STATES = EnumSet.of(IndexShardState.STARTED, IndexShardState.RELOCATED);
+    private static final EnumSet<IndexShardState> ACTIVE_STATES = EnumSet.of(IndexShardState.STARTED, IndexShardState.RELOCATED, IndexShardState.POST_RECOVERY);
 
     class ApplySettings implements NodeSettingsService.Listener {
         @Override
