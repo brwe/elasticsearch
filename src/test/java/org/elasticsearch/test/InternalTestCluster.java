@@ -76,6 +76,7 @@ import org.elasticsearch.index.cache.filter.AutoFilterCachingPolicy;
 import org.elasticsearch.index.cache.filter.FilterCacheModule;
 import org.elasticsearch.index.cache.filter.none.NoneFilterCache;
 import org.elasticsearch.index.cache.filter.weighted.WeightedFilterCache;
+import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.IndexShardModule;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.IndicesService;
@@ -972,8 +973,27 @@ public final class InternalTestCluster extends TestCluster {
 
     @Override
     public synchronized void afterTest() throws IOException {
+        assertShardIndexCounter();
         wipeDataDirectories();
         randomlyResetClients(); /* reset all clients - each test gets its own client based on the Random instance created above. */
+    }
+    /**
+     * Wipes any data that a test can leave behind: indices, templates and repositories
+     */
+    public void wipe() {
+        assertShardIndexCounter();
+        super.wipe();
+    }
+    private void assertShardIndexCounter() {
+        final Collection<NodeAndClient> nodesAndClients = nodes.values();
+        for (NodeAndClient nodeAndClient : nodesAndClients) {
+            IndicesService indexServices = getInstance(IndicesService.class, nodeAndClient.name);
+            for (IndexService indexService: indexServices) {
+                for (IndexShard indexShard: indexService) {
+                    assertThat(indexShard.getNumInFlightOperations(), equalTo(0l));
+                }
+            }
+        }
     }
 
     private void randomlyResetClients() throws IOException {

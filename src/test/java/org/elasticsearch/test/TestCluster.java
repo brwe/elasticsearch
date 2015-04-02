@@ -198,7 +198,7 @@ public abstract class TestCluster implements Iterable<Client>, Closeable {
 
     /**
      * Ensures that any breaker statistics are reset to 0.
-     *
+     * <p/>
      * The implementation is specific to the test cluster, because the act of
      * checking some breaker stats can increase them.
      */

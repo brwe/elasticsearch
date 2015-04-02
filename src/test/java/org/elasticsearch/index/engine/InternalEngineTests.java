@@ -1547,7 +1547,7 @@ public class InternalEngineTests extends ElasticsearchLuceneTestCase {
             wrapper.setRandomIOExceptionRate(randomDouble());
             wrapper.setRandomIOExceptionRateOnOpen(randomDouble());
             try (Store store = createStore(wrapper)) {
-                int refCount = store.refCount();
+                long refCount = store.refCount();
                 assertTrue("refCount: " + store.refCount(), store.refCount() > 0);
                 Translog translog = createTranslog();
                 InternalEngine holder;

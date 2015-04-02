@@ -97,7 +97,7 @@ public class StoreTest extends ElasticsearchLuceneTestCase {
         }
 
         store.decRef();
-        assertThat(store.refCount(), Matchers.equalTo(0));
+        assertThat(store.refCount(), Matchers.equalTo(0l));
         assertFalse(store.tryIncRef());
         try {
             store.incRef();

@@ -610,7 +610,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
     /**
      * Returns the current reference count.
      */
-    public int refCount() {
+    public long refCount() {
         return refCounter.refCount();
     }
 

@@ -21,6 +21,7 @@ package org.elasticsearch.common.util.concurrent;
 import org.apache.lucene.store.AlreadyClosedException;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A basic RefCounted implementation that is initialized with a
@@ -28,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * a 0 ref count
  */
 public abstract class AbstractRefCounted implements RefCounted {
-    private final AtomicInteger refCount = new AtomicInteger(1);
+    protected final AtomicLong refCount = new AtomicLong(1);
     private final String name;
 
     public AbstractRefCounted(String name) {
@@ -45,7 +46,7 @@ public abstract class AbstractRefCounted implements RefCounted {
     @Override
     public final boolean tryIncRef() {
         do {
-            int i = refCount.get();
+            long i = refCount.get();
             if (i > 0) {
                 if (refCount.compareAndSet(i, i + 1)) {
                     return true;
@@ -58,7 +59,7 @@ public abstract class AbstractRefCounted implements RefCounted {
 
     @Override
     public final void decRef() {
-        int i = refCount.decrementAndGet();
+        long i = refCount.decrementAndGet();
         assert i >= 0;
         if (i == 0) {
             closeInternal();
@@ -69,7 +70,7 @@ public abstract class AbstractRefCounted implements RefCounted {
     /**
      * Returns the current reference count.
      */
-    public int refCount() {
+    public long refCount() {
         return this.refCount.get();
     }
 

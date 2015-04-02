@@ -125,7 +125,7 @@ public class RefCountedTest extends ElasticsearchTestCase {
         } catch (AlreadyClosedException ex) {
             assertThat(ex.getMessage(), equalTo("closed"));
         }
-        assertThat(counted.refCount(), is(0));
+        assertThat(counted.refCount(), is(0l));
         assertThat(exceptions, Matchers.emptyIterable());
 
     }
