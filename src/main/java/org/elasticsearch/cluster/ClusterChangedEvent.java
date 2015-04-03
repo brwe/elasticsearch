@@ -105,6 +105,9 @@ public class ClusterChangedEvent {
      * Returns the indices deleted in this event
      */
     public List<String> indicesDeleted() {
+        if (newMaster()) {
+            return ImmutableList.of();
+        }
         if (previousState == null) {
             return ImmutableList.of();
         }
@@ -164,5 +167,17 @@ public class ClusterChangedEvent {
 
     public boolean nodesChanged() {
         return nodesRemoved() || nodesAdded();
+    }
+
+    public boolean newMaster() {
+        String oldMaster = previousState().getNodes().masterNodeId();
+        String newMaster = state().getNodes().masterNodeId();
+        if (oldMaster == null && newMaster == null) {
+            return false;
+        }
+        if (oldMaster == null && newMaster != null) {
+            return true;
+        }
+        return oldMaster.equals(newMaster) == false;
     }
 }
