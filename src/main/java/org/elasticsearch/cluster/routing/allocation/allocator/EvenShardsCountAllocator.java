@@ -69,6 +69,11 @@ public class EvenShardsCountAllocator extends AbstractComponent implements Shard
     }
 
     @Override
+    public void applySealedShards(StartedRerouteAllocation allocation) {
+
+    }
+
+    @Override
     public void applyFailedShards(FailedRerouteAllocation allocation) {
     }
 

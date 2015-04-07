@@ -105,6 +105,8 @@ import org.elasticsearch.action.admin.indices.warmer.get.GetWarmersResponse;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequest;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequestBuilder;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerResponse;
+import org.elasticsearch.action.seal.SealRequest;
+import org.elasticsearch.action.seal.SealResponse;
 import org.elasticsearch.common.Nullable;
 
 /**
@@ -280,6 +282,11 @@ public interface IndicesAdminClient extends ElasticsearchClient<IndicesAdminClie
      * @see org.elasticsearch.client.Requests#closeIndexRequest(String)
      */
     void close(CloseIndexRequest request, ActionListener<CloseIndexResponse> listener);
+
+
+    void seal(SealRequest request, ActionListener<SealResponse> listener);
+
+    ActionFuture<SealResponse> seal(SealRequest request);
 
     /**
      * Closes one or more indices based on their index name.

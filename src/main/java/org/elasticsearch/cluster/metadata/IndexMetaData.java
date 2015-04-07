@@ -124,7 +124,9 @@ public class IndexMetaData {
 
     public static enum State {
         OPEN((byte) 0),
-        CLOSE((byte) 1);
+        CLOSE((byte) 1),
+        SEALING((byte) 2),
+        SEALED((byte) 3);
 
         private final byte id;
 
@@ -141,6 +143,10 @@ public class IndexMetaData {
                 return OPEN;
             } else if (id == 1) {
                 return CLOSE;
+            } else if (id == 2) {
+                return SEALING;
+            } else if (id == 3) {
+                return SEALED;
             }
             throw new ElasticsearchIllegalStateException("No state match for id [" + id + "]");
         }
@@ -150,6 +156,10 @@ public class IndexMetaData {
                 return OPEN;
             } else if ("close".equals(state)) {
                 return CLOSE;
+            } else if ("sealing".equals(state)) {
+                return SEALING;
+            } else if ("sealed".equals(state)) {
+                return SEALED;
             }
             throw new ElasticsearchIllegalStateException("No state match for [" + state + "]");
         }

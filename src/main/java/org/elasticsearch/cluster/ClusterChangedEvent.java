@@ -124,8 +124,30 @@ public class ClusterChangedEvent {
         return deleted == null ? ImmutableList.<String>of() : deleted;
     }
 
+
+    public List<String> indicesSealing() {
+        if (previousState == null) {
+            return ImmutableList.of();
+        }
+        if (!metaDataChanged()) {
+            return ImmutableList.of();
+        }
+        List<String> sealing = null;
+        for (ObjectCursor<String> cursor : state.metaData().indices().keys()) {
+            String index = cursor.value;
+            // TODO: here maybe check if the inex was set to sealing before because then we can skip it?
+            if (state.metaData().index(index).state() == IndexMetaData.State.SEALING) {
+                if (sealing == null) {
+                    sealing = Lists.newArrayList();
+                }
+                sealing.add(index);
+            }
+        }
+        return sealing == null ? ImmutableList.<String>of() : sealing;
+    }
+
     public boolean metaDataChanged() {
-        return state.metaData() != previousState.metaData();
+        return state.metaData() != previousState.metaData(); // should we call equals here?
     }
 
     public boolean indexMetaDataChanged(IndexMetaData current) {

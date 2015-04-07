@@ -54,6 +54,7 @@ public class ShardStateAction extends AbstractComponent {
 
     public static final String SHARD_STARTED_ACTION_NAME = "internal:cluster/shard/started";
     public static final String SHARD_FAILED_ACTION_NAME = "internal:cluster/shard/failure";
+    public static final String SHARD_SEALED_ACTION_NAME = "internal:cluster/shard/sealed";
 
     private final TransportService transportService;
     private final ClusterService clusterService;
@@ -62,6 +63,7 @@ public class ShardStateAction extends AbstractComponent {
 
     private final BlockingQueue<ShardRoutingEntry> startedShardsQueue = ConcurrentCollections.newBlockingQueue();
     private final BlockingQueue<ShardRoutingEntry> failedShardQueue = ConcurrentCollections.newBlockingQueue();
+    private final BlockingQueue<ShardRoutingEntry> sealedShardQueue = ConcurrentCollections.newBlockingQueue();
 
     @Inject
     public ShardStateAction(Settings settings, ClusterService clusterService, TransportService transportService,
@@ -74,6 +76,7 @@ public class ShardStateAction extends AbstractComponent {
 
         transportService.registerHandler(SHARD_STARTED_ACTION_NAME, new ShardStartedTransportHandler());
         transportService.registerHandler(SHARD_FAILED_ACTION_NAME, new ShardFailedTransportHandler());
+        transportService.registerHandler(SHARD_SEALED_ACTION_NAME, new ShardSealedTransportHandler());
     }
 
     public void shardFailed(final ShardRouting shardRouting, final String indexUUID, final String reason) throws ElasticsearchException {
@@ -128,6 +131,25 @@ public class ShardStateAction extends AbstractComponent {
                         @Override
                         public void handleException(TransportException exp) {
                             logger.warn("failed to send shard started to [{}]", exp, masterNode);
+                        }
+                    });
+        }
+    }
+
+    public void shardSealed(final ShardRouting shardRouting, String indexUUID, final String reason, final DiscoveryNode masterNode) throws ElasticsearchException {
+
+        ShardRoutingEntry shardRoutingEntry = new ShardRoutingEntry(shardRouting, indexUUID, reason);
+
+        logger.debug("sending shard sealed for {}", shardRoutingEntry);
+
+        if (clusterService.localNode().equals(masterNode)) {
+            innerShardSealed(shardRoutingEntry);
+        } else {
+            transportService.sendRequest(masterNode,
+                    SHARD_SEALED_ACTION_NAME, new ShardRoutingEntry(shardRouting, indexUUID, reason), new EmptyTransportResponseHandler(ThreadPool.Names.SAME) {
+                        @Override
+                        public void handleException(TransportException exp) {
+                            logger.warn("failed to send shard sealed to [{}]", exp, masterNode);
                         }
                     });
         }
@@ -294,6 +316,105 @@ public class ShardStateAction extends AbstractComponent {
                 });
     }
 
+    //TODO: This is nearly exactly the code from innerShardStarted, should be written better
+    private void innerShardSealed(final ShardRoutingEntry shardRoutingEntry) {
+        logger.debug("received shard sealed for {}", shardRoutingEntry);
+        // buffer shard started requests, and the state update tasks will simply drain it
+        // this is to optimize the number of "sealed" events we generate, and batch them
+        // possibly, we can do time based batching as well, but usually, we would want to
+        // process started events as fast as possible, to make shards available
+        sealedShardQueue.add(shardRoutingEntry);
+
+        clusterService.submitStateUpdateTask("shard-sealed (" + shardRoutingEntry.shardRouting + "), reason [" + shardRoutingEntry.reason + "]", Priority.NORMAL,
+                new ClusterStateUpdateTask() {
+                    @Override
+                    public ClusterState execute(ClusterState currentState) {
+
+                        if (shardRoutingEntry.processed) {
+                            return currentState;
+                        }
+
+                        List<ShardRoutingEntry> shardRoutingEntries = new ArrayList<>();
+                        sealedShardQueue.drainTo(shardRoutingEntries);
+
+                        // nothing to process (a previous event has processed it already)
+                        if (shardRoutingEntries.isEmpty()) {
+                            return currentState;
+                        }
+
+                        RoutingTable routingTable = currentState.routingTable();
+                        MetaData metaData = currentState.getMetaData();
+
+                        List<ShardRouting> shardRoutingToBeApplied = new ArrayList<>(shardRoutingEntries.size());
+
+                        for (int i = 0; i < shardRoutingEntries.size(); i++) {
+                            ShardRoutingEntry shardRoutingEntry = shardRoutingEntries.get(i);
+                            shardRoutingEntry.processed = true;
+                            ShardRouting shardRouting = shardRoutingEntry.shardRouting;
+                            try {
+                                IndexMetaData indexMetaData = metaData.index(shardRouting.index());
+                                IndexRoutingTable indexRoutingTable = routingTable.index(shardRouting.index());
+                                // if there is no metadata, no routing table or the current index is not of the right uuid, the index has been deleted while it was being allocated
+                                // which is fine, we should just ignore this
+                                if (indexMetaData == null) {
+                                    continue;
+                                }
+                                if (indexRoutingTable == null) {
+                                    continue;
+                                }
+
+                                if (!indexMetaData.isSameUUID(shardRoutingEntry.indexUUID)) {
+                                    logger.debug("{} ignoring shard sealed, different index uuid, current {}, got {}", shardRouting.shardId(), indexMetaData.getUUID(), shardRoutingEntry);
+                                    continue;
+                                }
+
+                                // find the one that maps to us, if its already started, no need to do anything...
+                                // the shard might already be started since the nodes that is starting the shards might get cluster events
+                                // with the shard still initializing, and it will try and start it again (until the verification comes)
+
+                                IndexShardRoutingTable indexShardRoutingTable = indexRoutingTable.shard(shardRouting.id());
+
+                                boolean applyShardEvent = true;
+
+                                for (ShardRouting entry : indexShardRoutingTable) {
+                                    if (shardRouting.currentNodeId().equals(entry.currentNodeId())) {
+                                        // we found the same shard that exists on the same node id
+                                        if (!entry.started()) {
+                                            // shard is in initialized state, skipping event (probable already started)
+                                            logger.debug("{} ignoring shard started event for {}, current state: {}", shardRouting.shardId(), shardRoutingEntry, entry.state());
+                                            applyShardEvent = false;
+                                        }
+                                    }
+                                }
+
+                                if (applyShardEvent) {
+                                    shardRoutingToBeApplied.add(shardRouting);
+                                    logger.debug("{} will apply shard sealed {}", shardRouting.shardId(), shardRoutingEntry);
+                                }
+
+                            } catch (Throwable t) {
+                                logger.error("{} unexpected failure while processing shard started [{}]", t, shardRouting.shardId(), shardRouting);
+                            }
+                        }
+
+                        if (shardRoutingToBeApplied.isEmpty()) {
+                            return currentState;
+                        }
+
+                        RoutingAllocation.Result routingResult = allocationService.applySealedShards(currentState, shardRoutingToBeApplied);
+                        if (!routingResult.changed()) {
+                            return currentState;
+                        }
+                        return ClusterState.builder(currentState).routingResult(routingResult).build();
+                    }
+
+                    @Override
+                    public void onFailure(String source, Throwable t) {
+                        logger.error("unexpected failure during [{}]", t, source);
+                    }
+                });
+    }
+
     private class ShardFailedTransportHandler extends BaseTransportRequestHandler<ShardRoutingEntry> {
 
         @Override
@@ -323,6 +444,25 @@ public class ShardStateAction extends AbstractComponent {
         @Override
         public void messageReceived(ShardRoutingEntry request, TransportChannel channel) throws Exception {
             innerShardStarted(request);
+            channel.sendResponse(TransportResponse.Empty.INSTANCE);
+        }
+
+        @Override
+        public String executor() {
+            return ThreadPool.Names.SAME;
+        }
+    }
+
+    class ShardSealedTransportHandler extends BaseTransportRequestHandler<ShardRoutingEntry> {
+
+        @Override
+        public ShardRoutingEntry newInstance() {
+            return new ShardRoutingEntry();
+        }
+
+        @Override
+        public void messageReceived(ShardRoutingEntry request, TransportChannel channel) throws Exception {
+            innerShardSealed(request);
             channel.sendResponse(TransportResponse.Empty.INSTANCE);
         }
 

@@ -146,6 +146,9 @@ import org.elasticsearch.action.indexedscripts.put.TransportPutIndexedScriptActi
 import org.elasticsearch.action.mlt.MoreLikeThisAction;
 import org.elasticsearch.action.mlt.TransportMoreLikeThisAction;
 import org.elasticsearch.action.percolate.*;
+import org.elasticsearch.action.seal.SealAction;
+import org.elasticsearch.action.seal.TransportSealAction;
+import org.elasticsearch.action.seal.TransportShardSealAction;
 import org.elasticsearch.action.search.*;
 import org.elasticsearch.action.search.type.*;
 import org.elasticsearch.action.suggest.SuggestAction;
@@ -271,6 +274,7 @@ public class ActionModule extends AbstractModule {
         registerAction(GetSettingsAction.INSTANCE, TransportGetSettingsAction.class);
 
         registerAction(IndexAction.INSTANCE, TransportIndexAction.class);
+        registerAction(SealAction.INSTANCE, TransportSealAction.class);
         registerAction(GetAction.INSTANCE, TransportGetAction.class);
         registerAction(TermVectorsAction.INSTANCE, TransportTermVectorsAction.class,
                 TransportDfsOnlyAction.class);

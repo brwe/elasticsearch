@@ -45,6 +45,12 @@ public interface ShardsAllocator {
     void applyStartedShards(StartedRerouteAllocation allocation);
 
     /**
+     * Applies changes on started nodes based on the implemented algorithm.
+     * @param allocation all sealed {@link ShardRouting shards}
+     */
+    void applySealedShards(StartedRerouteAllocation allocation);
+
+    /**
      * Applies changes on failed nodes based on the implemented algorithm. 
      * @param allocation all failed {@link ShardRouting shards}
      */

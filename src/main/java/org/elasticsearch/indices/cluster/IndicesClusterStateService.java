@@ -27,16 +27,21 @@ import com.google.common.collect.Lists;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalStateException;
 import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.seal.*;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.ClusterStateListener;
+import org.elasticsearch.cluster.ack.ClusterStateUpdateResponse;
 import org.elasticsearch.cluster.action.index.NodeIndexDeletedAction;
 import org.elasticsearch.cluster.action.index.NodeMappingRefreshAction;
 import org.elasticsearch.cluster.action.shard.ShardStateAction;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.cluster.metadata.MetaDataIndexStateService;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.routing.*;
@@ -67,13 +72,12 @@ import org.elasticsearch.indices.recovery.RecoveryFailedException;
 import org.elasticsearch.indices.recovery.RecoveryState;
 import org.elasticsearch.indices.recovery.RecoveryStatus;
 import org.elasticsearch.indices.recovery.RecoveryTarget;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.threadpool.ThreadPool;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.collect.Maps.newHashMap;
 import static org.elasticsearch.ExceptionsHelper.detailedMessage;
@@ -98,6 +102,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
     // a list of shards that failed during recovery
     // we keep track of these shards in order to prevent repeated recovery of these shards on each cluster state update
     private final ConcurrentMap<ShardId, FailedShard> failedShards = ConcurrentCollections.newConcurrentMap();
+    private final TransportShardSealAction shardSealAction;
+    private final MetaDataIndexStateService indexStateService;
 
     static class FailedShard {
         public final long version;
@@ -119,7 +125,9 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
                                       ThreadPool threadPool, RecoveryTarget recoveryTarget,
                                       ShardStateAction shardStateAction,
                                       NodeIndexDeletedAction nodeIndexDeletedAction,
-                                      NodeMappingRefreshAction nodeMappingRefreshAction) {
+                                      NodeMappingRefreshAction nodeMappingRefreshAction,
+                                      TransportShardSealAction shardSealAction,
+                                      MetaDataIndexStateService indexStateService) {
         super(settings);
         this.indicesService = indicesService;
         this.clusterService = clusterService;
@@ -130,6 +138,9 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
         this.nodeMappingRefreshAction = nodeMappingRefreshAction;
 
         this.sendRefreshMapping = this.settings.getAsBoolean("indices.cluster.send_refresh_mapping", true);
+
+        this.shardSealAction = shardSealAction;
+        this.indexStateService = indexStateService;
     }
 
     @Override
@@ -186,8 +197,106 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             applyDeletedShards(event);
             applyCleanedIndices(event);
             applySettings(event);
+            applySealingIndices(event);
+            applySealedIndices(event);
         }
     }
+
+    private void applySealingIndices(ClusterChangedEvent event) {
+        final ClusterState clusterState = clusterService.state();
+        List<String> sealingIndices = event.indicesSealing();
+        List<SealShardRequest> sealShardActions = new ArrayList<>();
+        for (String sealingIndex : sealingIndices) {
+            // get all the shards this has to execute on
+            IndexRoutingTable indexRouting = clusterState.routingTable().index(sealingIndex);
+            for (IndexShardRoutingTable indexShardRoutingTable : indexRouting) {
+                //TODO: I guess here we would also have to check for relocating etc...
+                ShardRouting shardRouting = indexShardRoutingTable.primaryShard();
+                if (shardRouting.currentNodeId().equals(clusterService.localNode().getId())) {
+                    ShardId shardId = shardRouting.shardId();
+                    sealShardActions.add(new SealShardRequest(shardId));
+                }
+
+            }
+        }
+        // execute each with a TransportShardSealAction and do it like in Bulk requests
+
+        final AtomicInteger counter = new AtomicInteger(sealShardActions.size());
+        final List<SealShardResponse> sealShardResponses = Collections.synchronizedList(new ArrayList<SealShardResponse>());
+        for (final SealShardRequest shardRequest : sealShardActions) {
+            // this is actually a little odd. we execute it as a shard replication operation but always call this from the node that
+            // has the primary. This means that it will never be sent somewhere else although everybodys favorite class has this capability
+            shardSealAction.execute(shardRequest, new ActionListener<SealShardResponse>() {
+                @Override
+                public void onResponse(SealShardResponse sealShardResponse) {
+                    sealShardResponses.add(sealShardResponse);
+                    if (counter.decrementAndGet() == 0) {
+                        finishHim();
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable e) {
+                    // create failures for all relevant requests
+                    String message = ExceptionsHelper.detailedMessage(e);
+                    RestStatus status = ExceptionsHelper.status(e);
+                    sealShardResponses.add(new SealShardResponse(shardRequest.shardId(), message, status));
+                    if (counter.decrementAndGet() == 0) {
+                        finishHim();
+                    }
+                }
+
+                private void finishHim() {
+                    // TODO: here check if all succeeded and unseal or something...
+                }
+            });
+        }
+        // then update the meta data if this returns ok.
+        // the master later sets the index to sealed when all shards have been sealed*/
+    }
+
+    private void applySealedIndices(ClusterChangedEvent event) {
+        final ClusterState clusterState = clusterService.state();
+        //TODO: Here we must expand wildcards, resolve aliases etc. Do this later, for now just make sure there is one index and it exists and is open.
+        final List<String> sealedIndices = event.indicesSealing();
+        for (String sealingIndex : sealedIndices) {
+            IndexRoutingTable indexRouting = clusterState.routingTable().index(sealingIndex);
+
+            int numSealedShards = 0;
+            for (IndexShardRoutingTable indexShardRoutingTable : indexRouting) {
+                for (ShardRouting shardRouting : indexShardRoutingTable) {
+                    if (shardRouting.state() == ShardRoutingState.SEALED) {
+                        numSealedShards++;
+                    }
+                }
+            }
+            if (numSealedShards == indexRouting.shards().size()) {
+                sealedIndices.add(indexRouting.index());
+            }
+        }
+        if (sealedIndices.size() == 0) {
+            return;
+        }
+        // update cluster state and set index to sealed.
+        SealedIndexClusterStateUpdateRequest updateRequest = new SealedIndexClusterStateUpdateRequest()
+                .indices(sealedIndices.toArray(new String[sealedIndices.size()]));
+
+        indexStateService.sealIndex(updateRequest, new ActionListener<ClusterStateUpdateResponse>() {
+
+            @Override
+            public void onResponse(ClusterStateUpdateResponse response) {
+                // listener.onResponse(new SealResponse(response.isAcknowledged(), request.index()));
+                // TODO: when to do?
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                logger.debug("failed to seal indices [{}]", t, sealedIndices);
+                // TODO: when to do if error occures?
+            }
+        }, IndexMetaData.State.SEALED);
+    }
+
 
     private void applyCleanedIndices(final ClusterChangedEvent event) {
         // handle closed indices, since they are not allocated on a node once they are closed
@@ -602,7 +711,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
             }
 
             if (shardRouting.initializing()) {
-                applyInitializingShard(event.state(),indexMetaData, shardRouting);
+                applyInitializingShard(event.state(), indexMetaData, shardRouting);
             }
         }
     }

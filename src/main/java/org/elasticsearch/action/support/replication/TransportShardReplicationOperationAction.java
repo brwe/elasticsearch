@@ -872,7 +872,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
         }
     }
 
-    final protected Tuple<Response, ReplicaRequest> shardOperationOnPrimaryAfterIncRef(ClusterState clusterState, PrimaryOperationRequest shardRequest) throws Throwable {
+     protected Tuple<Response, ReplicaRequest> shardOperationOnPrimaryAfterIncRef(ClusterState clusterState, PrimaryOperationRequest shardRequest) throws Throwable {
         IndexShard indexShard = indicesService.indexServiceSafe(shardRequest.shardId.index().getName()).shardSafe(shardRequest.shardId.id());
         indexShard.incRef();
         try {
@@ -882,7 +882,7 @@ public abstract class TransportShardReplicationOperationAction<Request extends S
         }
     }
 
-    final protected void shardOperationOnReplicaAfterIncRef(ReplicaOperationRequest shardRequest) {
+     protected void shardOperationOnReplicaAfterIncRef(ReplicaOperationRequest shardRequest) {
         IndexShard indexShard = indicesService.indexServiceSafe(shardRequest.shardId.index().getName()).shardSafe(shardRequest.shardId.id());
         indexShard.incRef();
         try {

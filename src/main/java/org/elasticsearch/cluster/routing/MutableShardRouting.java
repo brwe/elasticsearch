@@ -123,6 +123,19 @@ public class MutableShardRouting extends ImmutableShardRouting {
     }
 
     /**
+     * Set the shards state to <code>SEALED</code>. The shards state must be
+     * <code>STARTED</code>. Any relocation will be
+     * canceled.
+     */
+    void moveToSealed() {
+        version++;
+        assert state == ShardRoutingState.STARTED;
+        relocatingNodeId = null;
+        restoreSource = null;
+        state = ShardRoutingState.SEALED;
+    }
+
+    /**
      * Make the shard primary unless it's not Primary
      * //TODO: doc exception
      */

@@ -42,7 +42,11 @@ public enum ShardRoutingState {
     /**
      * The shard is in the process being relocated.
      */
-    RELOCATING((byte) 4);
+    RELOCATING((byte) 4),
+    /**
+     * The shard is sealed.
+     */
+    SEALED((byte) 5);
 
     private byte value;
 
@@ -68,6 +72,8 @@ public enum ShardRoutingState {
                 return STARTED;
             case 4:
                 return RELOCATING;
+            case 5:
+                return SEALED;
             default:
                 throw new ElasticsearchIllegalStateException("No routing state mapped for [" + value + "]");
         }

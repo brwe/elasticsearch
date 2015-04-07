@@ -23,10 +23,12 @@ import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.close.CloseIndexClusterStateUpdateRequest;
 import org.elasticsearch.action.admin.indices.open.OpenIndexClusterStateUpdateRequest;
+import org.elasticsearch.action.seal.SealIndexClusterStateUpdateRequest;
 import org.elasticsearch.cluster.AckedClusterStateUpdateTask;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.ack.ClusterStateUpdateResponse;
+import org.elasticsearch.cluster.ack.IndicesClusterStateUpdateRequest;
 import org.elasticsearch.cluster.block.ClusterBlock;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.block.ClusterBlocks;
@@ -39,6 +41,7 @@ import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.indices.IndexPrimaryShardNotAllocatedException;
@@ -47,9 +50,11 @@ import org.elasticsearch.rest.RestStatus;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service responsible for submitting open/close index requests
+ * TODO: implement index close here also
  */
 public class MetaDataIndexStateService extends AbstractComponent {
 
@@ -173,6 +178,54 @@ public class MetaDataIndexStateService extends AbstractComponent {
                 }
 
                 RoutingAllocation.Result routingResult = allocationService.reroute(ClusterState.builder(updatedState).routingTable(rtBuilder).build());
+                //no explicit wait for other nodes needed as we use AckedClusterStateUpdateTask
+                return ClusterState.builder(updatedState).routingResult(routingResult).build();
+            }
+        });
+    }
+
+    public void sealIndex(final IndicesClusterStateUpdateRequest request, final ActionListener<ClusterStateUpdateResponse> listener, final IndexMetaData.State newState) {
+        if (request.indices() == null || request.indices().length == 0) {
+            throw new ElasticsearchIllegalArgumentException("Index name is required");
+        }
+
+        final String indicesAsString = Arrays.toString(request.indices());
+        request.masterNodeTimeout(new TimeValue(10, TimeUnit.SECONDS));
+        clusterService.submitStateUpdateTask("seal-index " + indicesAsString, Priority.URGENT, new AckedClusterStateUpdateTask<ClusterStateUpdateResponse>(request, listener) {
+            @Override
+            protected ClusterStateUpdateResponse newResponse(boolean acknowledged) {
+                return new ClusterStateUpdateResponse(acknowledged);
+            }
+
+            @Override
+            public ClusterState execute(ClusterState currentState) {
+                List<String> indicesToSeal = new ArrayList<>();
+                for (String index : request.indices()) {
+                    IndexMetaData indexMetaData = currentState.metaData().index(index);
+                    if (indexMetaData == null) {
+                        throw new IndexMissingException(new Index(index));
+                    }
+                    // TODO: Check if already sealed or sealing?
+                    indicesToSeal.add(index);
+                }
+
+                if (indicesToSeal.isEmpty()) {
+                    return currentState;
+                }
+
+                logger.info("sealing indices [{}]", indicesAsString);
+                MetaData.Builder mdBuilder = MetaData.builder(currentState.metaData());
+                ClusterBlocks.Builder blocksBuilder = ClusterBlocks.builder()
+                        .blocks(currentState.blocks());
+                for (String index : indicesToSeal) {
+                    mdBuilder.put(IndexMetaData.builder(currentState.metaData().index(index)).state(newState));
+                    // TODO: here also add the block write block for index, although the index should just be blocked by sealing state
+                    //blocksBuilder.addIndexBlock(index, INDEX_CLOSED_BLOCK);
+                }
+
+                ClusterState updatedState = ClusterState.builder(currentState).metaData(mdBuilder).blocks(blocksBuilder).build();
+
+                RoutingAllocation.Result routingResult = allocationService.reroute(ClusterState.builder(updatedState).routingTable(currentState.routingTable()).build());
                 //no explicit wait for other nodes needed as we use AckedClusterStateUpdateTask
                 return ClusterState.builder(updatedState).routingResult(routingResult).build();
             }

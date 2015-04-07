@@ -762,6 +762,23 @@ public class IndexShard extends AbstractIndexShardComponent implements RefCounte
         return this;
     }
 
+    public synchronized IndexShardState changeToSealing() {
+        synchronized (mutex) {
+            // TODO: change state s always called in synchronized block but can this be done better? it is not enforced o call change state in synchronized block
+            if (state() == IndexShardState.SEALED || state() == IndexShardState.SEALING) {
+                return state();
+            }
+            return changeState(IndexShardState.SEALING, "sealing shard");
+        }
+    }
+
+    public synchronized IndexShardState changeToSealed() {
+        synchronized (mutex) {
+            // TODO: change state s always called in synchronized block but can this be done better? it is not enforced o call change state in synchronized block
+            return changeState(IndexShardState.SEALED, "sealed shard");
+        }
+    }
+
     /**
      * called before starting to copy index files over
      */
@@ -1029,6 +1046,11 @@ public class IndexShard extends AbstractIndexShardComponent implements RefCounte
         MetaDataStateFormat.deleteMetaState(nodeEnv.shardPaths(shardId));
     }
 
+    /**
+     *
+     * @return >= 0 -> number of operations that are currently processed
+     *         -1   -> no more write operations accepeted until shard is unsealed
+     */
     public long getNumInFlightOperations() {
         return sealCounter.refCount() - 1;
     }
@@ -1337,7 +1359,7 @@ public class IndexShard extends AbstractIndexShardComponent implements RefCounte
 
     @Override
     public boolean tryIncRef() {
-        throw new UnsupportedOperationException("tryIncRef for IndexShard counter not available");
+        return sealCounter.tryIncRef();
     }
 
     @Override

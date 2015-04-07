@@ -106,6 +106,11 @@ public class BalancedShardsAllocator extends AbstractComponent implements Shards
     public void applyStartedShards(StartedRerouteAllocation allocation) { /* ONLY FOR GATEWAYS */ }
 
     @Override
+    public void applySealedShards(StartedRerouteAllocation allocation) {
+
+    }
+
+    @Override
     public void applyFailedShards(FailedRerouteAllocation allocation) { /* ONLY FOR GATEWAYS */ }
 
     @Override

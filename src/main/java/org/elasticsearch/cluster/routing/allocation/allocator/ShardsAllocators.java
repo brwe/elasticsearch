@@ -62,6 +62,12 @@ public class ShardsAllocators extends AbstractComponent implements ShardsAllocat
     }
 
     @Override
+    public void applySealedShards(StartedRerouteAllocation allocation) {
+        gatewayAllocator.applySealedShards(allocation);
+        allocator.applyStartedShards(allocation);
+    }
+
+    @Override
     public void applyFailedShards(FailedRerouteAllocation allocation) {
         gatewayAllocator.applyFailedShards(allocation);
         allocator.applyFailedShards(allocation);

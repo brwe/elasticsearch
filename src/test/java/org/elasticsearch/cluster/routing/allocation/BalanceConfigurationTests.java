@@ -337,6 +337,11 @@ public class BalanceConfigurationTests extends ElasticsearchAllocationTestCase {
             }
 
             @Override
+            public void applySealedShards(StartedRerouteAllocation allocation) {
+                
+            }
+
+            @Override
             public void applyFailedShards(FailedRerouteAllocation allocation) {
             }
 

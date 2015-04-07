@@ -410,6 +410,14 @@ public class RoutingNodes implements Iterable<RoutingNode> {
     }
 
     /**
+     * Mark a shard as sealed. TODO: internal statistics?
+     */
+    public void sealed(MutableShardRouting shard) {
+        assert shard.started();
+        shard.moveToSealed();
+    }
+
+    /**
      * Cancels a relocation of a shard that shard must relocating.
      */
     public void cancelRelocation(MutableShardRouting shard) {

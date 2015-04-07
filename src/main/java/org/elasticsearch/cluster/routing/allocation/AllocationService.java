@@ -44,6 +44,7 @@ import java.util.List;
 
 import static org.elasticsearch.cluster.routing.ShardRoutingState.INITIALIZING;
 import static org.elasticsearch.cluster.routing.ShardRoutingState.RELOCATING;
+import static org.elasticsearch.cluster.routing.ShardRoutingState.STARTED;
 
 /**
  * This service manages the node allocation of a cluster. For this reason the
@@ -87,6 +88,19 @@ public class AllocationService extends AbstractComponent {
         if (withReroute) {
             reroute(allocation);
         }
+        return new RoutingAllocation.Result(true, new RoutingTable.Builder().updateNodes(routingNodes).build().validateRaiseException(clusterState.metaData()));
+    }
+
+    public RoutingAllocation.Result applySealedShards(ClusterState clusterState, List<? extends ShardRouting> sealed) {
+        RoutingNodes routingNodes = clusterState.routingNodes();
+        // shuffle the unassigned nodes, just so we won't have things like poison failed shards
+        routingNodes.unassigned().shuffle();
+        StartedRerouteAllocation allocation = new StartedRerouteAllocation(allocationDeciders, routingNodes, clusterState.nodes(), sealed, clusterInfoService.getClusterInfo());
+        boolean changed = applySealedShards(routingNodes, sealed);
+        if (!changed) {
+            return new RoutingAllocation.Result(false, clusterState.routingTable());
+        }
+        shardsAllocators.applySealedShards(allocation);
         return new RoutingAllocation.Result(true, new RoutingTable.Builder().updateNodes(routingNodes).build().validateRaiseException(clusterState.metaData()));
     }
 
@@ -291,7 +305,7 @@ public class AllocationService extends AbstractComponent {
             }
         }
         for (ShardRouting shardToFail : shardsToFail) {
-           changed |= applyFailedShard(allocation, shardToFail, false);
+            changed |= applyFailedShard(allocation, shardToFail, false);
         }
 
         // now, go over and elect a new primary if possible, not, from this code block on, if one is elected,
@@ -402,6 +416,27 @@ public class AllocationService extends AbstractComponent {
                             sourceRoutingNode.remove();
                             break;
                         }
+                    }
+                }
+            }
+        }
+        return dirty;
+    }
+
+    private boolean applySealedShards(RoutingNodes routingNodes, Iterable<? extends ShardRouting> sealedShardEntries) {
+        boolean dirty = false;
+        // apply shards might be called several times with the same shard, ignore it
+        for (ShardRouting startedShard : sealedShardEntries) {
+            assert startedShard.state() == STARTED;
+
+            // TODO: relocating shards?
+            RoutingNodes.RoutingNodeIterator currentRoutingNode = routingNodes.routingNodeIter(startedShard.currentNodeId());
+            if (currentRoutingNode != null) {
+                for (MutableShardRouting shard : currentRoutingNode) {
+                    if (shard.shardId().equals(startedShard.shardId())) {
+                        dirty = true;
+                        routingNodes.sealed(shard);
+                        break;
                     }
                 }
             }

@@ -99,6 +99,13 @@ public class GatewayAllocator extends AbstractComponent {
             cachedShardsState.remove(failedShard.shardId());
         }
     }
+    //TODO: refcator so we don't implement this three times
+    public void applySealedShards(StartedRerouteAllocation allocation) {
+        for (ShardRouting sealed : allocation.startedShards()) {
+            cachedStores.remove(sealed.shardId());
+            cachedShardsState.remove(sealed.shardId());
+        }
+    }
 
     public boolean allocateUnassigned(RoutingAllocation allocation) {
         boolean changed = false;

@@ -132,6 +132,9 @@ import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerAction;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequest;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequestBuilder;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerResponse;
+import org.elasticsearch.action.seal.SealAction;
+import org.elasticsearch.action.seal.SealRequest;
+import org.elasticsearch.action.seal.SealResponse;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.Nullable;
 
@@ -288,6 +291,16 @@ public abstract class AbstractIndicesAdminClient implements IndicesAdminClient {
     @Override
     public void close(final CloseIndexRequest request, final ActionListener<CloseIndexResponse> listener) {
         execute(CloseIndexAction.INSTANCE, request, listener);
+    }
+
+    @Override
+    public void seal(final SealRequest request, final ActionListener<SealResponse> listener) {
+        execute(SealAction.INSTANCE, request, listener);
+    }
+
+    @Override
+    public ActionFuture<SealResponse> seal(final SealRequest request) {
+        return execute(SealAction.INSTANCE, request);
     }
 
     @Override
