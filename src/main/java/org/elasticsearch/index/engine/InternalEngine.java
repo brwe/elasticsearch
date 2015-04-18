@@ -38,7 +38,9 @@ import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.common.lucene.index.ElasticsearchDirectoryReader;
 import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.math.MathUtils;
+import org.elasticsearch.common.util.concurrent.AbstractRefCounted;
 import org.elasticsearch.common.util.concurrent.EsRejectedExecutionException;
+import org.elasticsearch.common.util.concurrent.RefCounted;
 import org.elasticsearch.common.util.concurrent.ReleasableLock;
 import org.elasticsearch.index.deletionpolicy.SnapshotIndexCommit;
 import org.elasticsearch.index.indexing.ShardIndexingService;
@@ -598,8 +600,9 @@ public class InternalEngine extends Engine {
 
     @Override
     public boolean syncFlushIfNoPendingChanges(String syncId, byte[] expectedCommitId) throws EngineException {
-        // best effort attempt before we aquire locks
+        // best effort attempt before we acquire locks
         ensureOpen();
+
         if (indexWriter.hasUncommittedChanges()) {
             logger.trace("can't sync commit [{}]. have pending changes", syncId);
             return false;
@@ -755,6 +758,7 @@ public class InternalEngine extends Engine {
         if (engineConfig.isEnableGcDeletes()) {
             pruneDeletedTombstones();
         }
+        logger.info("wrote commit id {}", newCommitId);
         return newCommitId;
     }
 

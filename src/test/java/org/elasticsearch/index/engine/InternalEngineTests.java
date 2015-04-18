@@ -48,6 +48,7 @@ import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.common.lucene.uid.Versions;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.util.concurrent.AbstractRefCounted;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.analysis.AnalysisService;
@@ -679,11 +680,19 @@ public class InternalEngineTests extends ElasticsearchLuceneTestCase {
         assertThat(commitID, equalTo(store.readLastCommittedSegmentsInfo().getId()));
         byte[] fakeId = commitID.clone();
         fakeId[0] = (byte) ~fakeId[0];
-        assertFalse("should fail to sync flush with wrong id (but no docs)", engine.syncFlushIfNoPendingChanges(syncId + "1", fakeId));
+        AbstractRefCounted counter = new AbstractRefCounted("test counter") {
+
+            @Override
+            protected void closeInternal() {
+
+            }
+        };
+        counter.incRef();
+        assertFalse("should fail to sync flush with wrong id (but no docs)", engine.syncFlushIfNoPendingChanges(syncId + "1", fakeId, counter));
         engine.create(new Engine.Create(null, newUid("2"), doc));
-        assertFalse("should fail to sync flush with right id but pending doc", engine.syncFlushIfNoPendingChanges(syncId + "2", commitID));
+        assertFalse("should fail to sync flush with right id but pending doc", engine.syncFlushIfNoPendingChanges(syncId + "2", commitID, counter));
         commitID = engine.flush();
-        assertTrue("should succeed to flush commit with right id and no pending doc", engine.syncFlushIfNoPendingChanges(syncId, commitID));
+        assertTrue("should succeed to flush commit with right id and no pending doc", engine.syncFlushIfNoPendingChanges(syncId, commitID, counter));
         assertThat(store.readLastCommittedSegmentsInfo().getUserData().get(Engine.SYNC_COMMIT_ID), equalTo(syncId));
     }
 

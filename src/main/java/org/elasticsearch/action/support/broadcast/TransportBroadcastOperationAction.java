@@ -97,14 +97,14 @@ public abstract class TransportBroadcastOperationAction<Request extends Broadcas
 
     protected class AsyncBroadcastAction {
 
-        private final Request request;
-        private final ActionListener<Response> listener;
-        private final ClusterState clusterState;
+        protected final Request request;
+        protected final ActionListener<Response> listener;
+        protected final ClusterState clusterState;
         private final DiscoveryNodes nodes;
         private final GroupShardsIterator shardsIts;
         private final int expectedOps;
         private final AtomicInteger counterOps = new AtomicInteger();
-        private final AtomicReferenceArray shardsResponses;
+        protected final AtomicReferenceArray shardsResponses;
 
         protected AsyncBroadcastAction(Request request, ActionListener<Response> listener) {
             this.request = request;

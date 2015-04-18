@@ -84,6 +84,9 @@ import org.elasticsearch.action.admin.indices.settings.put.UpdateSettingsRespons
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequest;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequestBuilder;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
+import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequest;
+import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequestBuilder;
+import org.elasticsearch.action.admin.indices.synccommit.SyncCommitResponse;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateResponse;
@@ -106,6 +109,7 @@ import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequest;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequestBuilder;
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerResponse;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.index.shard.ShardId;
 
 /**
  * Administrative actions/operations against indices.
@@ -352,12 +356,19 @@ public interface IndicesAdminClient extends ElasticsearchClient<IndicesAdminClie
      * @param listener A listener to be notified with a result
      * @see org.elasticsearch.client.Requests#flushRequest(String...)
      */
-    void flush(FlushRequest request, ActionListener<FlushResponse> listener);
+    void flush(FlushRequest request, ActionListener <FlushResponse> listener);
 
     /**
      * Explicitly flush one or more indices (releasing memory from the node).
      */
     FlushRequestBuilder prepareFlush(String... indices);
+
+    void syncCommit(final SyncCommitRequest request, final ActionListener<SyncCommitResponse> listener);
+
+    /**
+     * Explicitly flush one or more indices (releasing memory from the node).
+     */
+    SyncCommitRequestBuilder prepareSyncCommit(ShardId shardId);
 
     /**
      * Explicitly optimize one or more indices into a the number of segments.

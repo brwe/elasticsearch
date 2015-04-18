@@ -254,6 +254,31 @@ public class RoutingTable implements Iterable<IndexRoutingTable> {
         return new GroupShardsIterator(set);
     }
 
+    /**
+     * All the shard copies for the provided shard id grouped. Each group is a single element, consisting
+     * either of the primary shard of one replica.
+     *
+     * @param shardId the shard id for the copies we want
+     * @return All the shard copies (primary and replicas) for the shardId
+     * @throws IndexMissingException If an index passed does not exists
+     * @see IndexRoutingTable#groupByAllIt()
+     */
+    public GroupShardsIterator allShardCopiesGrouped(ShardId shardId) throws IndexMissingException {
+        // use list here since we need to maintain identity across shards
+        ArrayList<ShardIterator> set = new ArrayList<>();
+            IndexRoutingTable indexRoutingTable = index(shardId.index().name());
+            if (indexRoutingTable == null) {
+                throw new IndexMissingException(new Index(shardId.index().name()));
+            }
+        IndexShardRoutingTable copiesRoutingTable = indexRoutingTable.shard(shardId.id());
+            for (ShardRouting shardRouting : copiesRoutingTable) {
+                if (shardRouting.active()) {
+                    set.add(shardRouting.shardsIt());
+                }
+            }
+        return new GroupShardsIterator(set);
+    }
+
     public static Builder builder() {
         return new Builder();
     }
