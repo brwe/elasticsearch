@@ -19,7 +19,6 @@
 
 package org.elasticsearch.action.admin.indices.synccommit;
 
-import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.support.broadcast.BroadcastOperationRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -29,15 +28,6 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /**
- * A flush request to flush one or more indices. The flush process of an index basically frees memory from the index
- * by flushing data to the index storage and clearing the internal transaction log. By default, Elasticsearch uses
- * memory heuristics in order to automatically trigger flush operations as required in order to clear memory.
- * <p/>
- * <p>Best created with {@link org.elasticsearch.client.Requests#flushRequest(String...)}.
- *
- * @see org.elasticsearch.client.Requests#flushRequest(String...)
- * @see org.elasticsearch.client.IndicesAdminClient#syncCommit(SyncCommitRequest)
- * @see SyncCommitResponse
  */
 public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitRequest> {
     private ShardId shardId;
@@ -48,10 +38,6 @@ public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitReque
     SyncCommitRequest() {
     }
 
-    /**
-     * Constructs a new flush request against one or more indices. If nothing is provided, all indices will
-     * be flushed.
-     */
     public SyncCommitRequest(ShardId shardId) {
         super(Arrays.asList(shardId.getIndex()).toArray(new String[0]));
         this.shardId = shardId;
@@ -91,7 +77,7 @@ public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitReque
 
     @Override
     public String toString() {
-        return "PrimarySyncCommit{" +
+        return "SyncCommit{" +
                 "waitIfOngoing=" + waitIfOngoing() +
                 ", force=" + force() + "}";
     }
@@ -119,6 +105,4 @@ public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitReque
     public void shardId(ShardId shardId) {
         this.shardId = shardId;
     }
-
-
 }

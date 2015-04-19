@@ -19,7 +19,6 @@
 package org.elasticsearch.action.admin.indices.synccommit;
 
 import org.apache.lucene.index.SegmentInfos;
-import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.index.engine.Engine;
@@ -42,6 +41,7 @@ public class SyncCommitTests extends ElasticsearchIntegrationTest {
     public void runOnce() throws InterruptedException, IOException {
         assertAcked(client().admin().indices().prepareCreate("test").setSettings(
                 ImmutableSettings.builder().put("index.number_of_replicas", internalCluster().numDataNodes() - 1)
+                        .put("index.number_of_shards", 1)
                         .put("index.translog.flush_threshold_period", "1m")));
         ensureGreen("test");
         for (int j = 0; j < 10; j++) {
@@ -56,7 +56,6 @@ public class SyncCommitTests extends ElasticsearchIntegrationTest {
                     assertFalse(entry1.getValue().equals(entry2));
                 }
             }
-            logger.info("commit point {} on node {} (primary : {}) written", new String(entry1.getValue()), entry1.getKey().currentNodeId(), entry1.getKey().primary());
         }
         logClusterState();
 
@@ -65,8 +64,8 @@ public class SyncCommitTests extends ElasticsearchIntegrationTest {
             Store store = indexShard.engine().config().getStore();
             SegmentInfos segmentInfos = store.readLastCommittedSegmentsInfo();
             Map<String, String> userData = segmentInfos.getUserData();
-//            assertNotNull(userData.get(Engine.SYNC_COMMIT_ID));
-  //          assertTrue(userData.get(Engine.SYNC_COMMIT_ID).equals("123"));
+            assertNotNull(userData.get(Engine.SYNC_COMMIT_ID));
+            assertTrue(userData.get(Engine.SYNC_COMMIT_ID).equals("123"));
         }
 
     }

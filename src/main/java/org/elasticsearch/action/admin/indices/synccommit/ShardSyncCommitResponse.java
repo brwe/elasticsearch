@@ -19,14 +19,11 @@
 
 package org.elasticsearch.action.admin.indices.synccommit;
 
-import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationResponse;
 import org.elasticsearch.cluster.routing.ImmutableShardRouting;
 import org.elasticsearch.cluster.routing.ShardRouting;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.index.shard.ShardId;
 
 import java.io.IOException;
 
@@ -34,12 +31,10 @@ import java.io.IOException;
  *
  */
 class ShardSyncCommitResponse extends BroadcastShardOperationResponse {
-    // here add the commit point id -> we must have an own ShardFlushResponse
     byte[] id;
     private ShardRouting shardRouting;
 
     ShardSyncCommitResponse() {
-
     }
 
     ShardSyncCommitResponse(byte[] id, ShardRouting shardRouting) {
@@ -51,14 +46,14 @@ class ShardSyncCommitResponse extends BroadcastShardOperationResponse {
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        id = in.readBytesReference().array();
+        id = in.readByteArray();
         shardRouting = ImmutableShardRouting.readShardRoutingEntry(in);
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeBytesReference(new BytesArray(id));
+        out.writeByteArray(id);
         shardRouting.writeTo(out);
     }
 

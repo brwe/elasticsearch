@@ -22,7 +22,6 @@ package org.elasticsearch.action.synccommit;
 import org.elasticsearch.action.support.replication.ShardReplicationOperationRequest;
 import org.elasticsearch.cluster.routing.ImmutableShardRouting;
 import org.elasticsearch.cluster.routing.ShardRouting;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.index.shard.ShardId;
@@ -34,7 +33,6 @@ import java.util.Map;
 /**
  */
 public class WriteSyncCommitRequest extends ShardReplicationOperationRequest<WriteSyncCommitRequest> {
-
 
     private String syncId;
     private Map<ShardRouting, byte[]> commitIds;
@@ -57,7 +55,9 @@ public class WriteSyncCommitRequest extends ShardReplicationOperationRequest<Wri
         commitIds = new HashMap<>();
         int numCommitIds = in.readInt();
         for (int i = 0; i < numCommitIds; i++) {
-            commitIds.put(ImmutableShardRouting.readShardRoutingEntry(in), in.readBytesReference().array());
+            ShardRouting shardRouting = ImmutableShardRouting.readShardRoutingEntry(in);
+            byte[] id = in.readByteArray();
+            commitIds.put(shardRouting, id);
         }
         syncId = in.readString();
     }
@@ -69,16 +69,14 @@ public class WriteSyncCommitRequest extends ShardReplicationOperationRequest<Wri
         out.writeInt(commitIds.size());
         for (Map.Entry<ShardRouting, byte[]> entry : commitIds.entrySet()) {
             entry.getKey().writeTo(out);
-            out.writeBytesReference(new BytesArray(entry.getValue()));
-
+            out.writeByteArray(entry.getValue());
         }
         out.writeString(syncId);
     }
 
     @Override
     public String toString() {
-
-        return "write sync commit {[" + index + "]}";
+        return "write sync commit {" + shardId + "}";
     }
 
     public ShardId shardId() {

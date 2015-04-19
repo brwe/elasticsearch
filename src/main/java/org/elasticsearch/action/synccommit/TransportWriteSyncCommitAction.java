@@ -19,7 +19,6 @@
 
 package org.elasticsearch.action.synccommit;
 
-import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ElasticsearchIllegalStateException;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.replication.TransportShardReplicationOperationAction;
@@ -111,7 +110,6 @@ public class TransportWriteSyncCommitAction extends TransportShardReplicationOpe
                 commitId = entry.getValue();
             }
         }
-        logger.info("expected commit id {}", new String(commitId));
         indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId);
     }
 }

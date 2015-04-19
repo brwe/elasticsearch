@@ -23,7 +23,6 @@ import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.BroadcastOperationResponse;
 import org.elasticsearch.cluster.routing.ImmutableShardRouting;
 import org.elasticsearch.cluster.routing.ShardRouting;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
@@ -58,7 +57,9 @@ public class SyncCommitResponse extends BroadcastOperationResponse {
         super.readFrom(in);
         int numCommitIds = in.readInt();
         for (int i = 0; i < numCommitIds; i++) {
-            commitIds.put(ImmutableShardRouting.readShardRoutingEntry(in), in.readBytesReference().array());
+            ImmutableShardRouting shardRouting = ImmutableShardRouting.readShardRoutingEntry(in);
+            byte[] id = in.readByteArray();
+            commitIds.put(shardRouting, id);
         }
     }
 
@@ -68,8 +69,7 @@ public class SyncCommitResponse extends BroadcastOperationResponse {
         out.writeInt(commitIds.size());
         for (Map.Entry<ShardRouting, byte[]> entry : commitIds.entrySet()) {
             entry.getKey().writeTo(out);
-            out.writeBytesReference(new BytesArray(entry.getValue()));
-
+            out.writeByteArray(entry.getValue());
         }
     }
 

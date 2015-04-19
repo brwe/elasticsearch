@@ -145,10 +145,8 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
 
         public SyncCommitAsyncBroadcastAction(SyncCommitRequest request, ActionListener<SyncCommitResponse> listener) {
             super(request, listener);
-
         }
 
-        // Here perform the second part the sealing, that is execute a ShardReplicationOperationAction that does the sealing
         @Override
         protected void finishHim() {
             try {
