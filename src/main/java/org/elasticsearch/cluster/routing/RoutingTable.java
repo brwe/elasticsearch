@@ -21,6 +21,7 @@ package org.elasticsearch.cluster.routing;
 
 import com.carrotsearch.hppc.IntSet;
 import com.google.common.collect.*;
+import org.elasticsearch.ElasticsearchIllegalStateException;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MetaData;
@@ -195,7 +196,7 @@ public class RoutingTable implements Iterable<IndexRoutingTable> {
     /**
      * Return GroupShardsIterator where each assigned shard routing has it's own shard iterator.
      *
-     * @param includeEmpty if true, a shard iterator will be added for non-assigned shards as well
+     * @param includeEmpty             if true, a shard iterator will be added for non-assigned shards as well
      * @param includeRelocationTargets if true, an <b>extra</b> shard iterator will be added for relocating shards. The extra
      *                                 iterator contains a single ShardRouting pointing at the relocating target
      */
@@ -266,16 +267,20 @@ public class RoutingTable implements Iterable<IndexRoutingTable> {
     public GroupShardsIterator allShardCopiesGrouped(ShardId shardId) throws IndexMissingException {
         // use list here since we need to maintain identity across shards
         ArrayList<ShardIterator> set = new ArrayList<>();
-            IndexRoutingTable indexRoutingTable = index(shardId.index().name());
-            if (indexRoutingTable == null) {
-                throw new IndexMissingException(new Index(shardId.index().name()));
-            }
+        IndexRoutingTable indexRoutingTable = index(shardId.index().name());
+        if (indexRoutingTable == null) {
+            throw new IndexMissingException(new Index(shardId.index().name()));
+        }
         IndexShardRoutingTable copiesRoutingTable = indexRoutingTable.shard(shardId.id());
+        if (copiesRoutingTable != null) {
             for (ShardRouting shardRouting : copiesRoutingTable) {
                 if (shardRouting.active()) {
                     set.add(shardRouting.shardsIt());
                 }
             }
+        } else {
+            throw new ElasticsearchIllegalStateException(shardId + " does not exist");
+        }
         return new GroupShardsIterator(set);
     }
 
