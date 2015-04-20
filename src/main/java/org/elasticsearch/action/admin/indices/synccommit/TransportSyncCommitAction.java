@@ -119,6 +119,7 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
     @Override
     protected ShardSyncCommitResponse shardOperation(ShardSyncCommitRequest request) throws ElasticsearchException {
         IndexShard indexShard = indicesService.indexServiceSafe(request.shardId().getIndex()).shardSafe(request.shardId().id());
+        // TODO: cretaye a flush request and execute and make flush return id
         byte[] id = indexShard.syncCommit(request.getRequest());
         return new ShardSyncCommitResponse(id, request.shardRouting());
     }

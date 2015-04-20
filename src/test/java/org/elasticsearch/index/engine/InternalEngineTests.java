@@ -107,7 +107,8 @@ import static org.elasticsearch.test.ElasticsearchTestCase.terminate;
 import static org.hamcrest.Matchers.*;
 
 @LuceneTestCase.SuppressFileSystems("*") // mock FS causes translog issues recovering sometimes because of their use of globs, see LUCENE-6424
-public class InternalEngineTests extends ElasticsearchLuceneTestCase {
+public class
+        InternalEngineTests extends ElasticsearchLuceneTestCase {
 
     protected final ShardId shardId = new ShardId(new Index("index"), 1);
 

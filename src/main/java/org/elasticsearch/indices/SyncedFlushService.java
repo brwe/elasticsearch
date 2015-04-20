@@ -34,6 +34,11 @@ public class SyncedFlushService extends AbstractComponent {
     }
 
     public boolean attemptSyncedFlush(ShardId shardId) {
+        // TODO: call the pre synced flush action (flush and get the commit id)
+
+        // call the synced flush action , the rplication op blah
+
+
         throw new UnsupportedOperationException("not so fast");
     }
 }

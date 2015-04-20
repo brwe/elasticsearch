@@ -39,6 +39,7 @@ public class SyncCommitTests extends ElasticsearchIntegrationTest {
 
     @Test
     public void runOnce() throws InterruptedException, IOException {
+        // use service here,
         assertAcked(client().admin().indices().prepareCreate("test").setSettings(
                 ImmutableSettings.builder().put("index.number_of_replicas", internalCluster().numDataNodes() - 1)
                         .put("index.number_of_shards", 1)

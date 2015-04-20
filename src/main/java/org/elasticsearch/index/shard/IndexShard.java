@@ -689,6 +689,9 @@ public class IndexShard extends AbstractIndexShardComponent {
         return engine().syncFlushIfNoPendingChanges(syncId, expectedCommitId);
     }
 
+    // TODO: revert to have one flush
+    // always return id
+    //
     public void flush(FlushRequest request) throws ElasticsearchException {
         boolean waitIfOngoing = request.waitIfOngoing();
         boolean force = request.force();

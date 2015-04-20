@@ -81,5 +81,7 @@ public class FlushTest extends ElasticsearchIntegrationTest {
         String nodeName = state.getState().getNodes().get(nodeId).name();
         IndicesService indicesService = internalCluster().getInstance(IndicesService.class, nodeName);
         indicesService.indexServiceSafe("test").shardInjectorSafe(0).getInstance(SyncedFlushService.class).attemptSyncedFlush(new ShardId("test", 0));
+
+        //TDOD move code over from other Integration test
     }
 }
