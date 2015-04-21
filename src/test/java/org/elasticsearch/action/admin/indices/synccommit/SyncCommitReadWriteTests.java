@@ -44,7 +44,7 @@ public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
         ShardRouting shardRouting = new ImmutableShardRouting("test", 0, "test_node",
                 "other_test_node", randomBoolean(), ShardRoutingState.STARTED, randomInt());
         Map<ShardRouting, byte[]> commitIds = new HashMap<>();
-        commitIds.put(shardRouting, randomRealisticUnicodeOfLength(10).getBytes());
+        commitIds.put(shardRouting, generateRandomId(randomInt(100)));
         WriteSyncCommitRequest writeSyncCommitRequest = new WriteSyncCommitRequest(shardId, randomAsciiOfLength(5), commitIds);
         BytesStreamOutput out = new BytesStreamOutput();
         writeSyncCommitRequest.writeTo(out);
@@ -60,7 +60,7 @@ public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
         ShardRouting shardRouting = new ImmutableShardRouting("test", 0, "test_node",
                 "other_test_node", randomBoolean(), ShardRoutingState.STARTED, randomInt());
         AtomicReferenceArray atomicReferenceArray = new AtomicReferenceArray(1);
-        atomicReferenceArray.set(0, new ShardSyncCommitResponse(randomRealisticUnicodeOfLength(10).getBytes(), shardRouting));
+        atomicReferenceArray.set(0, new ShardSyncCommitResponse(generateRandomId(randomInt(100)), shardRouting));
         SyncCommitResponse syncCommitResponse = new SyncCommitResponse(randomInt(), randomInt(), randomInt(), new ArrayList<ShardOperationFailedException>(), atomicReferenceArray);
         BytesStreamOutput out = new BytesStreamOutput();
         syncCommitResponse.writeTo(out);
@@ -75,7 +75,7 @@ public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
     public void streamShardSyncResponse() throws InterruptedException, IOException {
         ShardRouting shardRouting = new ImmutableShardRouting("test", 0, "test_node",
                 "other_test_node", randomBoolean(), ShardRoutingState.STARTED, randomInt());
-        ShardSyncCommitResponse shardSyncCommitResponse = new ShardSyncCommitResponse(randomRealisticUnicodeOfLength(10).getBytes(), shardRouting);
+        ShardSyncCommitResponse shardSyncCommitResponse = new ShardSyncCommitResponse(generateRandomId(randomInt(100)), shardRouting);
         BytesStreamOutput out = new BytesStreamOutput();
         shardSyncCommitResponse.writeTo(out);
         out.close();
@@ -83,5 +83,13 @@ public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
         ShardSyncCommitResponse request = new ShardSyncCommitResponse();
         request.readFrom(in);
         assertArrayEquals(request.id(), shardSyncCommitResponse.id());
+    }
+
+    byte[] generateRandomId(int length) {
+        byte[] id = new byte[length];
+        for (int i = 0; i < length; i++) {
+            id[i] = randomByte();
+        }
+        return id;
     }
 }
