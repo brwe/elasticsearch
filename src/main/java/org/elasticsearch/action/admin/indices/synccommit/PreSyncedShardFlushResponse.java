@@ -30,14 +30,14 @@ import java.io.IOException;
 /**
  *
  */
-class ShardSyncCommitResponse extends BroadcastShardOperationResponse {
+class PreSyncedShardFlushResponse extends BroadcastShardOperationResponse {
     byte[] id;
     private ShardRouting shardRouting;
 
-    ShardSyncCommitResponse() {
+    PreSyncedShardFlushResponse() {
     }
 
-    ShardSyncCommitResponse(byte[] id, ShardRouting shardRouting) {
+    PreSyncedShardFlushResponse(byte[] id, ShardRouting shardRouting) {
         super(shardRouting.shardId());
         this.id = id;
         this.shardRouting = shardRouting;

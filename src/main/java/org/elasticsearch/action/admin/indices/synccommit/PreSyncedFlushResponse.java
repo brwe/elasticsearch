@@ -35,20 +35,20 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 /**
  * A response to sync commit action.
  */
-public class SyncCommitResponse extends BroadcastOperationResponse {
+public class PreSyncedFlushResponse extends BroadcastOperationResponse {
 
     Map<ShardRouting, byte[]> commitIds = new HashMap<>();
 
-    SyncCommitResponse() {
+    PreSyncedFlushResponse() {
 
     }
 
 
-    public SyncCommitResponse(int totalShards, int successfulShards, int failedShards, List<ShardOperationFailedException> shardFailures, AtomicReferenceArray shardsResponses) {
+    public PreSyncedFlushResponse(int totalShards, int successfulShards, int failedShards, List<ShardOperationFailedException> shardFailures, AtomicReferenceArray shardsResponses) {
         super(totalShards, successfulShards, failedShards, shardFailures);
         for (int i = 0; i < shardsResponses.length(); i++) {
-            ShardSyncCommitResponse shardSyncCommitResponse = (ShardSyncCommitResponse) shardsResponses.get(i);
-            commitIds.put(shardSyncCommitResponse.shardRouting(), shardSyncCommitResponse.id());
+            PreSyncedShardFlushResponse preSyncedShardFlushResponse = (PreSyncedShardFlushResponse) shardsResponses.get(i);
+            commitIds.put(preSyncedShardFlushResponse.shardRouting(), preSyncedShardFlushResponse.id());
         }
     }
 

@@ -19,7 +19,7 @@
 package org.elasticsearch.action.admin.indices.synccommit;
 
 import org.elasticsearch.action.ShardOperationFailedException;
-import org.elasticsearch.action.synccommit.WriteSyncCommitRequest;
+import org.elasticsearch.action.synccommit.SyncedFlushRequest;
 import org.elasticsearch.cluster.routing.ImmutableShardRouting;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.cluster.routing.ShardRoutingState;
@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
+public class SyncedFlushReadWriteTests extends ElasticsearchTestCase {
 
     @Test
     public void streamWriteSyncResponse() throws InterruptedException, IOException {
@@ -45,14 +45,14 @@ public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
                 "other_test_node", randomBoolean(), ShardRoutingState.STARTED, randomInt());
         Map<ShardRouting, byte[]> commitIds = new HashMap<>();
         commitIds.put(shardRouting, generateRandomId(randomInt(100)));
-        WriteSyncCommitRequest writeSyncCommitRequest = new WriteSyncCommitRequest(shardId, randomAsciiOfLength(5), commitIds);
+        SyncedFlushRequest syncedFlushRequest = new SyncedFlushRequest(shardId, randomAsciiOfLength(5), commitIds);
         BytesStreamOutput out = new BytesStreamOutput();
-        writeSyncCommitRequest.writeTo(out);
+        syncedFlushRequest.writeTo(out);
         out.close();
         StreamInput in = new BytesStreamInput(out.bytes());
-        WriteSyncCommitRequest request = new WriteSyncCommitRequest();
+        SyncedFlushRequest request = new SyncedFlushRequest();
         request.readFrom(in);
-        assertArrayEquals(request.commitIds().get(shardRouting), writeSyncCommitRequest.commitIds().get(shardRouting));
+        assertArrayEquals(request.commitIds().get(shardRouting), syncedFlushRequest.commitIds().get(shardRouting));
     }
 
     @Test
@@ -60,29 +60,29 @@ public class SyncCommitReadWriteTests extends ElasticsearchTestCase {
         ShardRouting shardRouting = new ImmutableShardRouting("test", 0, "test_node",
                 "other_test_node", randomBoolean(), ShardRoutingState.STARTED, randomInt());
         AtomicReferenceArray atomicReferenceArray = new AtomicReferenceArray(1);
-        atomicReferenceArray.set(0, new ShardSyncCommitResponse(generateRandomId(randomInt(100)), shardRouting));
-        SyncCommitResponse syncCommitResponse = new SyncCommitResponse(randomInt(), randomInt(), randomInt(), new ArrayList<ShardOperationFailedException>(), atomicReferenceArray);
+        atomicReferenceArray.set(0, new PreSyncedShardFlushResponse(generateRandomId(randomInt(100)), shardRouting));
+        PreSyncedFlushResponse preSyncedFlushResponse = new PreSyncedFlushResponse(randomInt(), randomInt(), randomInt(), new ArrayList<ShardOperationFailedException>(), atomicReferenceArray);
         BytesStreamOutput out = new BytesStreamOutput();
-        syncCommitResponse.writeTo(out);
+        preSyncedFlushResponse.writeTo(out);
         out.close();
         StreamInput in = new BytesStreamInput(out.bytes());
-        SyncCommitResponse request = new SyncCommitResponse();
+        PreSyncedFlushResponse request = new PreSyncedFlushResponse();
         request.readFrom(in);
-        assertArrayEquals(request.commitIds().get(shardRouting), syncCommitResponse.commitIds().get(shardRouting));
+        assertArrayEquals(request.commitIds().get(shardRouting), preSyncedFlushResponse.commitIds().get(shardRouting));
     }
 
     @Test
     public void streamShardSyncResponse() throws InterruptedException, IOException {
         ShardRouting shardRouting = new ImmutableShardRouting("test", 0, "test_node",
                 "other_test_node", randomBoolean(), ShardRoutingState.STARTED, randomInt());
-        ShardSyncCommitResponse shardSyncCommitResponse = new ShardSyncCommitResponse(generateRandomId(randomInt(100)), shardRouting);
+        PreSyncedShardFlushResponse preSyncedShardFlushResponse = new PreSyncedShardFlushResponse(generateRandomId(randomInt(100)), shardRouting);
         BytesStreamOutput out = new BytesStreamOutput();
-        shardSyncCommitResponse.writeTo(out);
+        preSyncedShardFlushResponse.writeTo(out);
         out.close();
         StreamInput in = new BytesStreamInput(out.bytes());
-        ShardSyncCommitResponse request = new ShardSyncCommitResponse();
+        PreSyncedShardFlushResponse request = new PreSyncedShardFlushResponse();
         request.readFrom(in);
-        assertArrayEquals(request.id(), shardSyncCommitResponse.id());
+        assertArrayEquals(request.id(), preSyncedShardFlushResponse.id());
     }
 
     byte[] generateRandomId(int length) {

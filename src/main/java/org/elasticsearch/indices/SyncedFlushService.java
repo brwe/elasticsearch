@@ -18,12 +18,12 @@
  */
 package org.elasticsearch.indices;
 
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequest;
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitResponse;
-import org.elasticsearch.action.admin.indices.synccommit.TransportSyncCommitAction;
-import org.elasticsearch.action.synccommit.TransportWriteSyncCommitAction;
-import org.elasticsearch.action.synccommit.WriteSyncCommitRequest;
-import org.elasticsearch.action.synccommit.WriteSyncCommitResponse;
+import org.elasticsearch.action.admin.indices.synccommit.PreSyncedFlushRequest;
+import org.elasticsearch.action.admin.indices.synccommit.PreSyncedFlushResponse;
+import org.elasticsearch.action.admin.indices.synccommit.TransportPreSyncedFlushAction;
+import org.elasticsearch.action.synccommit.TransportSyncedFlushAction;
+import org.elasticsearch.action.synccommit.SyncedFlushRequest;
+import org.elasticsearch.action.synccommit.SyncedFlushResponse;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -33,20 +33,20 @@ import java.util.concurrent.ExecutionException;
 
 public class SyncedFlushService extends AbstractComponent {
 
-    private final TransportSyncCommitAction transportSyncCommitAction;
-    private final TransportWriteSyncCommitAction transportWriteSyncCommitAction;
+    private final TransportPreSyncedFlushAction transportPreSyncedFlushAction;
+    private final TransportSyncedFlushAction transportSyncedFlushAction;
 
     @Inject
-    public SyncedFlushService(Settings settings, TransportSyncCommitAction transportSyncCommitAction, TransportWriteSyncCommitAction transportWriteSyncCommitAction) {
+    public SyncedFlushService(Settings settings, TransportPreSyncedFlushAction transportPreSyncedFlushAction, TransportSyncedFlushAction transportSyncedFlushAction) {
         super(settings);
-        this.transportSyncCommitAction = transportSyncCommitAction;
-        this.transportWriteSyncCommitAction = transportWriteSyncCommitAction;
+        this.transportPreSyncedFlushAction = transportPreSyncedFlushAction;
+        this.transportSyncedFlushAction = transportSyncedFlushAction;
     }
 
-    public WriteSyncCommitResponse attemptSyncedFlush(ShardId shardId) throws ExecutionException, InterruptedException {
-        SyncCommitResponse syncCommitResponse = transportSyncCommitAction.execute(new SyncCommitRequest(shardId)).get();
+    public SyncedFlushResponse attemptSyncedFlush(ShardId shardId) throws ExecutionException, InterruptedException {
+        PreSyncedFlushResponse preSyncedFlushResponse = transportPreSyncedFlushAction.execute(new PreSyncedFlushRequest(shardId)).get();
         String syncId = "123";
-        WriteSyncCommitResponse writeSyncCommitResponse = transportWriteSyncCommitAction.execute(new WriteSyncCommitRequest(shardId, syncId, syncCommitResponse.commitIds())).get();
-        return writeSyncCommitResponse;
+        SyncedFlushResponse syncedFlushResponse = transportSyncedFlushAction.execute(new SyncedFlushRequest(shardId, syncId, preSyncedFlushResponse.commitIds())).get();
+        return syncedFlushResponse;
     }
 }

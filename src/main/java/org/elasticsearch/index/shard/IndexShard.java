@@ -36,7 +36,6 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.WriteFailureException;
 import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.admin.indices.optimize.OptimizeRequest;
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequest;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.node.DiscoveryNode;

@@ -104,10 +104,6 @@ import org.elasticsearch.action.admin.indices.stats.IndicesStatsAction;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequest;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsRequestBuilder;
 import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitAction;
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequest;
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequestBuilder;
-import org.elasticsearch.action.admin.indices.synccommit.SyncCommitResponse;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateAction;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequestBuilder;
@@ -138,7 +134,6 @@ import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerRequestBuilder
 import org.elasticsearch.action.admin.indices.warmer.put.PutWarmerResponse;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.Nullable;
-import org.elasticsearch.index.shard.ShardId;
 
 /**
  *
@@ -328,16 +323,6 @@ public abstract class AbstractIndicesAdminClient implements IndicesAdminClient {
     @Override
     public FlushRequestBuilder prepareFlush(String... indices) {
         return new FlushRequestBuilder(this).setIndices(indices);
-    }
-
-    @Override
-    public void syncCommit(final SyncCommitRequest request, final ActionListener<SyncCommitResponse> listener) {
-        execute(SyncCommitAction.INSTANCE, request, listener);
-    }
-
-    @Override
-    public SyncCommitRequestBuilder prepareSyncCommit(ShardId shardId) {
-        return new SyncCommitRequestBuilder(this, shardId);
     }
 
     @Override

@@ -40,14 +40,14 @@ import java.util.Map;
 
 /**
  */
-public class TransportWriteSyncCommitAction extends TransportShardReplicationOperationAction<WriteSyncCommitRequest, WriteSyncCommitRequest, WriteSyncCommitResponse> {
+public class TransportSyncedFlushAction extends TransportShardReplicationOperationAction<SyncedFlushRequest, SyncedFlushRequest, SyncedFlushResponse> {
 
-    public static final String NAME = "indices:data/synccommit";
+    public static final String NAME = "indices:data/syncedflush";
 
     @Inject
-    public TransportWriteSyncCommitAction(Settings settings, TransportService transportService, ClusterService clusterService,
-                                          IndicesService indicesService, ThreadPool threadPool, ShardStateAction shardStateAction,
-                                          ActionFilters actionFilters) {
+    public TransportSyncedFlushAction(Settings settings, TransportService transportService, ClusterService clusterService,
+                                      IndicesService indicesService, ThreadPool threadPool, ShardStateAction shardStateAction,
+                                      ActionFilters actionFilters) {
         super(settings, NAME, transportService, clusterService, indicesService, threadPool, shardStateAction, actionFilters);
     }
 
@@ -62,18 +62,18 @@ public class TransportWriteSyncCommitAction extends TransportShardReplicationOpe
     }
 
     @Override
-    protected WriteSyncCommitRequest newRequestInstance() {
-        return new WriteSyncCommitRequest();
+    protected SyncedFlushRequest newRequestInstance() {
+        return new SyncedFlushRequest();
     }
 
     @Override
-    protected WriteSyncCommitRequest newReplicaRequestInstance() {
+    protected SyncedFlushRequest newReplicaRequestInstance() {
         return newRequestInstance();
     }
 
     @Override
-    protected WriteSyncCommitResponse newResponseInstance() {
-        return new WriteSyncCommitResponse();
+    protected SyncedFlushResponse newResponseInstance() {
+        return new SyncedFlushResponse();
     }
 
     @Override
@@ -88,7 +88,7 @@ public class TransportWriteSyncCommitAction extends TransportShardReplicationOpe
     }
 
     @Override
-    protected Tuple<WriteSyncCommitResponse, WriteSyncCommitRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest) throws Throwable {
+    protected Tuple<SyncedFlushResponse, SyncedFlushRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest) throws Throwable {
         byte[] commitId = null;
         for (Map.Entry<ShardRouting, byte[]> entry : shardRequest.request.commitIds().entrySet()) {
             if (entry.getKey().shardsIt().nextOrNull().primary()) {
@@ -97,11 +97,11 @@ public class TransportWriteSyncCommitAction extends TransportShardReplicationOpe
         }
         IndexService indexService = indicesService.indexServiceSafe(shardRequest.shardId.getIndex());
         IndexShard indexShard = indexService.shardSafe(shardRequest.shardId.id());
-        WriteSyncCommitResponse writeSyncCommitResponse = new WriteSyncCommitResponse(indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId));
-        if (writeSyncCommitResponse.success() == false) {
+        SyncedFlushResponse syncedFlushResponse = new SyncedFlushResponse(indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId));
+        if (syncedFlushResponse.success() == false) {
             throw new ElasticsearchIllegalStateException("could not sync commit on primary");
         }
-        return new Tuple<>(writeSyncCommitResponse, shardRequest.request);
+        return new Tuple<>(syncedFlushResponse, shardRequest.request);
     }
 
     @Override

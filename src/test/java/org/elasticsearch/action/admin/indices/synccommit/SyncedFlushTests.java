@@ -32,14 +32,15 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.hamcrest.Matchers.equalTo;
 
-public class SyncCommitTests extends ElasticsearchIntegrationTest {
+public class SyncedFlushTests extends ElasticsearchIntegrationTest {
 
     @Test
-    public void testCommitIdsReturnedCorrectly() throws InterruptedException, IOException {
+    public void testCommitIdsReturnedCorrectly() throws InterruptedException, IOException, ExecutionException {
         assertAcked(client().admin().indices().prepareCreate("test").setSettings(
                 ImmutableSettings.builder().put("index.number_of_replicas", internalCluster().numDataNodes() - 1)
                         .put("index.number_of_shards", 1)
@@ -48,11 +49,12 @@ public class SyncCommitTests extends ElasticsearchIntegrationTest {
         for (int j = 0; j < 10; j++) {
             client().prepareIndex("test", "test").setSource("{}").get();
         }
-        SyncCommitResponse syncCommitResponse = client().admin().indices().prepareSyncCommit(new ShardId("test", 0)).setWaitIfOngoing(true).get();
-        assertThat(syncCommitResponse.getFailedShards(), equalTo(0));
-        assertThat(syncCommitResponse.commitIds.size(), equalTo(internalCluster().numDataNodes()));
+        TransportPreSyncedFlushAction transportPreSyncedFlushAction = internalCluster().getInstance(TransportPreSyncedFlushAction.class);
+        PreSyncedFlushResponse preSyncedFlushResponse = transportPreSyncedFlushAction.execute(new PreSyncedFlushRequest(new ShardId("test", 0))).get();
+        assertThat(preSyncedFlushResponse.getFailedShards(), equalTo(0));
+        assertThat(preSyncedFlushResponse.commitIds.size(), equalTo(internalCluster().numDataNodes()));
         // TODO: use stats api once it is in
-        for (Map.Entry<ShardRouting, byte[]> entry : syncCommitResponse.commitIds.entrySet()) {
+        for (Map.Entry<ShardRouting, byte[]> entry : preSyncedFlushResponse.commitIds.entrySet()) {
             String nodeName = getNodeNameFromShardRouting(entry.getKey());
             IndicesService indicesService = internalCluster().getInstance(IndicesService.class, nodeName);
             IndexShard indexShard = indicesService.indexService("test").shard(0);

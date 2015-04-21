@@ -22,7 +22,7 @@ import org.apache.lucene.index.SegmentInfos;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.action.admin.indices.flush.FlushResponse;
-import org.elasticsearch.action.synccommit.WriteSyncCommitResponse;
+import org.elasticsearch.action.synccommit.SyncedFlushResponse;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.shard.IndexShard;
@@ -97,8 +97,8 @@ public class FlushTest extends ElasticsearchIntegrationTest {
         String nodeId = state.getState().getRoutingTable().index("test").shard(0).getShards().get(0).currentNodeId();
         String nodeName = state.getState().getNodes().get(nodeId).name();
         IndicesService indicesService = internalCluster().getInstance(IndicesService.class, nodeName);
-        WriteSyncCommitResponse writeSyncCommitResponse = indicesService.indexServiceSafe("test").shardInjectorSafe(0).getInstance(SyncedFlushService.class).attemptSyncedFlush(new ShardId("test", 0));
-        assertTrue(writeSyncCommitResponse.success());
+        SyncedFlushResponse syncedFlushResponse = indicesService.indexServiceSafe("test").shardInjectorSafe(0).getInstance(SyncedFlushService.class).attemptSyncedFlush(new ShardId("test", 0));
+        assertTrue(syncedFlushResponse.success());
 
         // TODO: use state api for this once it is in
         for (IndicesService indicesServiceX : internalCluster().getDataNodeInstances(IndicesService.class)) {

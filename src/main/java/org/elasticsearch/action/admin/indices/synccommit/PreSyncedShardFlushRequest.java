@@ -17,42 +17,56 @@
  * under the License.
  */
 
-package org.elasticsearch.action.synccommit;
+package org.elasticsearch.action.admin.indices.synccommit;
 
-import org.elasticsearch.action.ActionWriteResponse;
+import org.elasticsearch.action.support.broadcast.BroadcastShardOperationRequest;
+import org.elasticsearch.cluster.routing.ImmutableShardRouting;
+import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 
 import java.io.IOException;
 
 /**
+ *
  */
-public class WriteSyncCommitResponse extends ActionWriteResponse {
+class PreSyncedShardFlushRequest extends BroadcastShardOperationRequest {
 
+    private ShardRouting shardRouting;
+    // we need our own request because it has to include the shard routing
+    private PreSyncedFlushRequest request = new PreSyncedFlushRequest();
 
-    private boolean succes;
-
-    public WriteSyncCommitResponse() {
-
+    PreSyncedShardFlushRequest() {
     }
 
-    public WriteSyncCommitResponse(boolean success) {
-        this.succes = success;
+    PreSyncedShardFlushRequest(ShardRouting shardRouting, PreSyncedFlushRequest request) {
+        super(shardRouting.shardId(), request);
+        this.request = request;
+        this.shardRouting = shardRouting;
     }
+
 
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        this.succes = in.readBoolean();
+        request.readFrom(in);
+        shardRouting = ImmutableShardRouting.readShardRoutingEntry(in);
+
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        out.writeBoolean(succes);
+        request.writeTo(out);
+        shardRouting.writeTo(out);
+
     }
 
-    public boolean success() {
-        return succes;
+    PreSyncedFlushRequest getRequest() {
+        return request;
+    }
+
+    public ShardRouting shardRouting() {
+        return shardRouting;
     }
 }

@@ -29,16 +29,16 @@ import java.util.Arrays;
 
 /**
  */
-public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitRequest> {
+public class PreSyncedFlushRequest extends BroadcastOperationRequest<PreSyncedFlushRequest> {
     private ShardId shardId;
-    private boolean force = false;
-    private boolean waitIfOngoing = false;
+    private boolean force = true;
+    private boolean waitIfOngoing = true;
 
 
-    SyncCommitRequest() {
+    PreSyncedFlushRequest() {
     }
 
-    public SyncCommitRequest(ShardId shardId) {
+    public PreSyncedFlushRequest(ShardId shardId) {
         super(Arrays.asList(shardId.getIndex()).toArray(new String[0]));
         this.shardId = shardId;
     }
@@ -55,7 +55,7 @@ public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitReque
      * if set to <tt>true</tt> the flush will block
      * if a another flush operation is already running until the flush can be performed.
      */
-    public SyncCommitRequest waitIfOngoing(boolean waitIfOngoing) {
+    public PreSyncedFlushRequest waitIfOngoing(boolean waitIfOngoing) {
         this.waitIfOngoing = waitIfOngoing;
         return this;
     }
@@ -70,7 +70,7 @@ public class SyncCommitRequest extends BroadcastOperationRequest<SyncCommitReque
     /**
      * Force flushing, even if one is possibly not needed.
      */
-    public SyncCommitRequest force(boolean force) {
+    public PreSyncedFlushRequest force(boolean force) {
         this.force = force;
         return this;
     }

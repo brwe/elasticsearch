@@ -32,16 +32,16 @@ import java.util.Map;
 
 /**
  */
-public class WriteSyncCommitRequest extends ShardReplicationOperationRequest<WriteSyncCommitRequest> {
+public class SyncedFlushRequest extends ShardReplicationOperationRequest<SyncedFlushRequest> {
 
     private String syncId;
     private Map<ShardRouting, byte[]> commitIds;
     private ShardId shardId;
 
-    public WriteSyncCommitRequest() {
+    public SyncedFlushRequest() {
     }
 
-    public WriteSyncCommitRequest(ShardId shardId, String syncId, Map<ShardRouting, byte[]> commitIds) {
+    public SyncedFlushRequest(ShardId shardId, String syncId, Map<ShardRouting, byte[]> commitIds) {
         this.commitIds = commitIds;
         this.shardId = shardId;
         this.syncId = syncId;

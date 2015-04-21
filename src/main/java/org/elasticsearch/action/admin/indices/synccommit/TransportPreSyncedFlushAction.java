@@ -27,9 +27,6 @@ import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.TransportBroadcastOperationAction;
-import org.elasticsearch.action.synccommit.TransportWriteSyncCommitAction;
-import org.elasticsearch.action.synccommit.WriteSyncCommitRequest;
-import org.elasticsearch.action.synccommit.WriteSyncCommitResponse;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockException;
@@ -52,17 +49,16 @@ import static com.google.common.collect.Lists.newArrayList;
 /**
  * Sync Commit Action.
  */
-public class TransportSyncCommitAction extends TransportBroadcastOperationAction<SyncCommitRequest, SyncCommitResponse, ShardSyncCommitRequest, ShardSyncCommitResponse> {
+public class TransportPreSyncedFlushAction extends TransportBroadcastOperationAction<PreSyncedFlushRequest, PreSyncedFlushResponse, PreSyncedShardFlushRequest, PreSyncedShardFlushResponse> {
 
     private final IndicesService indicesService;
-    private final TransportWriteSyncCommitAction transportWriteSyncCommitAction;
+
+    public static final String NAME = "indices:admin/synccommit";
 
     @Inject
-    public TransportSyncCommitAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, IndicesService indicesService, TransportWriteSyncCommitAction transportWriteSyncCommitAction,
-                                     ActionFilters actionFilters) {
-        super(settings, SyncCommitAction.NAME, threadPool, clusterService, transportService, actionFilters);
+    public TransportPreSyncedFlushAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, IndicesService indicesService, ActionFilters actionFilters) {
+        super(settings, NAME, threadPool, clusterService, transportService, actionFilters);
         this.indicesService = indicesService;
-        this.transportWriteSyncCommitAction = transportWriteSyncCommitAction;
     }
 
     @Override
@@ -71,17 +67,17 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
     }
 
     @Override
-    protected SyncCommitRequest newRequest() {
-        return new SyncCommitRequest();
+    protected PreSyncedFlushRequest newRequest() {
+        return new PreSyncedFlushRequest();
     }
 
     @Override
-    protected void doExecute(SyncCommitRequest request, ActionListener<SyncCommitResponse> listener) {
+    protected void doExecute(PreSyncedFlushRequest request, ActionListener<PreSyncedFlushResponse> listener) {
         new SyncCommitAsyncBroadcastAction(request, listener).start();
     }
 
     @Override
-    protected SyncCommitResponse newResponse(SyncCommitRequest request, AtomicReferenceArray shardsResponses, ClusterState clusterState) {
+    protected PreSyncedFlushResponse newResponse(PreSyncedFlushRequest request, AtomicReferenceArray shardsResponses, ClusterState clusterState) {
         int successfulShards = 0;
         int failedShards = 0;
         List<ShardOperationFailedException> shardFailures = null;
@@ -99,53 +95,53 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
                 successfulShards++;
             }
         }
-        return new SyncCommitResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, shardsResponses);
+        return new PreSyncedFlushResponse(shardsResponses.length(), successfulShards, failedShards, shardFailures, shardsResponses);
     }
 
     @Override
-    protected ShardSyncCommitRequest newShardRequest() {
-        return new ShardSyncCommitRequest();
+    protected PreSyncedShardFlushRequest newShardRequest() {
+        return new PreSyncedShardFlushRequest();
     }
 
     @Override
-    protected ShardSyncCommitRequest newShardRequest(int numShards, ShardRouting shard, SyncCommitRequest request) {
-        return new ShardSyncCommitRequest(shard, request);
+    protected PreSyncedShardFlushRequest newShardRequest(int numShards, ShardRouting shard, PreSyncedFlushRequest request) {
+        return new PreSyncedShardFlushRequest(shard, request);
     }
 
     @Override
-    protected ShardSyncCommitResponse newShardResponse() {
-        return new ShardSyncCommitResponse();
+    protected PreSyncedShardFlushResponse newShardResponse() {
+        return new PreSyncedShardFlushResponse();
     }
 
     @Override
-    protected ShardSyncCommitResponse shardOperation(ShardSyncCommitRequest request) throws ElasticsearchException {
+    protected PreSyncedShardFlushResponse shardOperation(PreSyncedShardFlushRequest request) throws ElasticsearchException {
         IndexShard indexShard = indicesService.indexServiceSafe(request.shardId().getIndex()).shardSafe(request.shardId().id());
         FlushRequest flushRequest = new FlushRequest().force(true).waitIfOngoing(true);
         byte[] id = indexShard.flush(flushRequest);
-        return new ShardSyncCommitResponse(id, request.shardRouting());
+        return new PreSyncedShardFlushResponse(id, request.shardRouting());
     }
 
     /**
      * The sync commit request works against one primary and all of its copies.
      */
     @Override
-    protected GroupShardsIterator shards(ClusterState clusterState, SyncCommitRequest request, String[] concreteIndices) {
+    protected GroupShardsIterator shards(ClusterState clusterState, PreSyncedFlushRequest request, String[] concreteIndices) {
         return clusterState.routingTable().allShardCopiesGrouped(request.shardId());
     }
 
     @Override
-    protected ClusterBlockException checkGlobalBlock(ClusterState state, SyncCommitRequest request) {
+    protected ClusterBlockException checkGlobalBlock(ClusterState state, PreSyncedFlushRequest request) {
         return state.blocks().globalBlockedException(ClusterBlockLevel.METADATA);
     }
 
     @Override
-    protected ClusterBlockException checkRequestBlock(ClusterState state, SyncCommitRequest countRequest, String[] concreteIndices) {
+    protected ClusterBlockException checkRequestBlock(ClusterState state, PreSyncedFlushRequest countRequest, String[] concreteIndices) {
         return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA, concreteIndices);
     }
 
     private class SyncCommitAsyncBroadcastAction extends AsyncBroadcastAction {
 
-        public SyncCommitAsyncBroadcastAction(SyncCommitRequest request, ActionListener<SyncCommitResponse> listener) {
+        public SyncCommitAsyncBroadcastAction(PreSyncedFlushRequest request, ActionListener<PreSyncedFlushResponse> listener) {
             super(request, listener);
         }
 
