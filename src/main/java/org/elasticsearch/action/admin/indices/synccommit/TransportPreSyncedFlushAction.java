@@ -72,11 +72,6 @@ public class TransportPreSyncedFlushAction extends TransportBroadcastOperationAc
     }
 
     @Override
-    protected void doExecute(PreSyncedFlushRequest request, ActionListener<PreSyncedFlushResponse> listener) {
-        new SyncCommitAsyncBroadcastAction(request, listener).start();
-    }
-
-    @Override
     protected PreSyncedFlushResponse newResponse(PreSyncedFlushRequest request, AtomicReferenceArray shardsResponses, ClusterState clusterState) {
         int successfulShards = 0;
         int failedShards = 0;
@@ -137,21 +132,5 @@ public class TransportPreSyncedFlushAction extends TransportBroadcastOperationAc
     @Override
     protected ClusterBlockException checkRequestBlock(ClusterState state, PreSyncedFlushRequest countRequest, String[] concreteIndices) {
         return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA, concreteIndices);
-    }
-
-    private class SyncCommitAsyncBroadcastAction extends AsyncBroadcastAction {
-
-        public SyncCommitAsyncBroadcastAction(PreSyncedFlushRequest request, ActionListener<PreSyncedFlushResponse> listener) {
-            super(request, listener);
-        }
-
-        @Override
-        protected void finishHim() {
-            try {
-                listener.onResponse(newResponse(request, shardsResponses, clusterState));
-            } catch (Throwable e) {
-                listener.onFailure(e);
-            }
-        }
     }
 }
