@@ -22,6 +22,7 @@ package org.elasticsearch.action.admin.indices.synccommit;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ShardOperationFailedException;
+import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
 import org.elasticsearch.action.support.broadcast.BroadcastShardOperationFailedException;
@@ -119,8 +120,8 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
     @Override
     protected ShardSyncCommitResponse shardOperation(ShardSyncCommitRequest request) throws ElasticsearchException {
         IndexShard indexShard = indicesService.indexServiceSafe(request.shardId().getIndex()).shardSafe(request.shardId().id());
-        // TODO: cretaye a flush request and execute and make flush return id
-        byte[] id = indexShard.syncCommit(request.getRequest());
+        FlushRequest flushRequest = new FlushRequest().force(true).waitIfOngoing(true);
+        byte[] id = indexShard.flush(flushRequest);
         return new ShardSyncCommitResponse(id, request.shardRouting());
     }
 
