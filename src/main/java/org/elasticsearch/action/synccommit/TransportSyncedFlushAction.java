@@ -42,7 +42,7 @@ import java.util.Map;
  */
 public class TransportSyncedFlushAction extends TransportShardReplicationOperationAction<SyncedFlushRequest, SyncedFlushRequest, SyncedFlushResponse> {
 
-    public static final String NAME = "indices:data/syncedflush";
+    public static final String NAME = "indices:data/write/syncedflush";
 
     @Inject
     public TransportSyncedFlushAction(Settings settings, TransportService transportService, ClusterService clusterService,
