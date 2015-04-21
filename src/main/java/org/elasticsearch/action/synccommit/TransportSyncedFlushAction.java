@@ -20,6 +20,7 @@
 package org.elasticsearch.action.synccommit;
 
 import org.elasticsearch.ElasticsearchIllegalStateException;
+import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.replication.TransportShardReplicationOperationAction;
 import org.elasticsearch.cluster.ClusterService;
@@ -27,20 +28,30 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.action.shard.ShardStateAction;
 import org.elasticsearch.cluster.routing.ShardIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
+import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.index.Index;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.transport.BaseTransportRequestHandler;
+import org.elasticsearch.transport.TransportChannel;
+import org.elasticsearch.transport.TransportResponse;
 import org.elasticsearch.transport.TransportService;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  */
-public class TransportSyncedFlushAction extends TransportShardReplicationOperationAction<SyncedFlushRequest, SyncedFlushRequest, SyncedFlushResponse> {
+public class TransportSyncedFlushAction extends TransportShardReplicationOperationAction<SyncedFlushRequest, SyncedFlushRequest, SyncedFlushResponse, SyncedFlushReplicaResponse> {
 
     public static final String NAME = "indices:data/write/syncedflush";
 
@@ -77,6 +88,11 @@ public class TransportSyncedFlushAction extends TransportShardReplicationOperati
     }
 
     @Override
+    protected SyncedFlushReplicaResponse newReplicaResponseInstance() {
+        return new SyncedFlushReplicaResponse();
+    }
+
+    @Override
     protected String executor() {
         return ThreadPool.Names.FLUSH;
     }
@@ -105,7 +121,7 @@ public class TransportSyncedFlushAction extends TransportShardReplicationOperati
     }
 
     @Override
-    protected void shardOperationOnReplica(ReplicaOperationRequest shardRequest) {
+    protected SyncedFlushReplicaResponse shardOperationOnReplica(ReplicaOperationRequest shardRequest) {
         byte[] commitId = null;
         for (Map.Entry<ShardRouting, byte[]> entry : shardRequest.request.commitIds().entrySet()) {
             if (entry.getKey().shardsIt().nextOrNull().currentNodeId().equals(clusterService.localNode().getId())) {
@@ -114,6 +130,24 @@ public class TransportSyncedFlushAction extends TransportShardReplicationOperati
         }
         IndexService indexService = indicesService.indexServiceSafe(shardRequest.shardId.getIndex());
         IndexShard indexShard = indexService.shardSafe(shardRequest.shardId.id());
-        indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId);
+        SyncedFlushReplicaResponse syncedFlushReplicaResponse = new SyncedFlushReplicaResponse();
+        boolean success = indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId);
+        String message = success ? "synced flush succeeded" : "synced flush failed";
+        syncedFlushReplicaResponse.setResult(success, shardRequest.request.index(), shardRequest.shardId.id(), shardRequest.getNodeId(), message);
+        return syncedFlushReplicaResponse;
+    }
+
+
+    protected SyncedFlushResponse onAllReplicasResponded(SyncedFlushResponse finalResponse, CopyOnWriteArrayList<SyncedFlushReplicaResponse> replicaResponses) {
+        List<ActionWriteResponse.ShardInfo.Failure> additionalFailures = new ArrayList<>();
+        for (SyncedFlushReplicaResponse replicaResponse : replicaResponses) {
+            if (replicaResponse.succeeded == false) {
+                additionalFailures.add(new ActionWriteResponse.ShardInfo.Failure(replicaResponse.getIndex(), replicaResponse.getShardId(), replicaResponse.getNodeId(), replicaResponse.getReason(), RestStatus.CONFLICT, false));
+            }
+        }
+        additionalFailures.addAll(Arrays.asList(finalResponse.getShardInfo().getFailures()));
+        SyncedFlushResponse syncedFlushResponse = new SyncedFlushResponse(true);
+        syncedFlushResponse.setShardInfo(new ActionWriteResponse.ShardInfo(finalResponse.getShardInfo().getTotal(), finalResponse.getShardInfo().getTotal() - additionalFailures.size(), additionalFailures.toArray(new ActionWriteResponse.ShardInfo.Failure[additionalFailures.size()])));
+        return syncedFlushResponse;
     }
 }
