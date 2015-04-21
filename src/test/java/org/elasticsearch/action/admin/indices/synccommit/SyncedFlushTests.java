@@ -64,6 +64,8 @@ public class SyncedFlushTests extends ElasticsearchIntegrationTest {
         }
     }
 
+    //TODO: add test for in flight on replica, with mock transport similar to https://github.com/elastic/elasticsearch/pull/10610/files ?
+
     private String getNodeNameFromShardRouting(ShardRouting shardRouting) {
         ClusterStateResponse clusterStateResponse = client().admin().cluster().prepareState().get();
         for (RoutingNode routingNode : clusterStateResponse.getState().getRoutingNodes()) {

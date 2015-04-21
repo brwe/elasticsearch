@@ -252,4 +252,8 @@ public class TransportIndexAction extends TransportShardReplicationOperationActi
             }
         }
     }
+
+    public String getReplicaActionName() {
+        return IndexAction.NAME + "[r]";
+    }
 }
