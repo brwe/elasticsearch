@@ -44,6 +44,7 @@ public class SyncCommitActionTests extends ElasticsearchSingleNodeTest {
     final static public String INDEX = "test";
     final static public String TYPE = "test";
 
+    // TODO : rename to PreSyncedFlush (TransportSyncCommitAction)
     @Test
     public void testSynActionResponseFailure() throws ExecutionException, InterruptedException {
         createIndex(INDEX);
@@ -71,6 +72,7 @@ public class SyncCommitActionTests extends ElasticsearchSingleNodeTest {
         assertArrayEquals(readCommitIdFromDisk(), syncCommitResponse.id());
     }
 
+    // rename to SyncedFlush (WriteSyncCommitResponse)
     @Test
     public void testWriteSyncActionResponse() throws ExecutionException, InterruptedException, IOException {
         createIndex(INDEX);

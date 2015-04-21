@@ -88,13 +88,15 @@ public class TransportWriteSyncCommitAction extends TransportShardReplicationOpe
     }
 
     @Override
-    protected Tuple<WriteSyncCommitResponse, WriteSyncCommitRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest, IndexShard indexShard, IndexService indexService) throws Throwable {
+    protected Tuple<WriteSyncCommitResponse, WriteSyncCommitRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest) throws Throwable {
         byte[] commitId = null;
         for (Map.Entry<ShardRouting, byte[]> entry : shardRequest.request.commitIds().entrySet()) {
             if (entry.getKey().shardsIt().nextOrNull().primary()) {
                 commitId = entry.getValue();
             }
         }
+        IndexService indexService = indicesService.indexServiceSafe(shardRequest.shardId.getIndex());
+        IndexShard indexShard = indexService.shardSafe(shardRequest.shardId.id());
         WriteSyncCommitResponse writeSyncCommitResponse = new WriteSyncCommitResponse(indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId));
         if (writeSyncCommitResponse.success() == false) {
             throw new ElasticsearchIllegalStateException("could not sync commit on primary");
@@ -103,13 +105,15 @@ public class TransportWriteSyncCommitAction extends TransportShardReplicationOpe
     }
 
     @Override
-    protected void shardOperationOnReplica(ReplicaOperationRequest shardRequest, IndexShard indexShard, IndexService indexService) {
+    protected void shardOperationOnReplica(ReplicaOperationRequest shardRequest) {
         byte[] commitId = null;
         for (Map.Entry<ShardRouting, byte[]> entry : shardRequest.request.commitIds().entrySet()) {
             if (entry.getKey().shardsIt().nextOrNull().currentNodeId().equals(clusterService.localNode().getId())) {
                 commitId = entry.getValue();
             }
         }
+        IndexService indexService = indicesService.indexServiceSafe(shardRequest.shardId.getIndex());
+        IndexShard indexShard = indexService.shardSafe(shardRequest.shardId.id());
         indexShard.syncFlushIfNoPendingChanges(shardRequest.request.syncId(), commitId);
     }
 }

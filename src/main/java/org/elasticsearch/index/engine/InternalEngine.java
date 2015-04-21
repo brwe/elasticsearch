@@ -599,12 +599,7 @@ public class InternalEngine extends Engine {
     }
 
     @Override
-<<<<<<< HEAD
     public boolean syncFlushIfNoPendingChanges(String syncId, byte[] expectedCommitId) throws EngineException {
-=======
-    // TODO remove the counter check and move to the transport action, needs not be in the lock, is only in the primary anyway
-    public boolean syncFlushIfNoPendingChanges(String syncId, byte[] expectedCommitId, AbstractRefCounted refCounted) throws EngineException {
->>>>>>> 477452d... todos
         // best effort attempt before we acquire locks
         ensureOpen();
 
