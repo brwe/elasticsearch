@@ -18,27 +18,35 @@
  */
 package org.elasticsearch.indices;
 
+import org.elasticsearch.action.admin.indices.synccommit.SyncCommitRequest;
+import org.elasticsearch.action.admin.indices.synccommit.SyncCommitResponse;
+import org.elasticsearch.action.admin.indices.synccommit.TransportSyncCommitAction;
+import org.elasticsearch.action.synccommit.TransportWriteSyncCommitAction;
+import org.elasticsearch.action.synccommit.WriteSyncCommitRequest;
+import org.elasticsearch.action.synccommit.WriteSyncCommitResponse;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.shard.ShardId;
 
+import java.util.concurrent.ExecutionException;
+
 public class SyncedFlushService extends AbstractComponent {
 
-    private final IndicesService indicesService;
+    private final TransportSyncCommitAction transportSyncCommitAction;
+    private final TransportWriteSyncCommitAction transportWriteSyncCommitAction;
 
     @Inject
-    public SyncedFlushService(Settings settings, IndicesService indicesService) {
+    public SyncedFlushService(Settings settings, TransportSyncCommitAction transportSyncCommitAction, TransportWriteSyncCommitAction transportWriteSyncCommitAction) {
         super(settings);
-        this.indicesService = indicesService;
+        this.transportSyncCommitAction = transportSyncCommitAction;
+        this.transportWriteSyncCommitAction = transportWriteSyncCommitAction;
     }
 
-    public boolean attemptSyncedFlush(ShardId shardId) {
-        // TODO: call the pre synced flush action (flush and get the commit id)
-
-        // call the synced flush action , the rplication op blah
-
-
-        throw new UnsupportedOperationException("not so fast");
+    public WriteSyncCommitResponse attemptSyncedFlush(ShardId shardId) throws ExecutionException, InterruptedException {
+        SyncCommitResponse syncCommitResponse = transportSyncCommitAction.execute(new SyncCommitRequest(shardId)).get();
+        String syncId = "123";
+        WriteSyncCommitResponse writeSyncCommitResponse = transportWriteSyncCommitAction.execute(new WriteSyncCommitRequest(shardId, syncId, syncCommitResponse.commitIds())).get();
+        return writeSyncCommitResponse;
     }
 }

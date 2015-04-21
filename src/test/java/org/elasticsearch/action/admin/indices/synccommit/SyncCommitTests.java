@@ -19,9 +19,10 @@
 package org.elasticsearch.action.admin.indices.synccommit;
 
 import org.apache.lucene.index.SegmentInfos;
+import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
+import org.elasticsearch.cluster.routing.RoutingNode;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.store.Store;
@@ -38,8 +39,7 @@ import static org.hamcrest.Matchers.equalTo;
 public class SyncCommitTests extends ElasticsearchIntegrationTest {
 
     @Test
-    public void runOnce() throws InterruptedException, IOException {
-        // use service here,
+    public void testCommitIdsReturnedCorrectly() throws InterruptedException, IOException {
         assertAcked(client().admin().indices().prepareCreate("test").setSettings(
                 ImmutableSettings.builder().put("index.number_of_replicas", internalCluster().numDataNodes() - 1)
                         .put("index.number_of_shards", 1)
@@ -51,23 +51,24 @@ public class SyncCommitTests extends ElasticsearchIntegrationTest {
         SyncCommitResponse syncCommitResponse = client().admin().indices().prepareSyncCommit(new ShardId("test", 0)).setWaitIfOngoing(true).get();
         assertThat(syncCommitResponse.getFailedShards(), equalTo(0));
         assertThat(syncCommitResponse.commitIds.size(), equalTo(internalCluster().numDataNodes()));
-        for (Map.Entry<ShardRouting, byte[]> entry1 : syncCommitResponse.commitIds.entrySet()) {
-            for (Map.Entry<ShardRouting, byte[]> entry2 : syncCommitResponse.commitIds.entrySet()) {
-                if (entry1.getKey().equals(entry2.getKey()) == false) {
-                    assertFalse(entry1.getValue().equals(entry2));
-                }
-            }
-        }
-        logClusterState();
-
-        for (IndicesService indicesService : internalCluster().getDataNodeInstances(IndicesService.class)) {
+        // TODO: use stats api once it is in
+        for (Map.Entry<ShardRouting, byte[]> entry : syncCommitResponse.commitIds.entrySet()) {
+            String nodeName = getNodeNameFromShardRouting(entry.getKey());
+            IndicesService indicesService = internalCluster().getInstance(IndicesService.class, nodeName);
             IndexShard indexShard = indicesService.indexService("test").shard(0);
             Store store = indexShard.engine().config().getStore();
             SegmentInfos segmentInfos = store.readLastCommittedSegmentsInfo();
-            Map<String, String> userData = segmentInfos.getUserData();
-            assertNotNull(userData.get(Engine.SYNC_COMMIT_ID));
-            assertTrue(userData.get(Engine.SYNC_COMMIT_ID).equals("123"));
+            assertArrayEquals(segmentInfos.getId(), entry.getValue());
         }
+    }
 
+    private String getNodeNameFromShardRouting(ShardRouting shardRouting) {
+        ClusterStateResponse clusterStateResponse = client().admin().cluster().prepareState().get();
+        for (RoutingNode routingNode : clusterStateResponse.getState().getRoutingNodes()) {
+            if (routingNode.nodeId().equals(shardRouting.currentNodeId())) {
+                return routingNode.node().name();
+            }
+        }
+        return null;
     }
 }

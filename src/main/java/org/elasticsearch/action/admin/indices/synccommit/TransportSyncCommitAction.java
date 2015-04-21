@@ -58,8 +58,8 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
     private final TransportWriteSyncCommitAction transportWriteSyncCommitAction;
 
     @Inject
-    public TransportSyncCommitAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, IndicesService indicesService,  TransportWriteSyncCommitAction transportWriteSyncCommitAction,
-            ActionFilters actionFilters) {
+    public TransportSyncCommitAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, IndicesService indicesService, TransportWriteSyncCommitAction transportWriteSyncCommitAction,
+                                     ActionFilters actionFilters) {
         super(settings, SyncCommitAction.NAME, threadPool, clusterService, transportService, actionFilters);
         this.indicesService = indicesService;
         this.transportWriteSyncCommitAction = transportWriteSyncCommitAction;
@@ -152,20 +152,7 @@ public class TransportSyncCommitAction extends TransportBroadcastOperationAction
         @Override
         protected void finishHim() {
             try {
-                String syncId = "123";
-                final SyncCommitResponse response =  newResponse(request, shardsResponses, clusterState);
-                transportWriteSyncCommitAction.execute(new WriteSyncCommitRequest(request.shardId(), syncId, response.commitIds()), new ActionListener<WriteSyncCommitResponse>() {
-                    @Override
-                    public void onResponse(WriteSyncCommitResponse writeSyncCommitResponse) {
-                        //TODO: here put proper response
-                        listener.onResponse(response);
-                    }
-
-                    @Override
-                    public void onFailure(Throwable e) {
-                        listener.onFailure(e);
-                    }
-                });
+                listener.onResponse(newResponse(request, shardsResponses, clusterState));
             } catch (Throwable e) {
                 listener.onFailure(e);
             }
