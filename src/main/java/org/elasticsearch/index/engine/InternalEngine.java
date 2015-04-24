@@ -73,7 +73,9 @@ public class InternalEngine extends Engine {
     private final FailEngineOnMergeFailure mergeSchedulerFailureListener;
     private final MergeSchedulerListener mergeSchedulerListener;
 
-    /** When we last pruned expired tombstones from versionMap.deletes: */
+    /**
+     * When we last pruned expired tombstones from versionMap.deletes:
+     */
     private volatile long lastDeleteVersionPruneTimeMSec;
 
     private final ShardIndexingService indexingService;
@@ -153,7 +155,13 @@ public class InternalEngine extends Engine {
                 if (translogId.v1() != null && skipInitialTranslogRecovery == false) {
                     recoverFromTranslog(translogId.v1(), transformer);
                 } else {
-                    flush(true, true);
+                    if (lastCommittedSegmentInfos.getUserData().get(SYNC_COMMIT_ID) == null) {
+                        flush(true, true);
+                    } else {
+                        boolean syncFlushSuccess = syncFlushIfNoPendingChanges(lastCommittedSegmentInfos.getUserData().get(SYNC_COMMIT_ID), lastCommittedSegmentInfos.getId());
+                        assert syncFlushSuccess == true : "skipped translog recovery but synced flush failed";
+                    }
+
                 }
             } catch (IOException | EngineException ex) {
                 throw new EngineCreationFailureException(shardId, "failed to recover from translog", ex);
@@ -185,7 +193,7 @@ public class InternalEngine extends Engine {
             final long currentTranslogId = Long.parseLong(commitUserData.get(Translog.TRANSLOG_ID_KEY));
             return new Tuple<>(currentTranslogId, nextTranslogId);
         }
-         // translog id is not in the metadata - fix this inconsistency some code relies on this and old indices might not have it.
+        // translog id is not in the metadata - fix this inconsistency some code relies on this and old indices might not have it.
         writer.setCommitData(Collections.singletonMap(Translog.TRANSLOG_ID_KEY, Long.toString(nextTranslogId)));
         commitIndexWriter(writer);
         logger.debug("no translog ID present in the current commit - creating one");
@@ -1050,7 +1058,8 @@ public class InternalEngine extends Engine {
             boolean verbose = false;
             try {
                 verbose = Boolean.parseBoolean(System.getProperty("tests.verbose"));
-            } catch (Throwable ignore) {}
+            } catch (Throwable ignore) {
+            }
             iwc.setInfoStream(verbose ? InfoStream.getDefault() : new LoggerInfoStream(logger));
             iwc.setMergeScheduler(mergeScheduler.newMergeScheduler());
             MergePolicy mergePolicy = mergePolicyProvider.getMergePolicy();
@@ -1101,7 +1110,9 @@ public class InternalEngine extends Engine {
         }
     }
 
-    /** Extended SearcherFactory that warms the segments if needed when acquiring a new searcher */
+    /**
+     * Extended SearcherFactory that warms the segments if needed when acquiring a new searcher
+     */
     class SearchFactory extends EngineSearcherFactory {
 
         SearchFactory(EngineConfig engineConfig) {
@@ -1263,9 +1274,15 @@ public class InternalEngine extends Engine {
             IOUtils.closeWhileHandlingException(translog);
             throw new EngineException(shardId, "failed to recover from translog", e);
         }
-        flush(true, true);
+
         if (operationsRecovered > 0) {
+            flush(true, true);
             refresh("translog recovery");
+        } else if (lastCommittedSegmentInfos.getUserData().get(SYNC_COMMIT_ID) == null) {
+            flush(true, true);
+        } else {
+            boolean syncFlushSuccess = syncFlushIfNoPendingChanges(lastCommittedSegmentInfos.getUserData().get(SYNC_COMMIT_ID), lastCommittedSegmentInfos.getId());
+            assert syncFlushSuccess == true : "no operations during translog recovery but synced flush failed";
         }
         translog.clearUnreferenced();
     }
