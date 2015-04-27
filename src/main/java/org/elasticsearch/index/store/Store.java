@@ -29,7 +29,6 @@ import org.apache.lucene.util.*;
 import org.apache.lucene.util.Version;
 import org.elasticsearch.*;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.collect.MapBuilder;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.Streams;
@@ -47,7 +46,6 @@ import org.elasticsearch.common.util.SingleObjectCache;
 import org.elasticsearch.common.util.concurrent.AbstractRefCounted;
 import org.elasticsearch.common.util.concurrent.RefCounted;
 import org.elasticsearch.env.ShardLock;
-import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.settings.IndexSettings;
 import org.elasticsearch.index.shard.AbstractIndexShardComponent;
 import org.elasticsearch.index.shard.ShardId;
@@ -679,17 +677,16 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
         }
 
         MetadataSnapshot(IndexCommit commit, Directory directory, ESLogger logger) throws IOException {
-            final SegmentInfos segmentCommitInfos = Store.readSegmentsInfo(commit, directory);
-            commitUserData = segmentCommitInfos.getUserData();
-            metadata = buildMetadata(commit, directory, logger, segmentCommitInfos);
+            initMetadata(commit, directory, logger);
             assert metadata.isEmpty() || numSegmentFiles() == 1 : "numSegmentFiles: " + numSegmentFiles();
         }
 
-        ImmutableMap<String, StoreFileMetaData> buildMetadata(IndexCommit commit, Directory directory, ESLogger logger, SegmentInfos segmentCommitInfos) throws IOException {
+        void initMetadata(IndexCommit commit, Directory directory, ESLogger logger) throws IOException {
             ImmutableMap.Builder<String, StoreFileMetaData> builder = ImmutableMap.builder();
             Map<String, String> checksumMap = readLegacyChecksums(directory).v1();
             try {
-
+                final SegmentInfos segmentCommitInfos = Store.readSegmentsInfo(commit, directory);
+                commitUserData = segmentCommitInfos.getUserData();
                 Version maxVersion = Version.LUCENE_4_0; // we don't know which version was used to write so we take the max version.
                 for (SegmentCommitInfo info : segmentCommitInfos) {
                     final Version version = info.info.getVersion();
@@ -742,7 +739,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
 
                 throw ex;
             }
-            return builder.build();
+            metadata = builder.build();
         }
 
         /**
