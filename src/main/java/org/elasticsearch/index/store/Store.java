@@ -980,7 +980,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
             commitUserData = new HashMap<>();
             int num = in.readVInt();
             for (int i = num; i > 0; i--) {
-                commitUserData.put(in.readString(), in.readOptionalString());
+                commitUserData.put(in.readString(), in.readString());
             }
         }
 
@@ -993,7 +993,7 @@ public class Store extends AbstractIndexShardComponent implements Closeable, Ref
             out.writeVInt(commitUserData.size());
             for (Map.Entry<String, String> entry : commitUserData.entrySet()) {
                 out.writeString(entry.getKey());
-                out.writeOptionalString(entry.getValue());
+                out.writeString(entry.getValue());
             }
         }
 
