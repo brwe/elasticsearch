@@ -33,7 +33,9 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
+import org.elasticsearch.index.translog.TranslogService;
 import org.elasticsearch.indices.recovery.RecoveryState;
 import org.elasticsearch.indices.syncedflush.SyncedFlushService;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -454,6 +456,94 @@ public class RecoveryFromGatewayTests extends ElasticsearchIntegrationTest {
         }
 
     }
+
+
+    @Test
+    @Slow
+    @TestLogging("gateway:TRACE")
+    public void testReusePeerRecoveryWithTranslogAndSyncId() throws Exception {
+        final Settings settings = settingsBuilder()
+                .put("action.admin.cluster.node.shutdown.delay", "10ms")
+                .put(MockFSDirectoryService.CHECK_INDEX_ON_CLOSE, false)
+                .put("gateway.recover_after_nodes", 4)
+                .put(ThrottlingAllocationDecider.CLUSTER_ROUTING_ALLOCATION_CONCURRENT_RECOVERIES, 4)
+                .put(MockDirectoryHelper.CRASH_INDEX, false).build();
+
+        internalCluster().startNodesAsync(4, settings).get();
+        // prevent any rebalance actions during the peer recovery
+        // if we run into a relocation the reuse count will be 0 and this fails the test. We are testing here if
+        // we reuse the files on disk after full restarts for replicas.
+        assertAcked(prepareCreate("test").setSettings(ImmutableSettings.builder()
+                .put(indexSettings())
+                .put(TranslogService.INDEX_TRANSLOG_DISABLE_FLUSH, true)
+                .put(IndexShard.INDEX_FLUSH_ON_CLOSE, false)
+                .put(EnableAllocationDecider.INDEX_ROUTING_REBALANCE_ENABLE, EnableAllocationDecider.Rebalance.NONE)));
+        ensureGreen();
+        logger.info("--> indexing docs");
+        for (int i = 0; i < 1000; i++) {
+            client().prepareIndex("test", "type").setSource("field", "value").execute().actionGet();
+            if ((i % 200) == 0) {
+                client().admin().indices().prepareFlush().execute().actionGet();
+            }
+        }
+        if (randomBoolean()) {
+            client().admin().indices().prepareFlush().execute().actionGet();
+        }
+        logger.info("Running Cluster Health");
+        ensureGreen();
+        client().admin().indices().prepareOptimize("test").setMaxNumSegments(100).get(); // just wait for merges
+        client().admin().indices().prepareFlush().setWaitIfOngoing(true).setForce(true).get();
+
+
+        logger.info("--> trying to sync flush");
+        int numShards = Integer.parseInt(client().admin().indices().prepareGetSettings("test").get().getSetting("test", "index.number_of_shards"));
+        SyncedFlushService syncedFlushService = internalCluster().getInstance(SyncedFlushService.class);
+        for (int i = 0; i < numShards; i++) {
+            assertTrue(syncedFlushService.attemptSyncedFlush(new ShardId("test", i)).success());
+        }
+        // index some more docs to make sure we have ops in the translog
+
+        client().prepareIndex("test", "type").setSource("field", "value").execute().actionGet();
+        client().prepareIndex("test", "type").setSource("field", "value").execute().actionGet();
+        client().prepareIndex("test", "type").setSource("field", "value").execute().actionGet();
+
+
+        logger.info("--> disabling allocation while the cluster is shut down second time");
+        // Disable allocations while we are closing nodes
+        client().admin().cluster().prepareUpdateSettings()
+                .setTransientSettings(settingsBuilder()
+                        .put(EnableAllocationDecider.CLUSTER_ROUTING_ALLOCATION_ENABLE, EnableAllocationDecider.Allocation.NONE))
+                .get();
+        logger.info("--> full cluster restart");
+        internalCluster().fullRestart();
+
+        logger.info("--> waiting for cluster to return to green after shutdown");
+        ensureGreen();
+
+        RecoveryResponse recoveryResponse = client().admin().indices().prepareRecoveries("test").get();
+        for (ShardRecoveryResponse response : recoveryResponse.shardResponses().get("test")) {
+            RecoveryState recoveryState = response.recoveryState();
+            long recovered = 0;
+            for (RecoveryState.File file : recoveryState.getIndex().fileDetails()) {
+                if (file.name().startsWith("segments")) {
+                    recovered += file.length();
+                }
+            }
+
+            if (!recoveryState.getPrimary()) {
+                logger.info("--> replica shard {} recovered from {} to {} using sync id, recovered {}, reuse {}",
+                        response.getShardId(), recoveryState.getSourceNode().name(), recoveryState.getTargetNode().name(),
+                        recoveryState.getIndex().recoveredBytes(), recoveryState.getIndex().reusedBytes());
+            }
+            assertThat(recoveryState.getIndex().recoveredBytes(), equalTo(0l));
+            assertThat(recoveryState.getIndex().reusedBytes(), equalTo(recoveryState.getIndex().totalBytes()));
+            assertThat(recoveryState.getIndex().recoveredFileCount(), equalTo(0));
+            assertThat(recoveryState.getIndex().reusedFileCount(), equalTo(recoveryState.getIndex().totalFileCount()));
+
+        }
+
+    }
+
 
     @Test
     @Slow
