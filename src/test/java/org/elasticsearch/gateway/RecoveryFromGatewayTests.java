@@ -27,6 +27,7 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.routing.allocation.decider.EnableAllocationDecider;
 import org.elasticsearch.cluster.routing.allocation.decider.ThrottlingAllocationDecider;
+import org.elasticsearch.common.collect.HppcMaps;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -356,6 +357,7 @@ public class RecoveryFromGatewayTests extends ElasticsearchIntegrationTest {
                 .put("action.admin.cluster.node.shutdown.delay", "10ms")
                 .put(MockFSDirectoryService.CHECK_INDEX_ON_CLOSE, false)
                 .put("gateway.recover_after_nodes", 4)
+
                 .put(ThrottlingAllocationDecider.CLUSTER_ROUTING_ALLOCATION_CONCURRENT_RECOVERIES, 4)
                 .put(MockDirectoryHelper.CRASH_INDEX, false).build();
 
@@ -382,18 +384,28 @@ public class RecoveryFromGatewayTests extends ElasticsearchIntegrationTest {
         client().admin().indices().prepareOptimize("test").setMaxNumSegments(100).get(); // just wait for merges
         client().admin().indices().prepareFlush().setWaitIfOngoing(true).setForce(true).get();
 
-        logger.info("--> disabling allocation while the cluster is shut down");
+        boolean useSyncIds = randomBoolean();
+        if (useSyncIds == false) {
+            logger.info("--> disabling allocation while the cluster is shut down");
 
-        // Disable allocations while we are closing nodes
-        client().admin().cluster().prepareUpdateSettings()
-                .setTransientSettings(settingsBuilder()
-                        .put(EnableAllocationDecider.CLUSTER_ROUTING_ALLOCATION_ENABLE, EnableAllocationDecider.Allocation.NONE))
-                .get();
-        logger.info("--> full cluster restart");
-        internalCluster().fullRestart();
+            // Disable allocations while we are closing nodes
+            client().admin().cluster().prepareUpdateSettings()
+                    .setTransientSettings(settingsBuilder()
+                            .put(EnableAllocationDecider.CLUSTER_ROUTING_ALLOCATION_ENABLE, EnableAllocationDecider.Allocation.NONE))
+                    .get();
+            logger.info("--> full cluster restart");
+            internalCluster().fullRestart();
 
-        logger.info("--> waiting for cluster to return to green after first shutdown");
-        ensureGreen();
+            logger.info("--> waiting for cluster to return to green after first shutdown");
+            ensureGreen();
+        } else {
+            logger.info("--> trying to sync flush");
+            int numShards = Integer.parseInt(client().admin().indices().prepareGetSettings("test").get().getSetting("test", "index.number_of_shards"));
+            SyncedFlushService syncedFlushService = internalCluster().getInstance(SyncedFlushService.class);
+            for (int i = 0; i < numShards; i++) {
+                assertTrue(syncedFlushService.attemptSyncedFlush(new ShardId("test", i)).success());
+            }
+        }
 
         logger.info("--> disabling allocation while the cluster is shut down second time");
         // Disable allocations while we are closing nodes
@@ -404,7 +416,7 @@ public class RecoveryFromGatewayTests extends ElasticsearchIntegrationTest {
         logger.info("--> full cluster restart");
         internalCluster().fullRestart();
 
-        logger.info("--> waiting for cluster to return to green after second shutdown");
+        logger.info("--> waiting for cluster to return to green after {}shutdown", useSyncIds ? "" : "second ");
         ensureGreen();
 
         RecoveryResponse recoveryResponse = client().admin().indices().prepareRecoveries("test").get();
@@ -416,7 +428,7 @@ public class RecoveryFromGatewayTests extends ElasticsearchIntegrationTest {
                     recovered += file.length();
                 }
             }
-            if (!recoveryState.getPrimary()) {
+            if (!recoveryState.getPrimary() && useSyncIds == false) {
                 logger.info("--> replica shard {} recovered from {} to {}, recovered {}, reuse {}",
                         response.getShardId(), recoveryState.getSourceNode().name(), recoveryState.getTargetNode().name(),
                         recoveryState.getIndex().recoveredBytes(), recoveryState.getIndex().reusedBytes());
@@ -435,65 +447,6 @@ public class RecoveryFromGatewayTests extends ElasticsearchIntegrationTest {
             }
         }
 
-    }
-
-    @Test
-    @Slow
-    @TestLogging("indices.recovery:TRACE,index.store:TRACE")
-    public void testSyncFlushedRecovery() throws Exception {
-        final Settings settings = settingsBuilder()
-                .put("action.admin.cluster.node.shutdown.delay", "10ms")
-                .put(MockFSDirectoryService.CHECK_INDEX_ON_CLOSE, false)
-                .put("gateway.recover_after_nodes", 4)
-                .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
-                .put(ThrottlingAllocationDecider.CLUSTER_ROUTING_ALLOCATION_CONCURRENT_RECOVERIES, 4)
-                .put(MockDirectoryHelper.CRASH_INDEX, false).build();
-
-        internalCluster().startNodesAsync(4, settings).get();
-        // prevent any rebalance actions during the recovery
-        assertAcked(prepareCreate("test").setSettings(ImmutableSettings.builder()
-                .put(indexSettings())
-                .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
-                .put(EnableAllocationDecider.INDEX_ROUTING_REBALANCE_ENABLE, EnableAllocationDecider.Rebalance.NONE)));
-        ensureGreen();
-        logger.info("--> indexing docs");
-        for (int i = 0; i < 1000; i++) {
-            client().prepareIndex("test", "type").setSource("field", "value").execute().actionGet();
-        }
-
-        logger.info("--> disabling allocation while the cluster is shut down");
-
-        // Disable allocations while we are closing nodes
-        client().admin().cluster().prepareUpdateSettings()
-                .setTransientSettings(settingsBuilder()
-                        .put(EnableAllocationDecider.CLUSTER_ROUTING_ALLOCATION_ENABLE, EnableAllocationDecider.Allocation.NONE))
-                .get();
-
-        SyncedFlushService syncedFlushService = internalCluster().getInstance(SyncedFlushService.class);
-        assertTrue(syncedFlushService.attemptSyncedFlush(new ShardId("test", 0)).success());
-        logger.info("--> full cluster restart");
-        internalCluster().fullRestart();
-
-        logger.info("--> waiting for cluster to return to green after first shutdown");
-        ensureGreen();
-        logClusterState();
-        RecoveryResponse recoveryResponse = client().admin().indices().prepareRecoveries("test").get();
-        for (ShardRecoveryResponse response : recoveryResponse.shardResponses().get("test")) {
-            RecoveryState recoveryState = response.recoveryState();
-            if (!recoveryState.getPrimary()) {
-                logger.info("--> replica shard {} recovered from {} to {}, recovered {}, reuse {}",
-                        response.getShardId(), recoveryState.getSourceNode().name(), recoveryState.getTargetNode().name(),
-                        recoveryState.getIndex().recoveredBytes(), recoveryState.getIndex().reusedBytes());
-            } else {
-                logger.info("--> replica shard {} recovered from {} to {}, recovered {}, reuse {}",
-                        response.getShardId(), recoveryState.getSourceNode().name(), recoveryState.getTargetNode().name(),
-                        recoveryState.getIndex().recoveredBytes(), recoveryState.getIndex().reusedBytes());
-            }
-            assertThat("no bytes should be recovered", recoveryState.getIndex().recoveredBytes(), equalTo(0l));
-            assertThat("data should have been reused", recoveryState.getIndex().reusedBytes(), equalTo(recoveryState.getIndex().totalBytes()));
-            assertThat("no files should be recovered", recoveryState.getIndex().recoveredFileCount(), equalTo(0));
-            assertThat("all files should be reused", recoveryState.getIndex().reusedFileCount(), equalTo(recoveryState.getIndex().totalFileCount()));
-        }
     }
 
     @Test
