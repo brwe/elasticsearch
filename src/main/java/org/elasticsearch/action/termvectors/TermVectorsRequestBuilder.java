@@ -21,6 +21,7 @@ package org.elasticsearch.action.termvectors;
 
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionRequestBuilder;
+import org.elasticsearch.action.termvectors.vectorize.Vectorizer;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.VersionType;
@@ -207,6 +208,15 @@ public class TermVectorsRequestBuilder extends ActionRequestBuilder<TermVectorsR
         request.filterSettings(filterSettings);
         return this;
     }
+
+    /**
+     * Sets the settings for filtering out terms.
+     */
+    public TermVectorsRequestBuilder setVectorizer(Vectorizer vectorizer) {
+        request.vectorizer(vectorizer);
+        return this;
+    }
+
 
     @Override
     protected void doExecute(ActionListener<TermVectorsResponse> listener) {
