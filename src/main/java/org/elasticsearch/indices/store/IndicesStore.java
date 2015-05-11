@@ -69,6 +69,7 @@ public class IndicesStore extends AbstractComponent implements ClusterStateListe
     public static final String ACTION_SHARD_EXISTS = "internal:index/shard/exists";
 
     private static final EnumSet<IndexShardState> ACTIVE_STATES = EnumSet.of(IndexShardState.STARTED, IndexShardState.RELOCATED);
+    public static final TimeValue DEFAULT_SHARD_DELETE_TIMEOUT = new TimeValue(30, TimeUnit.SECONDS);
 
     class ApplySettings implements NodeSettingsService.Listener {
         @Override
@@ -125,7 +126,7 @@ public class IndicesStore extends AbstractComponent implements ClusterStateListe
         this.rateLimitingThrottle = componentSettings.getAsBytesSize("throttle.max_bytes_per_sec", new ByteSizeValue(20, ByteSizeUnit.MB));
         rateLimiting.setMaxRate(rateLimitingThrottle);
 
-        this.deleteShardTimeout = settings.getAsTime(INDICES_STORE_DELETE_SHARD_TIMEOUT, new TimeValue(30, TimeUnit.SECONDS));
+        this.deleteShardTimeout = settings.getAsTime(INDICES_STORE_DELETE_SHARD_TIMEOUT, DEFAULT_SHARD_DELETE_TIMEOUT);
 
         logger.debug("using indices.store.throttle.type [{}], with index.store.throttle.max_bytes_per_sec [{}]", rateLimitingType, rateLimitingThrottle);
 
@@ -430,11 +431,11 @@ public class IndicesStore extends AbstractComponent implements ClusterStateListe
         }
     }
 
-    private static class ShardActiveRequest extends TransportRequest {
+    protected static class ShardActiveRequest extends TransportRequest {
         protected TimeValue timeout = null;
-        private ClusterName clusterName;
-        private String indexUUID;
-        private ShardId shardId;
+        protected ClusterName clusterName;
+        protected String indexUUID;
+        protected ShardId shardId;
 
         ShardActiveRequest() {
         }
@@ -454,6 +455,8 @@ public class IndicesStore extends AbstractComponent implements ClusterStateListe
             shardId = ShardId.readShardId(in);
             if (in.getVersion().onOrAfter(Version.V_1_5_0)) {
                 timeout = new TimeValue(in.readLong(), TimeUnit.MILLISECONDS);
+            } else {
+                timeout = DEFAULT_SHARD_DELETE_TIMEOUT;
             }
         }
 
