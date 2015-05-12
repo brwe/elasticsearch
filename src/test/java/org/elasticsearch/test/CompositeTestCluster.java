@@ -51,7 +51,7 @@ import static org.junit.Assert.assertThat;
 public class CompositeTestCluster extends TestCluster {
     private final InternalTestCluster cluster;
     private final ExternalNode[] externalNodes;
-    private final ExternalClient client = new ExternalClient();
+    private ExternalClient client;
     private static final String NODE_PREFIX = "external_";
 
     public CompositeTestCluster(InternalTestCluster cluster, int numExternalNodes, ExternalNode externalNode) throws IOException {
@@ -61,6 +61,8 @@ public class CompositeTestCluster extends TestCluster {
         for (int i = 0; i < externalNodes.length; i++) {
             externalNodes[i] = externalNode;
         }
+        random = new Random(seed());
+        client = new ExternalClient();
     }
 
     @Override
@@ -86,7 +88,11 @@ public class CompositeTestCluster extends TestCluster {
             externalNodes[i].reset(random.nextLong());
         }
         if (size() > 0) {
-            client().admin().cluster().prepareHealth().setWaitForNodes(">=" + Integer.toString(this.size())).get();
+            try {
+                client().admin().cluster().prepareHealth().setWaitForNodes(">=" + Integer.toString(this.size())).get();
+            } catch (Throwable t) {
+                logger.warn("cluster health failed", t);
+            }
         }
     }
 

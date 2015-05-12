@@ -51,6 +51,7 @@ public abstract class TestCluster implements Iterable<Client>, Closeable {
 
     public TestCluster(long seed) {
         this.seed = seed;
+        this.random = new Random(seed);
     }
 
     public long seed() {
