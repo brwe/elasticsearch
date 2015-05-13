@@ -788,7 +788,7 @@ public abstract class AbstractClient extends AbstractComponent implements Client
         }
     }
 
-    static class ClusterAdmin implements ClusterAdminClient {
+    protected static class ClusterAdmin implements ClusterAdminClient {
 
         private final ElasticsearchClient client;
 
@@ -1115,7 +1115,7 @@ public abstract class AbstractClient extends AbstractComponent implements Client
         }
     }
 
-    static class IndicesAdmin implements IndicesAdminClient {
+    protected static class IndicesAdmin implements IndicesAdminClient {
 
         private final ElasticsearchClient client;
 

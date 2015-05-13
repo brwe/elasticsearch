@@ -122,7 +122,7 @@ final class ExternalNode implements Closeable {
 
             }
         }
-        this.externalNodeSettings = externaNodeSettingsBuilder.put(REQUIRED_SETTINGS).build();
+        this.externalNodeSettings = externaNodeSettingsBuilder.put(REQUIRED_SETTINGS).put("path.home", PathUtils.get(".").toAbsolutePath()).build();
         for (Map.Entry<String, String> entry : externalNodeSettings.getAsMap().entrySet()) {
             params.add("-Des." + entry.getKey() + "=" + entry.getValue());
         }

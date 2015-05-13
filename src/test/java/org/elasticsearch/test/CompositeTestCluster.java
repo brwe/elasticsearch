@@ -23,10 +23,13 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterators;
 import org.apache.lucene.util.IOUtils;
+import org.elasticsearch.action.*;
 import org.elasticsearch.action.admin.cluster.node.stats.NodeStats;
 import org.elasticsearch.action.admin.cluster.node.stats.NodesStatsResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.ClusterAdminClient;
 import org.elasticsearch.client.FilterClient;
+import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.common.breaker.CircuitBreaker;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
@@ -303,5 +306,12 @@ public class CompositeTestCluster extends TestCluster {
         public void close() {
             // never close this client
         }
+
+        @Override
+        protected Client in() {
+            return internalClient();
+        }
+
+
     }
 }
