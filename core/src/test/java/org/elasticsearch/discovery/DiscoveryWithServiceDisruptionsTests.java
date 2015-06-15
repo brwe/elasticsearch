@@ -951,9 +951,9 @@ public class DiscoveryWithServiceDisruptionsTests extends ElasticsearchIntegrati
     }
 
     @Test
-    public void testMetaIsRemovedIfAllShardsFromIndexRemoved() throws Exception {
+    public void testMetaDataImportedFromDataNodesIfMasterLostDataFolder() throws Exception {
+        // test for https://github.com/elastic/elasticsearch/issues/8823
         configureMulticastCluster(3, 1);
-        // this test checks that the index state is removed from a data only node once all shards have been allocated away from it
         String masterNode = startMasterNode();
         String blueNode = startDataNode("blue");
         String redNode = startDataNode("red");
@@ -973,35 +973,25 @@ public class DiscoveryWithServiceDisruptionsTests extends ElasticsearchIntegrati
         assertIndexInMetaState(masterNode, "red_index");
         assertIndexInMetaState(masterNode, "blue_index");
 
-        // now relocate blue_index to red_node and red_index to blue_node
-        logger.debug("relocating indices...");
-        client().admin().indices().prepareUpdateSettings("blue_index").setSettings(Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "red")).get();
-        client().admin().indices().prepareUpdateSettings("red_index").setSettings(Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "blue")).get();
-        client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).get();
-        ensureGreen();
-        assertIndexNotInMetaState(redNode, "red_index");
-        assertIndexNotInMetaState(blueNode, "blue_index");
-        assertIndexInMetaState(redNode, "blue_index");
-        assertIndexInMetaState(blueNode, "red_index");
-        assertIndexInMetaState(masterNode, "red_index");
-        assertIndexInMetaState(masterNode, "blue_index");
-
-        //at this point the blue_index is on red node and the red_index on blue node
-        // now, when we start red and master node again but without data folder, the red index should be gone but the blue index should initialize fine
-        stopNode(redNode);
+        //at this point the blue_index is on blue node and the red_index on red node
+        // now, when we start red and master node again but without data folder, the blue index should be gone but the red index should initialize fine
+        stopNode(blueNode);
         ((InternalTestCluster) cluster()).stopCurrentMasterNode();
+
+        //start with empty data folder
         masterNode = startMasterNode();
-        redNode = startDataNode("red");
+        blueNode = startDataNode("blue");
         ensureGreen();
         assertIndexNotInMetaState(redNode, "blue_index");
         assertIndexNotInMetaState(blueNode, "blue_index");
-        assertIndexNotInMetaState(redNode, "red_index");
-        assertIndexInMetaState(blueNode, "red_index");
+        assertIndexInMetaState(redNode, "red_index");
+        assertIndexNotInMetaState(blueNode, "red_index");
         assertIndexInMetaState(masterNode, "red_index");
         assertIndexNotInMetaState(masterNode, "blue_index");
         assertTrue(client().prepareGet("red_index", "doc", "1").get().isExists());
         // if the red_node had stored the index state then cluster health would be red and blue_index would exist
         assertFalse(client().admin().indices().prepareExists("blue_index").get().isExists());
+        assertTrue(client().admin().indices().prepareExists("red_index").get().isExists());
     }
 
     @Test
@@ -1023,13 +1013,9 @@ public class DiscoveryWithServiceDisruptionsTests extends ElasticsearchIntegrati
 
         logger.info("--> close red_index");
         client().admin().indices().prepareClose("red_index").get();
-        // close the index
         ClusterStateResponse clusterStateResponse = client().admin().cluster().prepareState().get();
         assertThat(clusterStateResponse.getState().getMetaData().index("red_index").getState().name(), equalTo(IndexMetaData.State.CLOSE.name()));
 
-        logger.info("--> restart red node");
-        stopNode(redNode);
-        redNode = startDataNode("red", redNodeDataPath);
         client().admin().indices().preparePutMapping("red_index").setType("doc").setSource(jsonBuilder().startObject()
                 .startObject("properties")
                 .startObject("integer_field")
@@ -1060,6 +1046,8 @@ public class DiscoveryWithServiceDisruptionsTests extends ElasticsearchIntegrati
         clusterStateResponse = client().admin().cluster().prepareState().get();
         assertThat(clusterStateResponse.getState().getMetaData().index("red_index").getState().name(), equalTo(IndexMetaData.State.OPEN.name()));
         ensureGreen("red_index");
+        getMappingsResponse = client().admin().indices().prepareGetMappings("red_index").addTypes("doc").get();
+        assertNotNull(((LinkedHashMap) (getMappingsResponse.getMappings().get("red_index").get("doc").getSourceAsMap().get("properties"))).get("integer_field"));
         assertIndexInMetaState(redNode, "red_index");
         assertIndexInMetaState(masterNode, "red_index");
         assertTrue(client().prepareGet("red_index", "doc", "1").get().isExists());

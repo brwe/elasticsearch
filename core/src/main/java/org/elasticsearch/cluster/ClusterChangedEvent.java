@@ -192,6 +192,6 @@ public class ClusterChangedEvent {
         if (oldMaster == null && newMaster != null) {
             return true;
         }
-        return oldMaster.equals(newMaster) == false;
+        return false;//oldMaster.equals(newMaster) == false;
     }
 }
