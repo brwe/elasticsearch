@@ -19,11 +19,13 @@
 
 package org.elasticsearch.discovery;
 
+import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import com.google.common.base.Predicate;
 import org.apache.lucene.util.LuceneTestCase;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
+import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
@@ -31,12 +33,15 @@ import org.elasticsearch.cluster.*;
 import org.elasticsearch.cluster.block.ClusterBlock;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.routing.DjbHashFunction;
+import org.elasticsearch.cluster.routing.allocation.decider.FilterAllocationDecider;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
@@ -48,6 +53,7 @@ import org.elasticsearch.discovery.zen.ping.ZenPing;
 import org.elasticsearch.discovery.zen.ping.ZenPingService;
 import org.elasticsearch.discovery.zen.ping.unicast.UnicastZenPing;
 import org.elasticsearch.discovery.zen.publish.PublishClusterStateAction;
+import org.elasticsearch.gateway.GatewayMetaState;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
 import org.elasticsearch.test.InternalTestCluster;
 import org.elasticsearch.test.discovery.ClusterDiscoveryConfiguration;
@@ -56,6 +62,7 @@ import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.elasticsearch.test.transport.MockTransportService;
 import org.elasticsearch.transport.*;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -65,6 +72,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.elasticsearch.client.Requests.clusterHealthRequest;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.test.ElasticsearchIntegrationTest.ClusterScope;
 import static org.elasticsearch.test.ElasticsearchIntegrationTest.Scope;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
@@ -941,6 +950,141 @@ public class DiscoveryWithServiceDisruptionsTests extends ElasticsearchIntegrati
         ensureStableCluster(3);
     }
 
+    @Test
+    public void testMetaIsRemovedIfAllShardsFromIndexRemoved() throws Exception {
+        configureMulticastCluster(3, 1);
+        // this test checks that the index state is removed from a data only node once all shards have been allocated away from it
+        String masterNode = startMasterNode();
+        String blueNode = startDataNode("blue");
+        String redNode = startDataNode("red");
+
+        // create blue_index on blue_node and same for red
+        client().admin().cluster().health(clusterHealthRequest().waitForYellowStatus().waitForNodes("3")).get();
+        assertAcked(prepareCreate("blue_index").setSettings(Settings.builder().put("index.number_of_replicas", 0).put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "blue")));
+        index("blue_index", "doc", "1", jsonBuilder().startObject().field("text", "some text").endObject());
+        assertAcked(prepareCreate("red_index").setSettings(Settings.builder().put("index.number_of_replicas", 0).put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "red")));
+        index("red_index", "doc", "1", jsonBuilder().startObject().field("text", "some text").endObject());
+
+        ensureGreen();
+        assertIndexNotInMetaState(redNode, "blue_index");
+        assertIndexNotInMetaState(blueNode, "red_index");
+        assertIndexInMetaState(redNode, "red_index");
+        assertIndexInMetaState(blueNode, "blue_index");
+        assertIndexInMetaState(masterNode, "red_index");
+        assertIndexInMetaState(masterNode, "blue_index");
+
+        // now relocate blue_index to red_node and red_index to blue_node
+        logger.debug("relocating indices...");
+        client().admin().indices().prepareUpdateSettings("blue_index").setSettings(Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "red")).get();
+        client().admin().indices().prepareUpdateSettings("red_index").setSettings(Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "blue")).get();
+        client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).get();
+        ensureGreen();
+        assertIndexNotInMetaState(redNode, "red_index");
+        assertIndexNotInMetaState(blueNode, "blue_index");
+        assertIndexInMetaState(redNode, "blue_index");
+        assertIndexInMetaState(blueNode, "red_index");
+        assertIndexInMetaState(masterNode, "red_index");
+        assertIndexInMetaState(masterNode, "blue_index");
+
+        //at this point the blue_index is on red node and the red_index on blue node
+        // now, when we start red and master node again but without data folder, the red index should be gone but the blue index should initialize fine
+        stopNode(redNode);
+        ((InternalTestCluster) cluster()).stopCurrentMasterNode();
+        masterNode = startMasterNode();
+        redNode = startDataNode("red");
+        ensureGreen();
+        assertIndexNotInMetaState(redNode, "blue_index");
+        assertIndexNotInMetaState(blueNode, "blue_index");
+        assertIndexNotInMetaState(redNode, "red_index");
+        assertIndexInMetaState(blueNode, "red_index");
+        assertIndexInMetaState(masterNode, "red_index");
+        assertIndexNotInMetaState(masterNode, "blue_index");
+        assertTrue(client().prepareGet("red_index", "doc", "1").get().isExists());
+        // if the red_node had stored the index state then cluster health would be red and blue_index would exist
+        assertFalse(client().admin().indices().prepareExists("blue_index").get().isExists());
+    }
+
+    @Test
+    public void testMetaWrittenWhenIndexIsClosedAndMetaUpdated() throws Exception {
+        configureMulticastCluster(2, 1);
+        String masterNode = startMasterNode();
+        String redNodeDataPath = createTempDir().toString();
+        String redNode = startDataNode("red", redNodeDataPath);
+        // create red_index on red_node
+        client().admin().cluster().health(clusterHealthRequest().waitForYellowStatus().waitForNodes("2")).get();
+        assertAcked(prepareCreate("red_index").setSettings(Settings.builder().put("index.number_of_replicas", 0).put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "red")));
+        index("red_index", "doc", "1", jsonBuilder().startObject().field("text", "some text").endObject());
+
+        logger.info("--> wait for green red_index");
+        ensureGreen();
+        logger.info("--> wait for meta state written for red_index");
+        assertIndexInMetaState(redNode, "red_index");
+        assertIndexInMetaState(masterNode, "red_index");
+
+        logger.info("--> close red_index");
+        client().admin().indices().prepareClose("red_index").get();
+        // close the index
+        ClusterStateResponse clusterStateResponse = client().admin().cluster().prepareState().get();
+        assertThat(clusterStateResponse.getState().getMetaData().index("red_index").getState().name(), equalTo(IndexMetaData.State.CLOSE.name()));
+
+        logger.info("--> restart red node");
+        stopNode(redNode);
+        redNode = startDataNode("red", redNodeDataPath);
+        client().admin().indices().preparePutMapping("red_index").setType("doc").setSource(jsonBuilder().startObject()
+                .startObject("properties")
+                .startObject("integer_field")
+                .field("type", "integer")
+                .endObject()
+                .endObject()
+                .endObject()).get();
+
+        // check if mapping update was actually applied
+        GetMappingsResponse getMappingsResponse = client().admin().indices().prepareGetMappings("red_index").addTypes("doc").get();
+        assertNotNull(((LinkedHashMap) (getMappingsResponse.getMappings().get("red_index").get("doc").getSourceAsMap().get("properties"))).get("integer_field"));
+        // restart master with empty data folder
+        ((InternalTestCluster) cluster()).stopCurrentMasterNode();
+        masterNode = startMasterNode();
+
+        ensureGreen("red_index");
+        assertIndexInMetaState(redNode, "red_index");
+        assertIndexInMetaState(masterNode, "red_index");
+        clusterStateResponse = client().admin().cluster().prepareState().get();
+        assertThat(clusterStateResponse.getState().getMetaData().index("red_index").getState().name(), equalTo(IndexMetaData.State.CLOSE.name()));
+
+        // check if mapping still there even when master did not have any meta data
+        getMappingsResponse = client().admin().indices().prepareGetMappings("red_index").addTypes("doc").get();
+        assertNotNull(((LinkedHashMap) (getMappingsResponse.getMappings().get("red_index").get("doc").getSourceAsMap().get("properties"))).get("integer_field"));
+
+        // open the index again
+        client().admin().indices().prepareOpen("red_index").get();
+        clusterStateResponse = client().admin().cluster().prepareState().get();
+        assertThat(clusterStateResponse.getState().getMetaData().index("red_index").getState().name(), equalTo(IndexMetaData.State.OPEN.name()));
+        ensureGreen("red_index");
+        assertIndexInMetaState(redNode, "red_index");
+        assertIndexInMetaState(masterNode, "red_index");
+        assertTrue(client().prepareGet("red_index", "doc", "1").get().isExists());
+    }
+
+    // tests if indices are really deleted even if a master transition inbetween
+    @Ignore("https://github.com/elastic/elasticsearch/issues/11665")
+    @Test
+    public void testIndicesDeleted() throws Exception {
+        configureMulticastCluster(3, 2);
+        String masterNode1 = startMasterNode();
+        String masterNode2 = startMasterNode();
+        String dataNode = startDataNode("blue");
+        assertAcked(prepareCreate("test"));
+        ensureYellow();
+
+        NetworkPartition networkPartition = new NetworkUnresponsivePartition(masterNode1, dataNode, getRandom());
+        internalCluster().setDisruptionScheme(networkPartition);
+        networkPartition.startDisrupting();
+        internalCluster().client(masterNode1).admin().indices().prepareDelete("test").setTimeout("1s").get();
+        stopNode(masterNode1);
+        startMasterNode();
+        ensureYellow();
+        assertFalse(client().admin().indices().prepareExists("test").get().isExists());
+    }
 
     protected NetworkPartition addRandomPartition() {
         NetworkPartition partition;
@@ -1079,5 +1223,78 @@ public class DiscoveryWithServiceDisruptionsTests extends ElasticsearchIntegrati
                 }
             }, 30, TimeUnit.SECONDS));
         }
+    }
+
+    private String startDataNode(String color) {
+        return startDataNode(color, createTempDir().toString());
+    }
+
+    private String startDataNode(String color, String newDataPath) {
+        Settings.Builder settingsBuilder = Settings.builder()
+                .put(nodeSettings(0))
+                .put("node.data", true)
+                .put("node.master", false)
+                .put("node.color", color)
+                .put("path.data", newDataPath);
+
+        return internalCluster().startNode(settingsBuilder.build());
+    }
+
+    private String startMasterNode() {
+        Settings.Builder settingsBuilder = Settings.builder()
+                .put(nodeSettings(0))
+                .put("node.data", false)
+                .put("node.master", true)
+                .put("path.data", createTempDir().toString());
+
+        return internalCluster().startNode(settingsBuilder.build());
+    }
+
+    private void stopNode(String name) throws IOException {
+        internalCluster().stopRandomNode(InternalTestCluster.nameFilter(name));
+    }
+
+    protected void assertIndexNotInMetaState(String nodeName, String indexName) throws Exception {
+        assertMetaState(nodeName, indexName, false);
+    }
+
+    protected void assertIndexInMetaState(String nodeName, String indexName) throws Exception {
+        assertMetaState(nodeName, indexName, true);
+    }
+
+
+    private void assertMetaState(final String nodeName, final String indexName, final boolean shouldBe) throws Exception {
+        awaitBusy(new Predicate<Object>() {
+            @Override
+            public boolean apply(Object o) {
+                logger.info("checking if meta state exists...");
+                try {
+                    return shouldBe == metaStateExists(nodeName, indexName);
+                } catch (Throwable t) {
+                    logger.info("failed to load meta state", t);
+                    // TODO: loading of meta state fails rarely if the state is deleted while we try to load it
+                    // this here is a hack, would be much better to use for example a WatchService
+                    return false;
+                }
+            }
+        });
+        boolean inMetaSate = metaStateExists(nodeName, indexName);
+        if (shouldBe) {
+            assertTrue("expected " + indexName + " in meta state of node " + nodeName, inMetaSate);
+        } else {
+            assertFalse("expected " + indexName + " to not be in meta state of node " + nodeName, inMetaSate);
+        }
+    }
+
+    private boolean metaStateExists(String nodeName, String indexName) throws Exception {
+        GatewayMetaState nodeMetaState = ((InternalTestCluster) cluster()).getInstance(GatewayMetaState.class, nodeName);
+        MetaData nodeMetaData = null;
+        nodeMetaData = nodeMetaState.loadMetaState();
+        ImmutableOpenMap<String, IndexMetaData> indices = nodeMetaData.getIndices();
+        boolean inMetaSate = false;
+        for (ObjectObjectCursor<String, IndexMetaData> index : indices) {
+            inMetaSate = inMetaSate || index.key.equals(indexName);
+        }
+        return inMetaSate;
     }
 }
