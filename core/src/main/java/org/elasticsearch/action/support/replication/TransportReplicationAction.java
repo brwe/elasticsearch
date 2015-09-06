@@ -373,9 +373,9 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
                 retryBecauseUnavailable(shardIt.shardId(), "No active shards.");
                 return;
             }
-            if (primary.active() == false) {
-                logger.trace("primary shard [{}] is not yet active, scheduling a retry.", primary.shardId());
-                retryBecauseUnavailable(shardIt.shardId(), "Primary shard is not active or isn't assigned to a known node.");
+            if (primary.active() == false && rerouteToRemoteInitializingReplica(primary, observer) == false) {
+                logger.trace("primary shard [{}] is not yet assigned, scheduling a retry.", primary.shardId());
+                retryBecauseUnavailable(shardIt.shardId(), "Primary shard isn't assigned to a known node.");
                 return;
             }
             if (observer.observedState().nodes().nodeExists(primary.currentNodeId()) == false) {
@@ -660,6 +660,10 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
             retry(new UnavailableShardsException(shardId, message + " Timeout: [" + internalRequest.request().timeout() + "], request: " + internalRequest.request().toString()));
         }
 
+    }
+
+    protected boolean rerouteToRemoteInitializingReplica(ShardRouting primary, ClusterStateObserver observer) {
+        return false;
     }
 
     protected Releasable getIndexShardOperationsCounter(ShardId shardId) {

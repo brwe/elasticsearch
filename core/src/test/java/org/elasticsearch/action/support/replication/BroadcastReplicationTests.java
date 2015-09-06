@@ -228,11 +228,10 @@ public class BroadcastReplicationTests extends ESTestCase {
     }
 
     @Test
-    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/13238")
     public void testTimeoutFlush() throws ExecutionException, InterruptedException {
 
         final String index = "test";
-        clusterService.setState(state(index, randomBoolean(),
+        clusterService.setState(state(index, true,
                 randomBoolean() ? ShardRoutingState.INITIALIZING : ShardRoutingState.UNASSIGNED, ShardRoutingState.UNASSIGNED));
         logger.debug("--> using initial state:\n{}", clusterService.state().prettyPrint());
         TransportShardFlushAction shardFlushAction = new TransportShardFlushAction(Settings.EMPTY, transportService, clusterService,
@@ -261,21 +260,12 @@ public class BroadcastReplicationTests extends ESTestCase {
         assertFailure("all shards should fail with cluster block", executeAndAssertImmediateResponse(flushAction, new FlushRequest(index)), ClusterBlockException.class);
     }
 
-    void assertFailure(String msg, BroadcastResponse broadcastResponse, Class<?> klass) throws InterruptedException {
-        assertThat(broadcastResponse.getSuccessfulShards(), equalTo(0));
-        assertThat(broadcastResponse.getTotalShards(), equalTo(broadcastResponse.getFailedShards()));
-        for (int i = 0; i < broadcastResponse.getFailedShards(); i++) {
-            assertThat(msg, broadcastResponse.getShardFailures()[i].getCause().getCause(), instanceOf(klass));
-        }
-    }
-
     @Test
-    @AwaitsFix(bugUrl = "https://github.com/elastic/elasticsearch/issues/13238")
     public void testTimeoutRefresh() throws ExecutionException, InterruptedException {
 
         final String index = "test";
-        clusterService.setState(state(index, randomBoolean(),
-                randomBoolean() ? ShardRoutingState.INITIALIZING : ShardRoutingState.UNASSIGNED, ShardRoutingState.UNASSIGNED));
+        clusterService.setState(state(index, true,
+                ShardRoutingState.INITIALIZING, ShardRoutingState.UNASSIGNED));
         logger.debug("--> using initial state:\n{}", clusterService.state().prettyPrint());
         TransportShardRefreshAction shardrefreshAction = new TransportShardRefreshAction(Settings.EMPTY, transportService, clusterService,
                 null, threadPool, null,
@@ -301,6 +291,16 @@ public class BroadcastReplicationTests extends ESTestCase {
         clusterService.setState(ClusterState.builder(clusterService.state()).blocks(block));
         assertFailure("all shards should fail with cluster block", executeAndAssertImmediateResponse(refreshAction, new RefreshRequest(index)), ClusterBlockException.class);
     }
+
+
+    void assertFailure(String msg, BroadcastResponse broadcastResponse, Class<?> klass) throws InterruptedException {
+        assertThat(broadcastResponse.getSuccessfulShards(), equalTo(0));
+        assertThat(broadcastResponse.getTotalShards(), equalTo(broadcastResponse.getFailedShards()));
+        for (int i = 0; i < broadcastResponse.getFailedShards(); i++) {
+            assertThat(msg, broadcastResponse.getShardFailures()[i].getCause().getCause(), instanceOf(klass));
+        }
+    }
+
 
     public BroadcastResponse executeAndAssertImmediateResponse(TransportBroadcastReplicationAction broadcastAction, BroadcastRequest request) throws InterruptedException, ExecutionException {
         return (BroadcastResponse) broadcastAction.execute(request).actionGet("5s");

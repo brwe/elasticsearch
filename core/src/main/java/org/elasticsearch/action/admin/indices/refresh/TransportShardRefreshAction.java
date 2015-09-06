@@ -25,12 +25,14 @@ import org.elasticsearch.action.support.replication.ReplicationRequest;
 import org.elasticsearch.action.support.replication.TransportReplicationAction;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.ClusterStateObserver;
 import org.elasticsearch.cluster.action.index.MappingUpdatedAction;
 import org.elasticsearch.cluster.action.shard.ShardStateAction;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.routing.ShardIterator;
+import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -99,5 +101,14 @@ public class TransportShardRefreshAction extends TransportReplicationAction<Repl
     @Override
     protected boolean shouldExecuteReplication(Settings settings) {
         return true;
+    }
+
+    @Override
+    protected boolean rerouteToRemoteInitializingReplica(ShardRouting primary, ClusterStateObserver observer) {
+        if (primary.initializing()) {
+            return primary.currentNodeId().equals(observer.observedState().nodes().localNodeId()) == false;
+        } else {
+            return false;
+        }
     }
 }
