@@ -373,9 +373,20 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
                 retryBecauseUnavailable(shardIt.shardId(), "No active shards.");
                 return;
             }
-            if (primary.active() == false && rerouteToRemoteInitializingReplica(primary, observer) == false) {
-                logger.trace("primary shard [{}] is not yet assigned, scheduling a retry.", primary.shardId());
+            if (primary.active() == false && primary.initializing() == false) {
+                logger.trace("primary shard [{}] is not yet active, scheduling a retry.", primary.shardId());
                 retryBecauseUnavailable(shardIt.shardId(), "Primary shard isn't assigned to a known node.");
+                return;
+            }
+            // if the shard is initializing we distinguish two cases: primary is local and primary is remote.
+            // if primary is local we schedule a retry and wait until the shard has started
+            // if it is remote we might want to send it to the target (depends on what rerouteToRemoteInitializingReplica() returns).
+            String localNodeId = observer.observedState().nodes().localNodeId();
+            boolean primaryIsLocal = primary.currentNodeId().equals(localNodeId);
+            if (primary.initializing() &&
+                    (primaryIsLocal || (primaryIsLocal == false && rerouteToRemoteInitializingReplica() == false))) {
+                logger.trace("primary shard [{}] is only initializing.", primary.shardId());
+                retryBecauseUnavailable(shardIt.shardId(), "Primary shard is still initializing.");
                 return;
             }
             if (observer.observedState().nodes().nodeExists(primary.currentNodeId()) == false) {
@@ -662,7 +673,8 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
 
     }
 
-    protected boolean rerouteToRemoteInitializingReplica(ShardRouting primary, ClusterStateObserver observer) {
+    // Should return false if we do not want to send requests to initializing primaries that are remote and true if we should.
+    protected boolean rerouteToRemoteInitializingReplica() {
         return false;
     }
 

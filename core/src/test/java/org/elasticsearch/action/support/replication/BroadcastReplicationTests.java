@@ -265,7 +265,7 @@ public class BroadcastReplicationTests extends ESTestCase {
 
         final String index = "test";
         clusterService.setState(state(index, true,
-                ShardRoutingState.INITIALIZING, ShardRoutingState.UNASSIGNED));
+                randomBoolean() ? ShardRoutingState.INITIALIZING : ShardRoutingState.UNASSIGNED, ShardRoutingState.UNASSIGNED));
         logger.debug("--> using initial state:\n{}", clusterService.state().prettyPrint());
         TransportShardRefreshAction shardrefreshAction = new TransportShardRefreshAction(Settings.EMPTY, transportService, clusterService,
                 null, threadPool, null,

@@ -104,11 +104,7 @@ public class TransportShardRefreshAction extends TransportReplicationAction<Repl
     }
 
     @Override
-    protected boolean rerouteToRemoteInitializingReplica(ShardRouting primary, ClusterStateObserver observer) {
-        if (primary.initializing()) {
-            return primary.currentNodeId().equals(observer.observedState().nodes().localNodeId()) == false;
-        } else {
-            return false;
-        }
+    protected boolean rerouteToRemoteInitializingReplica() {
+        return true;
     }
 }

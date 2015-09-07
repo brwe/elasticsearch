@@ -228,6 +228,35 @@ public class ShardReplicationTests extends ESTestCase {
     }
 
     @Test
+    // tests that requests are rerouted to remote initializing primaries if rerouteToRemoteInitializingReplica returns true
+    public void testRoutingToInitializingPrimary() {
+        final String index = "test";
+        final ShardId shardId = new ShardId(index, 0);
+        state(index, true, ShardRoutingState.INITIALIZING);
+        clusterService.setState(state(index, randomBoolean(), ShardRoutingState.INITIALIZING));
+        logger.debug("using state: \n{}", clusterService.state().prettyPrint());
+
+        IndexShardRoutingTable shardRoutingTable = clusterService.state().routingTable().index(index).shard(shardId.id());
+        String primaryNodeId = shardRoutingTable.primaryShard().currentNodeId();
+        Request request = new Request(shardId);
+        PlainActionFuture<Response> listener = new PlainActionFuture<>();
+
+        action = new ActionWithRerouteToInitializingRemotePrimary(Settings.EMPTY, "testActionRerouteInitializingRemotePrimary", transportService, clusterService, threadPool);
+        TransportReplicationAction<Request, Request, Response>.PrimaryPhase primaryPhase = action.new PrimaryPhase(request, listener);
+        assertTrue(primaryPhase.checkBlocks());
+        primaryPhase.run();
+        if (primaryNodeId.equals(clusterService.localNode().id())) {
+            logger.info("--> primary is assigned to [{}], checking request retried", primaryNodeId);
+            assertThat(transport.capturedRequests().length, equalTo(0));
+            assertIndexShardCounter(1);
+        } else {
+            logger.info("--> primary is assigned to [{}], checking request rerouted", primaryNodeId);
+            assertThat(transport.capturedRequestsByTargetNode().get(primaryNodeId).size(), equalTo(1));
+            assertIndexShardCounter(1);
+        }
+    }
+
+    @Test
     public void testWriteConsistency() throws ExecutionException, InterruptedException {
         action = new ActionWithConsistency(Settings.EMPTY, "testActionWithConsistency", transportService, clusterService, threadPool);
         final String index = "test";
@@ -627,6 +656,19 @@ public class ShardReplicationTests extends ESTestCase {
         @Override
         protected Releasable getIndexShardOperationsCounter(ShardId shardId) {
             return getOrCreateIndexShardOperationsCounter();
+        }
+    }
+    class ActionWithRerouteToInitializingRemotePrimary extends Action {
+
+        ActionWithRerouteToInitializingRemotePrimary(Settings settings, String actionName, TransportService transportService,
+               ClusterService clusterService,
+               ThreadPool threadPool) {
+            super(settings, actionName, transportService, clusterService, threadPool);
+        }
+
+        @Override
+        protected boolean rerouteToRemoteInitializingReplica() {
+            return true;
         }
     }
 
