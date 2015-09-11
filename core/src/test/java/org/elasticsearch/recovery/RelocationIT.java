@@ -41,6 +41,8 @@ import org.elasticsearch.cluster.routing.allocation.decider.EnableAllocationDeci
 import org.elasticsearch.cluster.routing.allocation.decider.FilterAllocationDecider;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.Priority;
+import org.elasticsearch.common.collect.Tuple;
+import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.TimeValue;
@@ -361,6 +363,71 @@ public class RelocationIT extends ESIntegTestCase {
         }
     }
 
+    public static class PrintTracer extends MockTransportService.Tracer {
+        private ESLogger logger;
+
+        final CountDownLatch blockRecoveryLatch;
+        final Tuple blockOn;
+        final CountDownLatch signalStartBlocking;
+
+        public PrintTracer(ESLogger logger, Tuple blockOn, CountDownLatch signalStartBlocking, CountDownLatch blockRecoveryLatch) {
+
+            this.logger = logger;
+            this.blockOn = blockOn;
+            this.signalStartBlocking = signalStartBlocking;
+            this.blockRecoveryLatch = blockRecoveryLatch;
+        }
+        public void receivedRequest(long requestId, String action) {
+            logger.info("receivedRequest {}", action);
+            maybeBlock(action);
+        }
+
+        private void maybeBlock(String action) {
+            if (action.equals(blockOn.v2())) {
+                if (isRightMethod()) {
+                    logger.info("--> signaling start to block recovery");
+                    signalStartBlocking.countDown();
+                    try {
+                        logger.info("--> wait to stop blocking");
+                        blockRecoveryLatch.await();
+                        logger.info("--> stop blocking");
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException("waiting for signal to continue recovery was interruped");
+                    }
+                }
+            }
+        }
+
+        private boolean isRightMethod() {
+            for (final StackTraceElement se : Thread.currentThread().getStackTrace()) {
+                final String methodName = se.getMethodName();
+                if (blockOn.v1().equals(methodName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public void responseSent(long requestId, String action) {
+            logger.info("responseSent {}", action);
+            maybeBlock(action);
+        }
+
+        public void responseSent(long requestId, String action, Throwable t) {
+            logger.info("responseSent {}", action);
+        }
+
+        public void receivedResponse(long requestId, DiscoveryNode sourceNode, String action) {
+            logger.info("receivedResponse {}", action);
+            maybeBlock(action);
+        }
+
+        public void requestSent(DiscoveryNode node, long requestId, String action, TransportRequestOptions options) {
+            logger.info("requestSent {}", action);
+            maybeBlock(action);
+        }
+    }
+
     @Test
     public void testMoveShardsWhileRelocation() throws Exception {
         final String indexName = "test";
@@ -370,6 +437,24 @@ public class RelocationIT extends ESIntegTestCase {
         internalCluster().startNode(Settings.builder().put("node.color", "green").build());
         final String blueNodeName = blueFuture.get();
         final String redNodeName = redFuture.get();
+        // gather all the different messages
+        String[] recoveryStages = {"start_recovery", "filesInfo", "file_chunk", "clean_files", "prepare_translog", "translog_ops", "finalize"};
+        String[] messages = {"requestSent", "receivedRequest", "responseSent", "receivedResponse"};
+        List<Tuple<String, String>> actions = new ArrayList<>();
+        for (String stage : recoveryStages) {
+            for (String message : messages) {
+                actions.add(new Tuple(message, "internal:index/shard/recovery/" + stage));
+            }
+        }
+        Tuple<String, String> blockOn = randomFrom(actions);
+        logger.info("--> will start to block recovery once {} is called with action {}", blockOn.v1(), blockOn.v2());
+        CountDownLatch signalStartBlocking = new CountDownLatch(1);
+        MockTransportService transportServiceBlueNode = (MockTransportService) internalCluster().getInstance(TransportService.class, blueNodeName);
+        CountDownLatch blockRecoveryLatch = new CountDownLatch(1);
+        transportServiceBlueNode.addTracer(new PrintTracer(logger, blockOn, signalStartBlocking, blockRecoveryLatch));
+
+        MockTransportService transportServiceRedNode = (MockTransportService) internalCluster().getInstance(TransportService.class, redNodeName);
+        transportServiceRedNode.addTracer(new PrintTracer(logger, blockOn, signalStartBlocking, blockRecoveryLatch));
 
         ClusterHealthResponse response = client().admin().cluster().prepareHealth().setWaitForNodes(">=3").get();
         assertThat(response.isTimedOut(), is(false));
@@ -398,47 +483,21 @@ public class RelocationIT extends ESIntegTestCase {
         SearchResponse searchResponse = client().prepareSearch(indexName).get();
         assertHitCount(searchResponse, numDocs);
 
-        // Slow down recovery in order to make recovery cancellations more likely
-        IndicesStatsResponse statsResponse = client().admin().indices().prepareStats(indexName).get();
-        long chunkSize = Math.max(1, statsResponse.getIndex(indexName).getShards()[0].getStats().getStore().size().bytes() / 10);
-        assertTrue(client().admin().cluster().prepareUpdateSettings()
-                .setTransientSettings(Settings.builder()
-                                // one chunk per sec..
-                                .put(RecoverySettings.INDICES_RECOVERY_MAX_BYTES_PER_SEC, chunkSize, ByteSizeUnit.BYTES)
-                                .put(RecoverySettings.INDICES_RECOVERY_FILE_CHUNK_SIZE, chunkSize, ByteSizeUnit.BYTES)
-                )
-                .get().isAcknowledged());
-
         client().admin().indices().prepareUpdateSettings(indexName).setSettings(
                 Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "red")
         ).get();
-
-        // Lets wait a bit and then move again to hopefully trigger recovery cancellations.
-        boolean applied = awaitBusy(
-                () -> {
-                    RecoveryResponse recoveryResponse =
-                            internalCluster().client(redNodeName).admin().indices().prepareRecoveries(indexName).get();
-                    return !recoveryResponse.shardRecoveryStates().get(indexName).isEmpty();
-                }
-        );
-        assertTrue(applied);
+        signalStartBlocking.await();
+        //recovery should have started and blocked by the tracer
+        // now, change allocation again so that recovery is cancelled
         client().admin().indices().prepareUpdateSettings(indexName).setSettings(
                 Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "color", "green")
         ).get();
-
-        // Restore the recovery speed to not timeout cluster health call
-        assertTrue(client().admin().cluster().prepareUpdateSettings()
-                .setTransientSettings(Settings.builder()
-                                .put(RecoverySettings.INDICES_RECOVERY_MAX_BYTES_PER_SEC, "20mb")
-                                .put(RecoverySettings.INDICES_RECOVERY_FILE_CHUNK_SIZE, "512kb")
-                )
-                .get().isAcknowledged());
-
+        // release the blocking
+        blockRecoveryLatch.countDown();
         // this also waits for all ongoing recoveries to complete:
         ensureSearchable(indexName);
         searchResponse = client().prepareSearch(indexName).get();
         assertHitCount(searchResponse, numDocs);
-
         stateResponse = client().admin().cluster().prepareState().get();
         assertTrue(stateResponse.getState().getRoutingNodes().node(blueNodeId).isEmpty());
     }
