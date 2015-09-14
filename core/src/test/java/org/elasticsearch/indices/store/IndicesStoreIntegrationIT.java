@@ -38,9 +38,12 @@ import org.elasticsearch.cluster.routing.allocation.command.MoveAllocationComman
 import org.elasticsearch.cluster.routing.allocation.decider.EnableAllocationDecider;
 import org.elasticsearch.cluster.routing.allocation.decider.FilterAllocationDecider;
 import org.elasticsearch.common.Priority;
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.discovery.DiscoveryService;
+import org.elasticsearch.discovery.DiscoverySettings;
 import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.index.shard.ShardId;
@@ -54,8 +57,7 @@ import org.elasticsearch.test.disruption.BlockClusterStateProcessing;
 import org.elasticsearch.test.disruption.SingleNodeDisruption;
 import org.elasticsearch.test.junit.annotations.TestLogging;
 import org.elasticsearch.test.transport.MockTransportService;
-import org.elasticsearch.transport.TransportRequestOptions;
-import org.elasticsearch.transport.TransportService;
+import org.elasticsearch.transport.*;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -67,6 +69,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.Thread.sleep;
 import static org.elasticsearch.common.settings.Settings.settingsBuilder;
@@ -170,6 +174,85 @@ public class IndicesStoreIntegrationIT extends ESIntegTestCase {
         assertThat(Files.exists(indexDirectory(node_3, "test")), equalTo(true));
 
     }
+
+    @Test
+    public void shardCleanupIfRelocationDeleteFailedAndIndexDeleted() throws Exception {
+        final String masterNode = internalCluster().startNode(Settings.builder().put("node.data", false));
+        final String node_1 = internalCluster().startNode(Settings.builder().put("node.master", false));
+        final String node_2 = internalCluster().startNode(Settings.builder().put("node.master", false));
+        logger.info("--> creating index [test] with one shard and on replica");
+        assertAcked(prepareCreate("test").setSettings(
+                        Settings.builder().put(indexSettings())
+                                .put(IndexMetaData.SETTING_NUMBER_OF_SHARDS, 1)
+                                .put(IndexMetaData.SETTING_NUMBER_OF_REPLICAS, 1))
+        );
+        ensureGreen("test");
+
+        logger.info("--> making sure that shard and its replica are allocated on node_1 and node_2");
+        assertThat(Files.exists(shardDirectory(node_1, "test", 0)), equalTo(true));
+        assertThat(Files.exists(indexDirectory(node_1, "test")), equalTo(true));
+        assertThat(Files.exists(shardDirectory(node_2, "test", 0)), equalTo(true));
+        assertThat(Files.exists(indexDirectory(node_2, "test")), equalTo(true));
+
+        logger.info("--> starting node server3");
+        final String node_3 = internalCluster().startNode(Settings.builder().put("node.master", false));
+
+       // transportServiceNode_3.addTracer(new PreventShardActiveTracer(logger));
+        logger.info("--> running cluster_health");
+        ClusterHealthResponse clusterHealth = client().admin().cluster().prepareHealth()
+                .setWaitForNodes("4")
+                .setWaitForRelocatingShards(0)
+                .get();
+        assertThat(clusterHealth.isTimedOut(), equalTo(false));
+
+        assertThat(Files.exists(shardDirectory(node_1, "test", 0)), equalTo(true));
+        assertThat(Files.exists(indexDirectory(node_1, "test")), equalTo(true));
+        assertThat(Files.exists(shardDirectory(node_2, "test", 0)), equalTo(true));
+        assertThat(Files.exists(indexDirectory(node_2, "test")), equalTo(true));
+        assertThat(Files.exists(shardDirectory(node_3, "test", 0)), equalTo(false));
+        assertThat(Files.exists(indexDirectory(node_3, "test")), equalTo(false));
+
+        logger.info("--> move shard from node_1 to node_3, and wait for relocation to finish");
+        MockTransportService transportServiceNode_1 = (MockTransportService) internalCluster().getInstance(TransportService.class, node_1);
+        String node_3_id = internalCluster().getInstance(DiscoveryService.class, node_3).localNode().id();
+        DiscoveryNode node_3_disco = internalCluster().clusterService().state().getNodes().dataNodes().get(node_3_id);
+        AtomicBoolean shardActiveRequestSent = new AtomicBoolean(false);
+        boolean worked = transportServiceNode_1.addDelegate(node_3_disco, new MockTransportService.DelegateTransport(transportServiceNode_1.original()) {
+            @Override
+            public void sendRequest(DiscoveryNode node, long requestId, String action, TransportRequest request, TransportRequestOptions options) throws IOException, TransportException {
+                logger.info("sending {}", action);
+                if (action.equals("internal:index/shard/exists") && shardActiveRequestSent.get() == false) {
+                    shardActiveRequestSent.set(true);
+                    logger.info("prevent shard active request from being sent");
+                    throw new ConnectTransportException(node, "DISCONNECT: simulated");
+                }
+                super.sendRequest(node, requestId, action, request, options);
+            }
+        });
+
+        internalCluster().client().admin().cluster().prepareReroute().add(new MoveAllocationCommand(new ShardId("test", 0), node_1, node_3)).get();
+
+        clusterHealth = client().admin().cluster().prepareHealth()
+                .setWaitForRelocatingShards(0)
+                .get();
+        assertThat(clusterHealth.isTimedOut(), equalTo(false));
+        logClusterState();
+        client().admin().indices().prepareDelete("test").get();
+        clusterHealth = client().admin().cluster().prepareHealth()
+                .setWaitForNodes("4")
+                .setWaitForRelocatingShards(0)
+                .get();
+        assertThat(clusterHealth.isTimedOut(), equalTo(false));
+
+        assertThat(waitForShardDeletion(node_1, "test", 0), equalTo(false));
+        assertThat(waitForIndexDeletion(node_1, "test"), equalTo(false));
+        assertThat(Files.exists(shardDirectory(node_2, "test", 0)), equalTo(false));
+        assertThat(Files.exists(indexDirectory(node_2, "test")), equalTo(false));
+        assertThat(Files.exists(shardDirectory(node_3, "test", 0)), equalTo(false));
+        assertThat(Files.exists(indexDirectory(node_3, "test")), equalTo(false));
+
+    }
+
 
     @Test
     public void shardsCleanup() throws Exception {
