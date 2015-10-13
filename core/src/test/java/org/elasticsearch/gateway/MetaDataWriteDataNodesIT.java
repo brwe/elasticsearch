@@ -19,6 +19,7 @@
 
 package org.elasticsearch.gateway;
 
+import com.carrotsearch.randomizedtesting.annotations.Seed;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
@@ -33,10 +34,18 @@ import org.elasticsearch.test.ESIntegTestCase.ClusterScope;
 import org.elasticsearch.test.InternalTestCluster;
 import org.junit.Test;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 
+import static java.lang.Thread.sleep;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.test.ESIntegTestCase.Scope;
 import static org.elasticsearch.test.InternalTestCluster.RestartCallback;
@@ -44,6 +53,7 @@ import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcke
 import static org.hamcrest.Matchers.equalTo;
 
 @ClusterScope(scope = Scope.TEST, numDataNodes = 0)
+@Seed("C56091B491A109C1")
 public class MetaDataWriteDataNodesIT extends ESIntegTestCase {
 
     @Test
@@ -79,6 +89,55 @@ public class MetaDataWriteDataNodesIT extends ESIntegTestCase {
         client().admin().indices().prepareUpdateSettings(index).setSettings(Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "_name", node2)).get();
         client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).get();
         ensureGreen();
+        assertIndexDirectoryDeleted(node1, index);
+        assertIndexInMetaState(node2, index);
+        assertIndexInMetaState(masterNode, index);
+    }
+
+
+    /**
+     * Test that reproduces the failure message from #13758
+     * see for example http://build-us-00.elastic.co/job/es_core_21_centos/76/consoleText
+     * */
+    @Test
+    public void testShardDeletionIfWeHoldOnToFileDuringDeletion() throws Exception {
+        // this test checks that the index state is removed from a data only node once all shards have been allocated away from it
+        String masterNode = internalCluster().startMasterOnlyNode(Settings.EMPTY);
+        InternalTestCluster.Async<String> nodeName1 = internalCluster().startDataOnlyNodeAsync();
+        InternalTestCluster.Async<String> nodeName2 = internalCluster().startDataOnlyNodeAsync();
+        String node1 = nodeName1.get();
+        String node2 = nodeName2.get();
+
+        String index = "index";
+        assertAcked(prepareCreate(index).setSettings(Settings.builder().put("index.number_of_replicas", 0).put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "_name", node1)));
+        index(index, "doc", "1", jsonBuilder().startObject().field("text", "some text").endObject());
+        ensureGreen();
+        assertIndexInMetaState(node1, index);
+        assertIndexDirectoryDeleted(node2, index);
+        assertIndexInMetaState(masterNode, index);
+
+        logger.debug("relocating index...");
+        client().admin().indices().prepareUpdateSettings(index).setSettings(Settings.builder().put(FilterAllocationDecider.INDEX_ROUTING_INCLUDE_GROUP + "_name", node2)).get();
+
+        //open the state file and hold on to it while the shard is relocated.
+        // first find the file
+        NodeEnvironment nodeEnv = ((InternalTestCluster) cluster()).getInstance(NodeEnvironment.class, node1);
+        nodeEnv.indexPaths(new Index(index));
+        Path path = null;
+        Path[] indexPaths = nodeEnv.indexPaths(new Index(index));
+        final Path stateDir = indexPaths[0].resolve("_state");
+        try (DirectoryStream<Path> paths = Files.newDirectoryStream(stateDir)) {
+            path = paths.iterator().next();
+        } catch (NoSuchFileException | FileNotFoundException ex) {
+            fail("could not find state file");
+        }
+        // open the file and keep open for a while so that shard cannot be deleted
+        try (SeekableByteChannel sbc = Files.newByteChannel(path);
+             InputStream in = Channels.newInputStream(sbc)) {
+            client().admin().cluster().prepareHealth().setWaitForRelocatingShards(0).get();
+            ensureGreen();
+            sleep(1000);
+        }
         assertIndexDirectoryDeleted(node1, index);
         assertIndexInMetaState(node2, index);
         assertIndexInMetaState(masterNode, index);
