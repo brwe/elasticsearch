@@ -37,16 +37,19 @@ public final class ShardStateMetaData {
     private static final String PRIMARY_KEY = "primary";
     private static final String VERSION_KEY = "version";
     private static final String INDEX_UUID_KEY = "index_uuid" ;
+    private static final String ALLOCATION_ID_KEY = "allocation_id" ;
 
     public final long version;
     public final String indexUUID;
     public final boolean primary;
+    public final String allocationId;
 
-    public ShardStateMetaData(long version, boolean primary, String indexUUID) {
+    public ShardStateMetaData(long version, boolean primary, String indexUUID, String allocationId) {
         assert indexUUID != null;
         this.version = version;
         this.primary = primary;
         this.indexUUID = indexUUID;
+        this.allocationId = allocationId;
     }
 
     @Override
@@ -69,6 +72,9 @@ public final class ShardStateMetaData {
         if (indexUUID != null ? !indexUUID.equals(that.indexUUID) : that.indexUUID != null) {
           return false;
         }
+        if (allocationId.equals(that.allocationId) == false) {
+            return false;
+        }
 
         return true;
     }
@@ -78,12 +84,18 @@ public final class ShardStateMetaData {
         int result = (int) (version ^ (version >>> 32));
         result = 31 * result + (indexUUID != null ? indexUUID.hashCode() : 0);
         result = 31 * result + (primary ? 1 : 0);
+        result = 31 * result + allocationId.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
-        return "version [" + version + "], primary [" + primary + "]";
+        return "ShardStateMetaData{" +
+                "version=" + version +
+                ", indexUUID='" + indexUUID + '\'' +
+                ", primary=" + primary +
+                ", allocationId='" + allocationId + '\'' +
+                '}';
     }
 
     public static final MetaDataStateFormat<ShardStateMetaData> FORMAT = new MetaDataStateFormat<ShardStateMetaData>(XContentType.JSON, SHARD_STATE_FILE_PREFIX) {
@@ -100,6 +112,7 @@ public final class ShardStateMetaData {
             builder.field(VERSION_KEY, shardStateMetaData.version);
             builder.field(PRIMARY_KEY, shardStateMetaData.primary);
             builder.field(INDEX_UUID_KEY, shardStateMetaData.indexUUID);
+            builder.field(ALLOCATION_ID_KEY, shardStateMetaData.allocationId);
         }
 
         @Override
@@ -112,6 +125,7 @@ public final class ShardStateMetaData {
             Boolean primary = null;
             String currentFieldName = null;
             String indexUUID = IndexMetaData.INDEX_UUID_NA_VALUE;
+            String allocationId = null;
             while ((token = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
                 if (token == XContentParser.Token.FIELD_NAME) {
                     currentFieldName = parser.currentName();
@@ -122,6 +136,8 @@ public final class ShardStateMetaData {
                         primary = parser.booleanValue();
                     } else if (INDEX_UUID_KEY.equals(currentFieldName)) {
                         indexUUID = parser.text();
+                    } else if (ALLOCATION_ID_KEY.equals(currentFieldName)) {
+                        allocationId = parser.text();
                     } else {
                         throw new CorruptStateException("unexpected field in shard state [" + currentFieldName + "]");
                     }
@@ -135,7 +151,7 @@ public final class ShardStateMetaData {
             if (version == -1) {
                 throw new CorruptStateException("missing value for [version] in shard state");
             }
-            return new ShardStateMetaData(version, primary, indexUUID);
+            return new ShardStateMetaData(version, primary, indexUUID, allocationId);
         }
     };
 }

@@ -1425,7 +1425,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndexSett
                             " previous version:  [" + currentRouting.version() + "] current version [" + newRouting.version() + "]";
                     return;
                 }
-                final ShardStateMetaData newShardStateMetadata = new ShardStateMetaData(newRouting.version(), newRouting.primary(), getIndexUUID());
+                final ShardStateMetaData newShardStateMetadata = new ShardStateMetaData(newRouting.version(), newRouting.primary(), getIndexUUID(), newRouting.allocationId().getId());
                 logger.trace("{} writing shard state, reason [{}]", shardId, writeReason);
                 ShardStateMetaData.FORMAT.write(newShardStateMetadata, newShardStateMetadata.version, shardPath().getShardStatePath());
             } catch (IOException e) { // this is how we used to handle it.... :(

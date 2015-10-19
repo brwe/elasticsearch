@@ -88,7 +88,7 @@ public class MultiDataPathUpgraderTests extends ESTestCase {
                     }
                 }
                 ++metaStateVersion;
-                ShardStateMetaData.FORMAT.write(new ShardStateMetaData(metaStateVersion, true, uuid), metaStateVersion, shardDataPaths);
+                ShardStateMetaData.FORMAT.write(new ShardStateMetaData(metaStateVersion, true, uuid, Strings.randomBase64UUID()), metaStateVersion, shardDataPaths);
             }
             final Path path = randomFrom(shardDataPaths);
             ShardPath targetPath = new ShardPath(false, path, path, uuid, new ShardId("foo", 0));
@@ -199,7 +199,7 @@ public class MultiDataPathUpgraderTests extends ESTestCase {
         try (NodeEnvironment nodeEnvironment = newNodeEnvironment()) {
             String uuid = Strings.randomBase64UUID();
             final ShardId shardId = new ShardId("foo", 0);
-            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(1, true, uuid), 1, nodeEnvironment.availableShardPaths(shardId));
+            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(1, true, uuid, Strings.randomBase64UUID()), 1, nodeEnvironment.availableShardPaths(shardId));
             MultiDataPathUpgrader helper = new MultiDataPathUpgrader(nodeEnvironment);
             boolean multiDataPaths = nodeEnvironment.nodeDataPaths().length > 1;
             boolean needsUpgrading = helper.needsUpgrading(shardId);
@@ -267,7 +267,7 @@ public class MultiDataPathUpgraderTests extends ESTestCase {
                     }
                 };
                 String uuid = Strings.randomBase64UUID();
-                ShardStateMetaData.FORMAT.write(new ShardStateMetaData(1, true, uuid), 1, paths);
+                ShardStateMetaData.FORMAT.write(new ShardStateMetaData(1, true, uuid, Strings.randomBase64UUID()), 1, paths);
                 final ShardPath shardPath = helper.pickShardPath(new ShardId("foo", 0));
                 assertEquals(expectedPath, shardPath.getDataPath());
                 assertEquals(expectedPath, shardPath.getShardStatePath());

@@ -20,6 +20,7 @@ package org.elasticsearch.index.shard;
 
 import com.carrotsearch.randomizedtesting.annotations.Repeat;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.test.ESTestCase;
@@ -42,7 +43,8 @@ public class ShardPathTests extends ESTestCase {
             ShardId shardId = new ShardId("foo", 0);
             Path[] paths = env.availableShardPaths(shardId);
             Path path = randomFrom(paths);
-            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(2, true, "0xDEADBEEF"), 2, path);
+            String allocationId = Strings.randomBase64UUID();
+            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(2, true, "0xDEADBEEF", allocationId), 2, path);
             ShardPath shardPath = ShardPath.loadShardPath(logger, env, shardId, settings);
             assertEquals(path, shardPath.getDataPath());
             assertEquals("0xDEADBEEF", shardPath.getIndexUUID());
@@ -61,7 +63,7 @@ public class ShardPathTests extends ESTestCase {
             Path[] paths = env.availableShardPaths(shardId);
             assumeTrue("This test tests multi data.path but we only got one", paths.length > 1);
             int id = randomIntBetween(1, 10);
-            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(id, true, "0xDEADBEEF"), id, paths);
+            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(id, true, "0xDEADBEEF", Strings.randomBase64UUID()), id, paths);
             ShardPath.loadShardPath(logger, env, shardId, settings);
         }
     }
@@ -75,7 +77,7 @@ public class ShardPathTests extends ESTestCase {
             Path[] paths = env.availableShardPaths(shardId);
             Path path = randomFrom(paths);
             int id = randomIntBetween(1, 10);
-            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(id, true, "0xDEADBEEF"), id, path);
+            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(id, true, "0xDEADBEEF", Strings.randomBase64UUID()), id, path);
             ShardPath.loadShardPath(logger, env, shardId, settings);
         }
     }
@@ -120,7 +122,7 @@ public class ShardPathTests extends ESTestCase {
             ShardId shardId = new ShardId("foo", 0);
             Path[] paths = env.availableShardPaths(shardId);
             Path path = randomFrom(paths);
-            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(2, true, "0xDEADBEEF"), 2, path);
+            ShardStateMetaData.FORMAT.write(new ShardStateMetaData(2, true, "0xDEADBEEF", Strings.randomBase64UUID()), 2, path);
             ShardPath shardPath = ShardPath.loadShardPath(logger, env, shardId, indexSetttings);
             boolean found = false;
             for (Path p : env.nodeDataPaths()) {
