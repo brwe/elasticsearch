@@ -287,6 +287,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         boolean success = false;
         ArrayList<ImmutableTranslogReader> foundTranslogs = new ArrayList<>();
         final Path tempFile = Files.createTempFile(location, TRANSLOG_FILE_PREFIX, TRANSLOG_FILE_SUFFIX); // a temp file to copy checkpoint to - note it must be in on the same FS otherwise atomic move won't work
+        boolean deleteTempFile = true;
         try (ReleasableLock lock = writeLock.acquire()) {
             logger.debug("open uncommitted translog checkpoint {}", checkpoint);
             final String checkpointTranslogFile = getFilename(checkpoint.generation);
@@ -312,18 +313,24 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                 Files.copy(location.resolve(CHECKPOINT_FILE_NAME), tempFile, StandardCopyOption.REPLACE_EXISTING);
                 IOUtils.fsync(tempFile, false);
                 Files.move(tempFile, commitCheckpoint, StandardCopyOption.ATOMIC_MOVE);
+                deleteTempFile = false;
                 // we only fsync the directory the tempFile was already fsynced
                 IOUtils.fsync(commitCheckpoint.getParent(), true);
             }
             success = true;
+        } catch (Throwable t) {
+            logger.info("caught ", t);
+            throw t;
         } finally {
             if (success == false) {
                 IOUtils.closeWhileHandlingException(foundTranslogs);
             }
-            try {
-                Files.delete(tempFile);
-            } catch (IOException ex) {
-                logger.warn("failed to delete temp file {}", ex, tempFile);
+            if (deleteTempFile) {
+                try {
+                    Files.delete(tempFile);
+                } catch (IOException ex) {
+                    logger.warn("failed to delete temp file {}", ex, tempFile);
+                }
             }
         }
         return foundTranslogs;
