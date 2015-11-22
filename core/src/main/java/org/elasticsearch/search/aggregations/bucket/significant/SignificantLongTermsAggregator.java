@@ -72,12 +72,13 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
 
     @Override
     public SignificantLongTerms buildAggregation(long owningBucketOrdinal) throws IOException {
+        //logger.info("calling buildAggregation from ", new Exception());
         assert owningBucketOrdinal == 0;
 
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
-        ESLoggerFactory.getRootLogger().info("size = {}", size);
+        logger.info("---> size = {}", size);
 
-        long supersetSize = termsAggFactory.prepareBackground(context);
+        long supersetSize = termsAggFactory.prepareBackground(context, logger);
         long subsetSize = numCollectedDocs;
 
         BucketSignificancePriorityQueue ordered = new BucketSignificancePriorityQueue(size);
@@ -95,7 +96,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
             spare.subsetSize = subsetSize;
             spare.supersetDf = termsAggFactory.getBackgroundFrequency(spare.term);
             spare.supersetSize = supersetSize;
-            ESLoggerFactory.getRootLogger().info("created bucket with key {} and {} {} {} {}", spare.getKeyAsString(), spare.subsetDf, spare.subsetSize, spare.supersetDf, spare.supersetSize);
+            logger.info("---> created bucket with key {} and subsetDf {} subsetSize {} supersetDf {} supersetSize {}", spare.getKeyAsString(), spare.subsetDf, spare.subsetSize, spare.supersetDf, spare.supersetSize);
             // During shard-local down-selection we use subset/superset stats that are for this shard only
             // Back at the central reducer these properties will be updated with global stats
             spare.updateScore(termsAggFactory.getSignificanceHeuristic());
@@ -110,6 +111,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
             bucket.aggregations = bucketAggregations(bucket.bucketOrd);
             list[i] = bucket;
         }
+        logger.info("---> created {} buckets", list.length);
         return new SignificantLongTerms(subsetSize, supersetSize, name, formatter, bucketCountThresholds.getRequiredSize(),
                 bucketCountThresholds.getMinDocCount(), termsAggFactory.getSignificanceHeuristic(), Arrays.asList(list), pipelineAggregators(),
                 metaData());

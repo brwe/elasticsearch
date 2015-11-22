@@ -27,6 +27,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.ParseFieldMatcher;
 import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.lucene.index.FilterableTermsEnum;
 import org.elasticsearch.common.lucene.index.FreqTermsEnum;
 import org.elasticsearch.index.mapper.MappedFieldType;
@@ -226,8 +227,9 @@ public class SignificantTermsAggregatorFactory extends ValuesSourceAggregatorFac
      * @param context The aggregation context 
      * @return The number of documents in the index (after an optional filter might have been applied)
      */
-    public long prepareBackground(AggregationContext context) {
+    public long prepareBackground(AggregationContext context, ESLogger logger) {
         if (termsEnum != null) {
+            logger.info("---> termsEnum not null and has {} docs", termsEnum);
             // already prepared - return 
             return termsEnum.getNumDocs();
         }
@@ -235,9 +237,11 @@ public class SignificantTermsAggregatorFactory extends ValuesSourceAggregatorFac
         IndexReader reader = searchContext.searcher().getIndexReader();
         try {
             if (numberOfAggregatorsCreated == 1) {
+                logger.info("---> numberOfAggregatorsCreated is 1");
                 // Setup a termsEnum for sole use by one aggregator
                 termsEnum = new FilterableTermsEnum(reader, indexedFieldName, PostingsEnum.NONE, filter);
             } else {
+                logger.info("---> numberOfAggregatorsCreated is != 1");
                 // When we have > 1 agg we have possibility of duplicate term frequency lookups 
                 // and so use a TermsEnum that caches results of all term lookups
                 termsEnum = new FreqTermsEnum(reader, indexedFieldName, true, false, filter, searchContext.bigArrays());
@@ -245,6 +249,7 @@ public class SignificantTermsAggregatorFactory extends ValuesSourceAggregatorFac
         } catch (IOException e) {
             throw new ElasticsearchException("failed to build terms enumeration", e);
         }
+        logger.info("---> newly created terms enum with {} docs", termsEnum.getNumDocs());
         return termsEnum.getNumDocs();
     }
 

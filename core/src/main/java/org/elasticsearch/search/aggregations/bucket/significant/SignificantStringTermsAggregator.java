@@ -77,7 +77,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
         assert owningBucketOrdinal == 0;
 
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
-        long supersetSize = termsAggFactory.prepareBackground(context);
+        long supersetSize = termsAggFactory.prepareBackground(context, logger);
         long subsetSize = numCollectedDocs;
 
         BucketSignificancePriorityQueue ordered = new BucketSignificancePriorityQueue(size);

@@ -19,6 +19,8 @@
 
 package org.elasticsearch.search.functionscore;
 
+import org.elasticsearch.action.admin.indices.stats.IndicesStatsResponse;
+import org.elasticsearch.action.admin.indices.stats.ShardStats;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchPhaseExecutionException;
 import org.elasticsearch.action.search.SearchResponse;
@@ -48,6 +50,7 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  * Tests for the {@code field_value_factor} function in a function_score query.
  */
+@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 5)
 public class TestIT extends ESIntegTestCase {
     static final String INDEX_NAME = "testidx";
     static final String DOC_TYPE = "doc";
@@ -67,9 +70,13 @@ public class TestIT extends ESIntegTestCase {
         index01Docs(type, settings);
 
         logClusterState();
-        checkSignificantTermsAggregationCorrect();
-        int upgradedNodesCounter = 1;
-            logger.debug("testBucketStreaming: upgrading {}st node", upgradedNodesCounter++);
+        IndicesStatsResponse statsResponse = client().admin().indices().prepareStats(INDEX_NAME).get();
+        for (ShardStats shardStats : statsResponse.getIndex(INDEX_NAME).getShards()) {
+            logger.info("---> shard {} has {} docs", shardStats.getShardRouting().shardId(), shardStats.getStats().getDocs().getCount());
+        }
+        //checkSignificantTermsAggregationCorrect();
+        //int upgradedNodesCounter = 1;
+            //logger.debug("testBucketStreaming: upgrading {}st node", upgradedNodesCounter++);
             ensureGreen();
             logClusterState();
             client().admin().indices().prepareForceMerge().setMaxNumSegments(1).get();
@@ -84,19 +91,19 @@ public class TestIT extends ESIntegTestCase {
         String[] gb = {"0", "1"};
         List<IndexRequestBuilder> indexRequestBuilderList = new ArrayList<>();
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "1")
-                .setSource(TEXT_FIELD, "1", CLASS_FIELD, "1"));
+                .setSource(TEXT_FIELD, "1", CLASS_FIELD, "one"));
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "2")
-                .setSource(TEXT_FIELD, "1", CLASS_FIELD, "1"));
+                .setSource(TEXT_FIELD, "1", CLASS_FIELD, "one"));
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "3")
-                .setSource(TEXT_FIELD, "0", CLASS_FIELD, "0"));
+                .setSource(TEXT_FIELD, "0", CLASS_FIELD, "zero"));
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "4")
-                .setSource(TEXT_FIELD, "0", CLASS_FIELD, "0"));
+                .setSource(TEXT_FIELD, "0", CLASS_FIELD, "zero"));
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "5")
-                .setSource(TEXT_FIELD, gb, CLASS_FIELD, "1"));
+                .setSource(TEXT_FIELD, gb, CLASS_FIELD, "one"));
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "6")
-                .setSource(TEXT_FIELD, gb, CLASS_FIELD, "0"));
+                .setSource(TEXT_FIELD, gb, CLASS_FIELD, "zero"));
         indexRequestBuilderList.add(client().prepareIndex(INDEX_NAME, DOC_TYPE, "7")
-                .setSource(TEXT_FIELD, "0", CLASS_FIELD, "0"));
+                .setSource(TEXT_FIELD, "0", CLASS_FIELD, "zero"));
         indexRandom(true, indexRequestBuilderList);
     }
 
@@ -118,7 +125,11 @@ public class TestIT extends ESIntegTestCase {
             assertThat(agg.getBuckets().size(), equalTo(1));
             String term = agg.iterator().next().getKeyAsString();
             String classTerm = classBucket.getKeyAsString();
-            assertTrue(term.equals(classTerm));
+            if (classTerm.equals("zero")) {
+                assertThat(term, equalTo("0"));
+            } else {
+                assertThat(term, equalTo("1"));
+            }
         }
     }
 }

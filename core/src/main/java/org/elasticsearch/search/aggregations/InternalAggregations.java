@@ -26,9 +26,12 @@ import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Streamable;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.aggregations.InternalAggregation.ReduceContext;
 import org.elasticsearch.search.aggregations.support.AggregationPath;
 
@@ -167,6 +170,16 @@ public class InternalAggregations implements Aggregations, ToXContent, Streamabl
         for (Map.Entry<String, List<InternalAggregation>> entry : aggByName.entrySet()) {
             List<InternalAggregation> aggregations = entry.getValue();
             InternalAggregation first = aggregations.get(0); // the list can't be empty as it's created on demand
+            ESLoggerFactory.getRootLogger().info("---> reducing aggregation of {} that has {} aggs", first.getName(), aggregations.size());
+            for (InternalAggregation agg : aggregations){
+                try {
+                    XContentBuilder builder = XContentFactory.jsonBuilder();
+                    agg.toXContent(builder, EMPTY_PARAMS);
+                    ESLoggerFactory.getRootLogger().info("---> agg {}",builder.string());
+                } catch (IOException e) {
+
+                }
+            }
             reducedAggregations.add(first.reduce(aggregations, context));
         }
         return new InternalAggregations(reducedAggregations);

@@ -40,9 +40,15 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregation.ReduceContext;
 import org.elasticsearch.search.aggregations.InternalAggregations;
+import org.elasticsearch.search.aggregations.bucket.significant.SignificantLongTerms;
+import org.elasticsearch.search.aggregations.bucket.significant.SignificantStringTerms;
+import org.elasticsearch.search.aggregations.bucket.significant.SignificantTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 import org.elasticsearch.search.aggregations.pipeline.SiblingPipelineAggregator;
 import org.elasticsearch.search.dfs.AggregatedDfs;
@@ -404,6 +410,29 @@ public class SearchPhaseController extends AbstractComponent {
             if (firstResult.aggregations() != null && firstResult.aggregations().asList() != null) {
                 List<InternalAggregations> aggregationsList = new ArrayList<>(queryResults.size());
                 for (AtomicArray.Entry<? extends QuerySearchResultProvider> entry : queryResults) {
+                    logger.info("---> buckets received from shard {} ", entry.value.shardTarget().getShardId());
+                    StringTerms stringTerms = (StringTerms)entry.value.queryResult().aggregations().asList().get(0);
+                    if (stringTerms.getBuckets().size()!= 0) {
+                        for (Terms.Bucket bucket : stringTerms.getBuckets()) {
+                            logger.info("---> for class term {}", bucket.getKeyAsString());
+                            if (bucket.getAggregations().asList().size()!=0) {
+                                Aggregation agg = bucket.getAggregations().asList().get(0);
+                                if (agg instanceof SignificantLongTerms) {
+                                    SignificantLongTerms longTerms = (SignificantLongTerms) agg;
+                                    for (SignificantTerms.Bucket longBucket:longTerms.getBuckets()) {
+                                        logger.info("---> bucket key {} subsetDf {} subsetSize {} supersetDf {} supersetSize {}", longBucket.getKeyAsString(), longBucket.getSubsetDf(), longBucket.getSubsetSize(), longBucket.getSupersetDf(), longBucket.getSupersetSize());
+                                    }
+
+                                } else {
+                                    SignificantStringTerms longTerms = (SignificantStringTerms) agg;
+                                    for (SignificantTerms.Bucket longBucket:longTerms.getBuckets()) {
+                                        logger.info("---> bucket key {} subsetDf {} subsetSize {} supersetDf {} supersetSize {}", longBucket.getKeyAsString(), longBucket.getSubsetDf(), longBucket.getSubsetSize(), longBucket.getSupersetDf(), longBucket.getSupersetSize());
+                                    }
+                                }
+
+                            }
+                        }
+                    }
                     aggregationsList.add((InternalAggregations) entry.value.queryResult().aggregations());
                 }
                 aggregations = InternalAggregations.reduce(aggregationsList, new ReduceContext(bigArrays, scriptService, headersContext));

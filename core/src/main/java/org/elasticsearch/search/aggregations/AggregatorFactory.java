@@ -21,6 +21,8 @@ package org.elasticsearch.search.aggregations;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.Scorer;
 import org.elasticsearch.common.lease.Releasables;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.ObjectArray;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
@@ -41,6 +43,7 @@ public abstract class AggregatorFactory {
     protected AggregatorFactory parent;
     protected AggregatorFactories factories = AggregatorFactories.EMPTY;
     protected Map<String, Object> metaData;
+    ESLogger logger;
 
     /**
      * Constructs a new aggregator factory.
@@ -216,6 +219,7 @@ public abstract class AggregatorFactory {
                 if (bucket < aggregators.size()) {
                     Aggregator aggregator = aggregators.get(bucket);
                     if (aggregator != null) {
+                        aggregator.logger = logger;
                         return aggregator.buildAggregation(0);
                     }
                 }

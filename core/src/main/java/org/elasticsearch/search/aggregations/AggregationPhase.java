@@ -23,7 +23,11 @@ import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.lucene.search.Queries;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.SearchParseElement;
 import org.elasticsearch.search.SearchPhase;
 import org.elasticsearch.search.aggregations.bucket.global.GlobalAggregator;
@@ -45,12 +49,17 @@ public class AggregationPhase implements SearchPhase {
 
     private final AggregationParseElement parseElement;
 
+    private  ESLogger logger = Loggers.getLogger(AggregationPhase.class);
+
     private final AggregationBinaryParseElement binaryParseElement;
+    Settings settings;
 
     @Inject
-    public AggregationPhase(AggregationParseElement parseElement, AggregationBinaryParseElement binaryParseElement) {
+    public AggregationPhase(AggregationParseElement parseElement, AggregationBinaryParseElement binaryParseElement, Settings settings) {
         this.parseElement = parseElement;
         this.binaryParseElement = binaryParseElement;
+        logger = Loggers.getLogger(AggregationPhase.class, settings);
+        this.settings = settings;
     }
 
     @Override
@@ -139,6 +148,9 @@ public class AggregationPhase implements SearchPhase {
         for (Aggregator aggregator : context.aggregations().aggregators()) {
             try {
                 aggregator.postCollection();
+                aggregator.logger = Loggers.getLogger(aggregator.getClass(), settings);
+                logger.info("---> build aggregation on shard {}", context.shardTarget().getShardId());
+                aggregator.settings = settings;
                 aggregations.add(aggregator.buildAggregation(0));
             } catch (IOException e) {
                 throw new AggregationExecutionException("Failed to build aggregation [" + aggregator.name() + "]", e);

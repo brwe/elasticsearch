@@ -228,9 +228,9 @@ public class SignificantStringTerms extends InternalSignificantTerms<Significant
         for (InternalSignificantTerms.Bucket bucket : buckets) {
             //There is a condition (presumably when only one shard has a bucket?) where reduce is not called
             // and I end up with buckets that contravene the user's min_doc_count criteria in my reducer
-            if (bucket.subsetDf >= minDocCount) {
+           // if (bucket.subsetDf >= minDocCount) {
                 bucket.toXContent(builder, params);
-            }
+           // }
         }
         builder.endArray();
         return builder;

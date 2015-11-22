@@ -19,6 +19,7 @@
 package org.elasticsearch.search.aggregations.bucket.significant;
 
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactory;
@@ -39,10 +40,12 @@ import java.io.IOException;
 public class SignificantTermsParser implements Aggregator.Parser {
 
     private final SignificanceHeuristicParserMapper significanceHeuristicParserMapper;
+    Settings settings;
 
     @Inject
-    public SignificantTermsParser(SignificanceHeuristicParserMapper significanceHeuristicParserMapper) {
+    public SignificantTermsParser(SignificanceHeuristicParserMapper significanceHeuristicParserMapper, Settings settings) {
         this.significanceHeuristicParserMapper = significanceHeuristicParserMapper;
+        this.settings = settings;
     }
 
     @Override

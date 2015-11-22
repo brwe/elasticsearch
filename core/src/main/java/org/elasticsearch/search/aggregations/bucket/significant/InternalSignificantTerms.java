@@ -23,6 +23,8 @@ import com.google.common.collect.Maps;
 import org.elasticsearch.common.io.stream.Streamable;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.InternalAggregations;
@@ -30,6 +32,7 @@ import org.elasticsearch.search.aggregations.InternalMultiBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.significant.heuristics.SignificanceHeuristic;
 import org.elasticsearch.search.aggregations.pipeline.PipelineAggregator;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -170,22 +173,37 @@ public abstract class InternalSignificantTerms<A extends InternalSignificantTerm
         // Compute the overall result set size and the corpus size using the
         // top-level Aggregations from each shard
         for (InternalAggregation aggregation : aggregations) {
+            XContentBuilder builder = null;
+            try {
+                builder = XContentFactory.jsonBuilder();
+                aggregation.toXContent(builder, EMPTY_PARAMS);
+                ESLoggerFactory.getRootLogger().info("---> agg before sorting buckets {}",builder.string());
+            } catch (IOException e) {
+            }
+
             InternalSignificantTerms<A, B> terms = (InternalSignificantTerms<A, B>) aggregation;
             globalSubsetSize += terms.subsetSize;
             globalSupersetSize += terms.supersetSize;
         }
         Map<String, List<InternalSignificantTerms.Bucket>> buckets = new HashMap<>();
+
         for (InternalAggregation aggregation : aggregations) {
+            ESLoggerFactory.getRootLogger().info("---> adding buckets to same term buckets",aggregation);
             InternalSignificantTerms<A, B> terms = (InternalSignificantTerms<A, B>) aggregation;
+
             for (Bucket bucket : terms.buckets) {
-                List<Bucket> existingBuckets = buckets.get(bucket.getKey());
+                List<Bucket> existingBuckets = buckets.get(bucket.getKeyAsString());
                 if (existingBuckets == null) {
                     existingBuckets = new ArrayList<>(aggregations.size());
                     buckets.put(bucket.getKeyAsString(), existingBuckets);
                 }
                 // Adjust the buckets with the global stats representing the
                 // total size of the pots from which the stats are drawn
-                existingBuckets.add(bucket.newBucket(bucket.getSubsetDf(), globalSubsetSize, bucket.getSupersetDf(), globalSupersetSize, bucket.aggregations));
+
+                Bucket newBucket = bucket.newBucket(bucket.getSubsetDf(), globalSubsetSize, bucket.getSupersetDf(), globalSupersetSize, bucket.aggregations);
+                ESLoggerFactory.getRootLogger().info("---> adding bucket {} {} {} {} {}",newBucket.getKeyAsString(),
+                        newBucket.subsetDf, newBucket.subsetSize, newBucket.supersetDf, newBucket.supersetSize);
+                existingBuckets.add(newBucket);
             }
         }
 
@@ -196,15 +214,15 @@ public abstract class InternalSignificantTerms<A extends InternalSignificantTerm
             List<Bucket> sameTermBuckets = entry.getValue();
             for (int i = 0; i< sameTermBuckets.size(); i++) {
                 if (sameTermBuckets.get(i) == null) {
-                    ESLoggerFactory.getRootLogger().info("bucket is null");
+                    ESLoggerFactory.getRootLogger().info("---> bucket is null");
                 } else {
-                    ESLoggerFactory.getRootLogger().info("bucket that will be reduced {} {} {} {} {}", sameTermBuckets.get(i).getKeyAsString(),
+                    ESLoggerFactory.getRootLogger().info("---> bucket that will be reduced {} {} {} {} {}", sameTermBuckets.get(i).getKeyAsString(),
                             sameTermBuckets.get(i).subsetDf, sameTermBuckets.get(i).subsetSize, sameTermBuckets.get(i).supersetDf, sameTermBuckets.get(i).supersetSize);
                 }
             }
             final Bucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
             b.updateScore(significanceHeuristic);
-            ESLoggerFactory.getRootLogger().info("reduced to {} {} {} {} {} {}", b.getKeyAsString(), b.score, b.subsetDf, b.subsetSize, b.supersetDf, b.supersetSize);
+            ESLoggerFactory.getRootLogger().info("---> reduced to {} {} {} {} {} {}", b.getKeyAsString(), b.score, b.subsetDf, b.subsetSize, b.supersetDf, b.supersetSize);
             if ((b.score > 0) && (b.subsetDf >= minDocCount)) {
                 ordered.insertWithOverflow(b);
             }

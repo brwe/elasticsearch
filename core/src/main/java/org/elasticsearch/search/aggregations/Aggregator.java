@@ -23,6 +23,8 @@ import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.ParseField;
 import org.elasticsearch.common.ParseFieldMatcher;
 import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.search.aggregations.bucket.BucketsAggregator;
 import org.elasticsearch.search.aggregations.support.AggregationContext;
@@ -36,6 +38,9 @@ import java.io.IOException;
 // IMPORTANT: DO NOT add methods to this class unless strictly required.
 // On the other hand, if you can remove methods from it, you are highly welcome!
 public abstract class Aggregator extends BucketCollector implements Releasable {
+
+    public ESLogger logger;
+    public Settings settings;
 
     /**
      * Parses the aggregation request and creates the appropriate aggregator factory for it.

@@ -19,6 +19,7 @@
 package org.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.IntArray;
 import org.elasticsearch.search.aggregations.Aggregator;
@@ -113,6 +114,7 @@ public abstract class BucketsAggregator extends AggregatorBase {
     protected final InternalAggregations bucketAggregations(long bucket) throws IOException {
         final InternalAggregation[] aggregations = new InternalAggregation[subAggregators.length];
         for (int i = 0; i < subAggregators.length; i++) {
+            subAggregators[i].logger = Loggers.getLogger(subAggregators[i].getClass(), settings);
             aggregations[i] = subAggregators[i].buildAggregation(bucket);
         }
         return new InternalAggregations(Arrays.asList(aggregations));
