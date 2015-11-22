@@ -21,6 +21,7 @@ package org.elasticsearch.search.aggregations.bucket.significant;
 import com.google.common.collect.Maps;
 
 import org.elasticsearch.common.io.stream.Streamable;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.InternalAggregation;
@@ -66,6 +67,8 @@ public abstract class InternalSignificantTerms<A extends InternalSignificantTerm
 
         protected Bucket(long subsetDf, long subsetSize, long supersetDf, long supersetSize, InternalAggregations aggregations) {
             super(subsetDf, subsetSize, supersetDf, supersetSize);
+           // ESLoggerFactory.getRootLogger().info("creating new bucket {} {} {} {}", subsetDf, subsetSize, supersetDf, supersetSize);
+            //ESLoggerFactory.getRootLogger().info("called from ", new Exception("test exception"));
             this.aggregations = aggregations;
         }
 
@@ -191,8 +194,17 @@ public abstract class InternalSignificantTerms<A extends InternalSignificantTerm
         BucketSignificancePriorityQueue ordered = new BucketSignificancePriorityQueue(size);
         for (Map.Entry<String, List<Bucket>> entry : buckets.entrySet()) {
             List<Bucket> sameTermBuckets = entry.getValue();
+            for (int i = 0; i< sameTermBuckets.size(); i++) {
+                if (sameTermBuckets.get(i) == null) {
+                    ESLoggerFactory.getRootLogger().info("bucket is null");
+                } else {
+                    ESLoggerFactory.getRootLogger().info("bucket that will be reduced {} {} {} {} {}", sameTermBuckets.get(i).getKeyAsString(),
+                            sameTermBuckets.get(i).subsetDf, sameTermBuckets.get(i).subsetSize, sameTermBuckets.get(i).supersetDf, sameTermBuckets.get(i).supersetSize);
+                }
+            }
             final Bucket b = sameTermBuckets.get(0).reduce(sameTermBuckets, reduceContext);
             b.updateScore(significanceHeuristic);
+            ESLoggerFactory.getRootLogger().info("reduced to {} {} {} {} {} {}", b.getKeyAsString(), b.score, b.subsetDf, b.subsetSize, b.supersetDf, b.supersetSize);
             if ((b.score > 0) && (b.subsetDf >= minDocCount)) {
                 ordered.insertWithOverflow(b);
             }

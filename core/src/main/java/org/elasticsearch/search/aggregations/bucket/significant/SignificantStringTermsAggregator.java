@@ -22,6 +22,7 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.lease.Releasables;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
@@ -100,6 +101,7 @@ public class SignificantStringTermsAggregator extends StringTermsAggregator {
             // that are for this shard only
             // Back at the central reducer these properties will be updated with
             // global stats
+            ESLoggerFactory.getRootLogger().info("created bucket with key {} and {} {} {} {}", spare.getKeyAsString(), spare.subsetDf, spare.subsetSize, spare.supersetDf, spare.supersetSize);
             spare.updateScore(termsAggFactory.getSignificanceHeuristic());
 
             spare.bucketOrd = i;

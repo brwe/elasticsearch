@@ -21,6 +21,7 @@ package org.elasticsearch.search.aggregations.bucket.significant;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.elasticsearch.common.lease.Releasables;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorFactories;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
@@ -74,6 +75,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
         assert owningBucketOrdinal == 0;
 
         final int size = (int) Math.min(bucketOrds.size(), bucketCountThresholds.getShardSize());
+        ESLoggerFactory.getRootLogger().info("size = {}", size);
 
         long supersetSize = termsAggFactory.prepareBackground(context);
         long subsetSize = numCollectedDocs;
@@ -93,6 +95,7 @@ public class SignificantLongTermsAggregator extends LongTermsAggregator {
             spare.subsetSize = subsetSize;
             spare.supersetDf = termsAggFactory.getBackgroundFrequency(spare.term);
             spare.supersetSize = supersetSize;
+            ESLoggerFactory.getRootLogger().info("created bucket with key {} and {} {} {} {}", spare.getKeyAsString(), spare.subsetDf, spare.subsetSize, spare.supersetDf, spare.supersetSize);
             // During shard-local down-selection we use subset/superset stats that are for this shard only
             // Back at the central reducer these properties will be updated with global stats
             spare.updateScore(termsAggFactory.getSignificanceHeuristic());
