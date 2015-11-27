@@ -24,6 +24,7 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.util.GeoUtils;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.MetaDataIndexUpgradeService;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
@@ -42,6 +43,7 @@ import org.elasticsearch.index.mapper.core.LongFieldMapper;
 import org.elasticsearch.index.mapper.core.StringFieldMapper;
 import org.elasticsearch.index.mapper.core.TokenCountFieldMapper;
 import org.elasticsearch.index.mapper.geo.BaseGeoPointFieldMapper;
+import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.test.ESSingleNodeTestCase;
 import org.elasticsearch.test.VersionUtils;
 
@@ -74,9 +76,50 @@ public class MultiFieldTests extends ESSingleNodeTestCase {
         testMultiField(mapping);
     }
 
+    public void testNoDotsInFieldNamesForMultiFields() throws Exception {
+        String mapping = copyToStringFromClasspath("/org/elasticsearch/index/mapper/multifield/test-multi-fields.json");
+        testNoDotsInFieldNamesForMultiFields(mapping);
+    }
+
+    private void testNoDotsInFieldNamesForMultiFields(String mapping) throws Exception {
+
+        client().admin().indices().prepareCreate("test").addMapping( "person", mapping).get();
+        XContentBuilder testData = jsonBuilder();
+
+        MetaDataIndexUpgradeService upgradeService = getInstanceFromNode(MetaDataIndexUpgradeService.class);
+        IndicesService indicesService = getInstanceFromNode(IndicesService.class);
+        IndexMetaData metaData = indicesService.indexService("test").getMetaData();
+
+        upgradeService.upgradeIndexMetaData(metaData);
+        testData.startObject()
+                .field("age", 28)
+                .field("name", "some name")
+                .startObject("object1")
+                .field("multi1", "2010-01-01")
+                .endObject()
+                .endObject();
+    }
+
+
     private void testMultiField(String mapping) throws Exception {
+
         DocumentMapper docMapper = createIndex("test").mapperService().documentMapperParser().parse(mapping);
-        BytesReference json = new BytesArray(copyToBytesFromClasspath("/org/elasticsearch/index/mapper/multifield/test-data.json"));
+        logger.info(docMapper.mapping().toString());
+        XContentBuilder testData = jsonBuilder();
+
+        MetaDataIndexUpgradeService upgradeService = getInstanceFromNode(MetaDataIndexUpgradeService.class);
+        IndicesService indicesService = getInstanceFromNode(IndicesService.class);
+        IndexMetaData metaData = indicesService.indexService("test").getMetaData();
+
+        upgradeService.upgradeIndexMetaData(metaData);
+        testData.startObject()
+                .field("age", 28)
+                .field("name", "some name")
+                .startObject("object1")
+                .field("multi1", "2010-01-01")
+                .endObject()
+                .endObject();
+        BytesReference json = testData.bytes();
         Document doc = docMapper.parse("test", "person", "1", json).rootDoc();
 
         IndexableField f = doc.getField("name");
