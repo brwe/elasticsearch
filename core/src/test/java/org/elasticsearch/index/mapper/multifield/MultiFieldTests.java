@@ -24,17 +24,18 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.util.GeoUtils;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.cluster.metadata.MetaDataIndexUpgradeService;
+import org.elasticsearch.cluster.routing.UnassignedInfo;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
 import org.elasticsearch.index.IndexService;
-import org.elasticsearch.index.mapper.DocumentMapper;
-import org.elasticsearch.index.mapper.DocumentMapperParser;
-import org.elasticsearch.index.mapper.MappedFieldType;
-import org.elasticsearch.index.mapper.MapperParsingException;
+import org.elasticsearch.index.mapper.*;
 import org.elasticsearch.index.mapper.ParseContext.Document;
 import org.elasticsearch.index.mapper.core.CompletionFieldMapper;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
@@ -42,10 +43,12 @@ import org.elasticsearch.index.mapper.core.LongFieldMapper;
 import org.elasticsearch.index.mapper.core.StringFieldMapper;
 import org.elasticsearch.index.mapper.core.TokenCountFieldMapper;
 import org.elasticsearch.index.mapper.geo.BaseGeoPointFieldMapper;
+import org.elasticsearch.indices.IndicesModule;
 import org.elasticsearch.test.ESSingleNodeTestCase;
 import org.junit.Test;
 import org.elasticsearch.test.VersionUtils;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -534,6 +537,61 @@ public class MultiFieldTests extends ESSingleNodeTestCase {
             fail("expected mapping parse failure");
         } catch (MapperParsingException e) {
             assertTrue(e.getMessage().contains("cannot be used in multi field"));
+        }
+    }
+
+    public void testParseMappingTwice() throws IOException {
+        XContentBuilder mapping = jsonBuilder();
+        mapping.startObject()
+                .startObject("my_type")
+                .startObject("properties")
+                .startObject("city")
+                .field("type", "string")
+                .startObject("fields")
+                .startObject("raw")
+                .field("type", "string")
+                .field("index", "not_analyzed")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject();
+
+        IndexService indexService = createIndex("test");
+        MapperService mapperService = indexService.mapperService();
+        DocumentMapper docMapper = mapperService.documentMapperParser().parse(mapping.string());
+        assertFalse(docMapper.mapping().toString().contains("."));
+        MetaDataIndexUpgradeService metaDataIndexUpgradeService = new MetaDataIndexUpgradeService(Settings.EMPTY, null, new IndicesModule().getMapperRegistry());
+        IndexMetaData indexMetaData = IndexMetaData.builder("test").putMapping("my_type", docMapper.mapping().toString())
+                .settings(settings(Version.CURRENT))
+                .numberOfShards(1).numberOfReplicas(1)
+                .build();
+        metaDataIndexUpgradeService.upgradeIndexMetaData(indexMetaData);
+        assertThat(indexMetaData, equalTo(metaDataIndexUpgradeService.upgradeIndexMetaData(indexMetaData)));
+    }
+
+    public void testMultiFieldWithDot() throws IOException {
+        XContentBuilder mapping = jsonBuilder();
+        mapping.startObject()
+                .startObject("my_type")
+                .startObject("properties")
+                .startObject("city")
+                .field("type", "string")
+                .startObject("fields")
+                .startObject("raw.blah")
+                .field("type", "string")
+                .field("index", "not_analyzed")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject();
+
+        MapperService mapperService = createIndex("test").mapperService();
+        try {
+            mapperService.documentMapperParser().parse(mapping.string());
+            fail("this should throw an exception because one field contains a dot");
+        } catch (MapperParsingException e) {
         }
     }
 }
