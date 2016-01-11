@@ -38,6 +38,7 @@ import org.elasticsearch.common.io.FileSystemUtils;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
 import org.elasticsearch.common.util.concurrent.ConcurrentCollections;
@@ -45,6 +46,8 @@ import org.elasticsearch.index.Index;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.test.ESTestCase;
+import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.threadpool.ThreadPoolInfo;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -80,6 +83,8 @@ public class TranslogTests extends ESTestCase {
     protected Translog translog;
     protected Path translogDir;
 
+    protected ThreadPool threadPool;
+
     @Override
     protected void afterIfSuccessful() throws Exception {
         super.afterIfSuccessful();
@@ -96,6 +101,8 @@ public class TranslogTests extends ESTestCase {
 
     }
 
+
+
     @Override
     @Before
     public void setUp() throws Exception {
@@ -103,6 +110,7 @@ public class TranslogTests extends ESTestCase {
         // if a previous test failed we clean up things here
         translogDir = createTempDir();
         translog = create(translogDir);
+        threadPool = new ThreadPool(getClass().getName());
     }
 
     @Override
@@ -111,6 +119,7 @@ public class TranslogTests extends ESTestCase {
         try {
             assertEquals("there are still open views", 0, translog.getNumOpenViews());
             translog.close();
+            terminate(threadPool);
         } finally {
             super.tearDown();
         }
@@ -124,7 +133,7 @@ public class TranslogTests extends ESTestCase {
         Settings build = Settings.settingsBuilder()
                 .put(TranslogConfig.INDEX_TRANSLOG_FS_TYPE, TranslogWriter.Type.SIMPLE.name())
                 .build();
-        return new TranslogConfig(shardId, path, build, Translog.Durabilty.REQUEST, BigArrays.NON_RECYCLING_INSTANCE, null);
+        return new TranslogConfig(shardId, path, build, Translog.Durabilty.REQUEST, BigArrays.NON_RECYCLING_INSTANCE, threadPool);
     }
 
     protected void addToTranslogAndList(Translog translog, ArrayList<Translog.Operation> list, Translog.Operation op) throws IOException {
@@ -1477,6 +1486,28 @@ public class TranslogTests extends ESTestCase {
         }
 
         protected void afterAdd() throws IOException {}
+    }
+
+    public void testTranslogCreateWithThreadpoolSchedule() throws IOException {
+        Path tempDir = createTempDir();
+                Settings build = Settings.settingsBuilder()
+                .put(TranslogConfig.INDEX_TRANSLOG_FS_TYPE, TranslogWriter.Type.SIMPLE.name())
+                        .put(TranslogConfig.INDEX_TRANSLOG_SYNC_INTERVAL, TimeValue.timeValueMillis(1))
+                .build();
+        TranslogConfig config = new TranslogConfig(shardId, tempDir, build, Translog.Durabilty.REQUEST, BigArrays.NON_RECYCLING_INSTANCE, threadPool);
+        final AtomicReference<Exception> exceptionAtomicReference = new AtomicReference<>();
+        Translog tlog = new Translog(config) {
+            @Override
+            public boolean syncNeeded() {
+                try {
+                    return super.syncNeeded();
+                } catch (Exception e) {
+                    exceptionAtomicReference.set(e);
+                    throw e;
+                }
+            };
+        };
+        assertNull(exceptionAtomicReference.get());
     }
 
     public void testFailFlush() throws IOException {
