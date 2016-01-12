@@ -214,6 +214,13 @@ public class ExceptionSerializationTests extends ESTestCase {
         return in.readThrowable();
     }
 
+    public void testWriteSuppressedSelfRef() throws IOException {
+        Exception exceptionWithSuppressed = new Exception("test");
+        Exception suppressedException = new IllegalStateException(exceptionWithSuppressed);
+        exceptionWithSuppressed.addSuppressed(suppressedException);
+        serialize(exceptionWithSuppressed);
+    }
+
     public void testIllegalShardRoutingStateException() throws IOException {
         final ShardRouting routing = TestShardRouting.newShardRouting("test", 0, "xyz", "def", false, ShardRoutingState.STARTED, 0);
         final String routingAsString = routing.toString();
