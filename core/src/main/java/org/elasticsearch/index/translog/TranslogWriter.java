@@ -25,10 +25,10 @@ import org.apache.lucene.store.OutputStreamDataOutput;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.RamUsageEstimator;
-import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.Channels;
 import org.elasticsearch.common.unit.ByteSizeValue;
+import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.util.Callback;
 import org.elasticsearch.index.shard.ShardId;
 
@@ -37,8 +37,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
@@ -109,9 +107,14 @@ public class TranslogWriter extends TranslogReader {
     private synchronized final void closeWithTragicEvent(Throwable throwable) throws IOException {
         assert throwable != null : "throwable must not be null in a tragic event";
         if (tragedy == null) {
+            ESLoggerFactory.getRootLogger().info("tragedy is null and will now be set to ", throwable);
+            ESLoggerFactory.getRootLogger().info("stacktrace for this event is ", new Exception("just for stacktrace"));
+
             tragedy = throwable;
         } else {
             tragedy.addSuppressed(throwable);
+            ESLoggerFactory.getRootLogger().info("tragedy is not null and got a new suppressed ", tragedy);
+            ESLoggerFactory.getRootLogger().info("stacktrace for this event is ", new Exception("just for stacktrace"));
         }
         close();
     }

@@ -563,7 +563,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         try (ReleasableLock lock = readLock.acquire()) {
             if (location.generation == current.generation) { // if we have a new one it's already synced
                 ensureOpen();
-                return current.syncUpTo(location.translogLocation + location.size);
+                return current.syncUpTo(location.translogLocation + location.size); // here we set the tragedy to ClosedByInterruptException
             }
         } catch (Throwable ex) {
             closeOnTragicEvent(ex);
@@ -572,11 +572,18 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         return false;
     }
 
-    private void closeOnTragicEvent(Throwable ex) {
+    private void closeOnTragicEvent(Throwable ex) { // we call this because sync failed with a ClosedByInterruptException
+
         if (current.getTragicException() != null) {
             try {
-                close();
+                close(); // throws again AlreadyClosedEx, cause : tragic exception
             } catch (Exception inner) {
+                if (ex == inner.getCause()) {
+                    logger.info("stacktrace: ", new Exception("just for stacktrace"));
+                    logger.info("the tragic exception is: ", current.getTragicException());
+                    logger.info("the inner exception is: ", inner);
+                    logger.info("the exception is: ", ex);
+                }
                 assert(ex != inner.getCause());
                 ex.addSuppressed(inner);
             }
