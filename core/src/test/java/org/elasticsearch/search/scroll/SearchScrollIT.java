@@ -29,6 +29,7 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.UncategorizedExecutionException;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.rest.action.search.RestClearScrollAction;
 import org.elasticsearch.rest.action.search.RestSearchScrollAction;
@@ -51,6 +52,25 @@ import static org.hamcrest.Matchers.*;
  *
  */
 public class SearchScrollIT extends ESIntegTestCase {
+
+    public void testScanWithMinScore() throws Exception {
+        client().prepareIndex("index", "type", "1").setSource("field", 1).get();
+        client().prepareIndex("index", "type", "2").setSource("field", 2).get();
+        client().prepareIndex("index", "type", "3").setSource("field", 3).get();
+        refresh();
+        SearchResponse searchResponse = client().prepareSearch()
+            .setQuery(matchAllQuery())
+            .setScroll(TimeValue.timeValueMinutes(2))
+            .execute().actionGet();
+        client().prepareClearScroll().addScrollId(searchResponse.getScrollId()).get();
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(3L));
+        searchResponse = client().prepareSearch()
+            .setQuery(functionScoreQuery(ScoreFunctionBuilders.fieldValueFactorFunction("field")).setMinScore(2f))
+            .setScroll(TimeValue.timeValueMinutes(2))
+            .execute().actionGet();
+        client().prepareClearScroll().addScrollId(searchResponse.getScrollId()).get();
+        assertThat(searchResponse.getHits().getTotalHits(), equalTo(2L));
+    }
 
     @Test
     public void testSimpleScrollQueryThenFetch() throws Exception {

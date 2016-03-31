@@ -190,3 +190,45 @@
       clear_scroll:
         scroll_id: $scroll_id
 
+---
+"Scan with min score":
+  - do:
+      index:
+        index:  index
+        type:   type
+        id:     1
+        body:   { num: 1 }
+
+  - do:
+      index:
+        index:  index
+        type:   type
+        id:     2
+        body:   { num: 2 }
+
+  - do:
+        index:
+          index:  index
+          type:   type
+          id:     3
+          body:   { num: 3 }
+
+  - do:
+      indices.refresh: {}
+
+  - do:
+      search:
+        index: index
+        search_type: scan
+        size: 1
+        scroll: 1m
+        body: { "query":{"function_score": {"functions": [{"field_value_factor": {"field": "num"}}], "min_score": 2}}}
+
+
+  - match: {hits.total:      2    }
+  - length: {hits.hits:      0    }
+  - set: {_scroll_id: scroll_id}
+  - do:
+      clear_scroll:
+        scroll_id: $scroll_id
+
