@@ -20,11 +20,19 @@
 package org.elasticsearch.search.highlight;
 
 import org.apache.lucene.analysis.MockAnalyzer;
+import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.PhraseQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.spatial.geopoint.search.GeoPointInBBoxQuery;
 import org.apache.lucene.util.LuceneTestCase;
+import org.elasticsearch.index.analysis.FieldNameAnalyzer;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class PlainHighlighterTests extends LuceneTestCase {
 
@@ -37,6 +45,16 @@ public class PlainHighlighterTests extends LuceneTestCase {
         org.apache.lucene.search.highlight.Highlighter highlighter = new org.apache.lucene.search.highlight.Highlighter(queryScorer);
         String[] frags = highlighter.getBestFragments(new MockAnalyzer(random()), "field", "bar foo bar foo", 10);
         assertArrayEquals(new String[] {"bar <B>foo</B> <B>bar</B> foo"}, frags);
+    }
+
+    public void testGeoFieldHighlightingUnit() throws IOException, InvalidTokenOffsetsException {
+        Map analyzsers = new HashMap<>();
+        analyzsers.put("geo_point", new KeywordAnalyzer());
+        FieldNameAnalyzer fieldNameAnalyzer = new FieldNameAnalyzer(analyzsers);
+        org.apache.lucene.search.highlight.Highlighter highlighter = new org.apache.lucene.search.highlight.Highlighter(
+            new CustomQueryScorer(new GeoPointInBBoxQuery("geo_point", -64.92354174306496, 61.10078883158897, -170.15625, 118.47656249999999),
+                null, "geo_point", "geo_point"));
+        highlighter.getBestFragment(fieldNameAnalyzer.tokenStream("geo_point", "60.12,100.34"), "60.12,100.34");
     }
 
 }
