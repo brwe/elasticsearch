@@ -113,7 +113,9 @@ public class FunctionScoreQueryParser implements QueryParser {
                 filter = parseContext.parseInnerFilter();
             } else if ("score_mode".equals(currentFieldName) || "scoreMode".equals(currentFieldName)) {
                 scoreMode = parseScoreMode(parseContext, parser);
-            } else if ("boost_mode".equals(currentFieldName) || "boostMode".equals(currentFieldName)) {
+            }
+            // nees to add a script for combine script here
+            else if ("boost_mode".equals(currentFieldName) || "boostMode".equals(currentFieldName)) {
                 combineFunction = parseBoostMode(parseContext, parser);
             } else if ("max_boost".equals(currentFieldName) || "maxBoost".equals(currentFieldName)) {
                 maxBoost = parser.floatValue();
@@ -168,6 +170,7 @@ public class FunctionScoreQueryParser implements QueryParser {
         if (maxBoost == null) {
             maxBoost = Float.MAX_VALUE;
         }
+        // need to make sure that if combine scripot is the score mode then we actually have a script!
         // handle cases where only one score function and no filter was
         // provided. In this case we create a FunctionScoreQuery.
         if (filterFunctions.size() == 0 || filterFunctions.size() == 1 && (filterFunctions.get(0).filter == null || Queries.isConstantMatchAllQuery(filterFunctions.get(0).filter))) {

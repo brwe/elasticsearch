@@ -31,6 +31,7 @@ import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.ToStringUtils;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.script.LeafSearchScript;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ public class FiltersFunctionScoreQuery extends Query {
     }
 
     public static enum ScoreMode {
+        // here add script option?
         First, Avg, Max, Sum, Min, Multiply
     }
 
@@ -89,6 +91,7 @@ public class FiltersFunctionScoreQuery extends Query {
     final ScoreMode scoreMode;
     final float maxBoost;
     private Float minScore;
+    // here add a variable for the script code
 
     protected CombineFunction combineFunction;
 
@@ -172,6 +175,8 @@ public class FiltersFunctionScoreQuery extends Query {
         }
 
         private FiltersFunctionFactorScorer functionScorer(LeafReaderContext context) throws IOException {
+
+
             Scorer subQueryScorer = subQueryWeight.scorer(context);
             if (subQueryScorer == null) {
                 return null;
@@ -184,6 +189,14 @@ public class FiltersFunctionScoreQuery extends Query {
                 Scorer filterScorer = filterWeights[i].scorer(context);
                 docSets[i] = Lucene.asSequentialAccessBits(context.reader().maxDoc(), filterScorer);
             }
+            // here we need to initialize the script like we do in script score too, like
+
+           /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
+            final CannedScorer scorer = new CannedScorer();
+            leafScript.setScorer(scorer);
+            ...
+
+            */
             return new FiltersFunctionFactorScorer(this, subQueryScorer, scoreMode, filterFunctions, maxBoost, functions, docSets, combineFunction, needsScores);
         }
 
@@ -303,7 +316,9 @@ public class FiltersFunctionScoreQuery extends Query {
                         factor *= functions[i].score(docId, subQueryScore);
                     }
                 }
-            } else {
+            }
+            // here add the script execution?
+            else {
                 double totalFactor = 0.0f;
                 double weightSum = 0;
                 for (int i = 0; i < filterFunctions.length; i++) {
