@@ -33,6 +33,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.script.LeafSearchScript;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,7 +77,7 @@ public class FiltersFunctionScoreQuery extends Query {
     }
 
     public enum ScoreMode implements Writeable {
-        FIRST, AVG, MAX, SUM, MIN, MULTIPLY;
+        FIRST, AVG, MAX, SUM, MIN, MULTIPLY, SCRIPT;
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
@@ -100,7 +101,9 @@ public class FiltersFunctionScoreQuery extends Query {
     final FilterFunction[] filterFunctions;
     final ScoreMode scoreMode;
     final float maxBoost;
+
     private final Float minScore;
+    // here add a variable for the script code
 
     final protected CombineFunction combineFunction;
 
@@ -178,6 +181,8 @@ public class FiltersFunctionScoreQuery extends Query {
         }
 
         private FiltersFunctionFactorScorer functionScorer(LeafReaderContext context) throws IOException {
+
+
             Scorer subQueryScorer = subQueryWeight.scorer(context);
             if (subQueryScorer == null) {
                 return null;
@@ -190,6 +195,14 @@ public class FiltersFunctionScoreQuery extends Query {
                 Scorer filterScorer = filterWeights[i].scorer(context);
                 docSets[i] = Lucene.asSequentialAccessBits(context.reader().maxDoc(), filterScorer);
             }
+            // here we need to initialize the script like we do in script score too, like
+
+           /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
+            final CannedScorer scorer = new CannedScorer();
+            leafScript.setScorer(scorer);
+            ...
+
+            */
             return new FiltersFunctionFactorScorer(this, subQueryScorer, scoreMode, filterFunctions, maxBoost, functions, docSets, combineFunction, needsScores);
         }
 
@@ -314,6 +327,7 @@ public class FiltersFunctionScoreQuery extends Query {
                         }
                     }
                     break;
+                // here add the script execution?
                 default: // Avg / Total
                     double totalFactor = 0.0f;
                     double weightSum = 0;

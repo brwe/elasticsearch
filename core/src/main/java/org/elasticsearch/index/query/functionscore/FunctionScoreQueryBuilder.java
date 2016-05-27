@@ -44,6 +44,8 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryRewriteContext;
 import org.elasticsearch.index.query.QueryShardContext;
+import org.elasticsearch.script.Script;
+
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -88,6 +90,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     private Float minScore = null;
 
     private final FilterFunctionBuilder[] filterFunctionBuilders;
+    private Script combineScript;
 
     /**
      * Creates a function_score query without functions
@@ -331,6 +334,10 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         return new FiltersFunctionScoreQuery(query, scoreMode, filterFunctions, maxBoost, minScore, boostMode);
     }
 
+    public Script getCombineScript() {
+        return combineScript;
+    }
+
     /**
      * Function to be associated with an optional filter, meaning it will be executed only for the documents
      * that match the given filter.
@@ -490,6 +497,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                             .fromXContent(parseContext);
                     filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(scoreFunction));
                 }
+                // here also parse the script!
             } else if (token == XContentParser.Token.START_ARRAY) {
                 if (parseContext.getParseFieldMatcher().match(currentFieldName, FUNCTIONS_FIELD)) {
                     if (singleFunctionFound) {
@@ -556,7 +564,11 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
         functionScoreQueryBuilder.boost(boost);
         functionScoreQueryBuilder.queryName(queryName);
+
+        // make sure that if score_mode is set to script then we have a script and that we do not have a script if score-mode is set to
+        // something different.
         return Optional.of(functionScoreQueryBuilder);
+
     }
 
     private static void handleMisplacedFunctionsDeclaration(XContentLocation contentLocation, String errorString) {

@@ -94,6 +94,7 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
         }
         if (randomBoolean()) {
             functionScoreQueryBuilder.scoreMode(randomFrom(FiltersFunctionScoreQuery.ScoreMode.values()));
+            // here also add the script in case we randomly pick the script combine mode
         }
         if (randomBoolean()) {
             functionScoreQueryBuilder.maxBoost(randomFloat());
@@ -352,6 +353,55 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
                 queryBuilder = parseQuery(((AbstractQueryBuilder) queryBuilder).buildAsBytes(XContentType.values()[i]));
             }
         }
+    }
+
+    public void testParseFunctionScoreWithScriptCombine() throws IOException {
+        String functionScoreQuery = "{\n" +
+            "    \"function_score\": {\n" +
+            "      \"score_mode\": \"script\",\n" +
+            "      \"functions\": [\n" +
+            "        {\n" +
+            "          \"filter\": {\n" +
+            "            \"match\": {\n" +
+            "              \"some_other_field\": \"foo\"\n" +
+            "            }\n" +
+            "          },\n" +
+            "          \"field_value_factor\": {\n" +
+            "            \"field\": \"num_field\"\n" +
+            "          },\n" +
+            "          \"weight\": 2,\n" +
+            "          \"var_name\": \"score_a\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "          \"filter\": {\n" +
+            "            \"match\": {\n" +
+            "              \"some_other_field\": \"foo\"\n" +
+            "            }\n" +
+            "          },\n" +
+            "          \"field_value_factor\": {\n" +
+            "            \"field\": \"another_num_field\"\n" +
+            "          },\n" +
+            "          \"weight\": 2,\n" +
+            "          \"var_name\": \"score_b\"\n" +
+            "        }\n" +
+            "      ],\n" +
+            "      \"combine_script\": {\n" +
+            "        \"lang\": \"mock\",\n" +
+            "        \"inline\": \"score_a*score_b+42+c\",\n" +
+            "        \"params\": {\n" +
+            "          \"c\": 13\n" +
+            "        }\n" +
+            "      },\n" +
+            "      \"boost_mode\": \"replace\"\n" +
+            "    }";
+
+        FunctionScoreQueryBuilder queryBuilder = (FunctionScoreQueryBuilder)parseQuery(functionScoreQuery);
+        assertThat(queryBuilder.scoreMode(), equalTo(FiltersFunctionScoreQuery.ScoreMode.SCRIPT));
+        assertNotNull(queryBuilder.getCombineScript());
+        assertThat(queryBuilder.getCombineScript().getLang(), equalTo("mockscript"));
+        assertThat(queryBuilder.getCombineScript().getScript(), equalTo("score_a*score_b+42+c"));
+        assertThat(queryBuilder.getCombineScript().getParams().get("c"), equalTo(13));
+        assertThat(queryBuilder.getCombineScript().getType(), equalTo(ScriptService.ScriptType.INLINE));
     }
 
     public void testParseSingleFunction() throws IOException {
