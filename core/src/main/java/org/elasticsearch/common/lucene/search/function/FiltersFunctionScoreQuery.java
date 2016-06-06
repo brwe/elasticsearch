@@ -327,6 +327,15 @@ public class FiltersFunctionScoreQuery extends Query {
                         }
                     }
                     break;
+                case SCRIPT:
+                    // This is just a dummy implementation - it multiplies
+                    // TODO replace with real implementation
+                    for (int i = 0; i < filterFunctions.length; i++) {
+                        if (docSets[i].get(docId)) {
+                            factor *= functions[i].score(docId, subQueryScore);
+                        }
+                    }
+                    break;
                 // here add the script execution?
                 default: // Avg / Total
                     double totalFactor = 0.0f;

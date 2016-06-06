@@ -345,20 +345,29 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     public static class FilterFunctionBuilder implements ToXContent, Writeable {
         private final QueryBuilder filter;
         private final ScoreFunctionBuilder<?> scoreFunction;
+        private final String varName;
 
         public FilterFunctionBuilder(ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-            this(new MatchAllQueryBuilder(), scoreFunctionBuilder);
+            this(new MatchAllQueryBuilder(), scoreFunctionBuilder, "");
         }
 
-        public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunction) {
+        public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunctionBuilder) {
+            this(filter, scoreFunctionBuilder, "");
+        }
+
+        public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunction, String varName) {
             if (filter == null) {
                 throw new IllegalArgumentException("function_score: filter must not be null");
             }
             if (scoreFunction == null) {
                 throw new IllegalArgumentException("function_score: function must not be null");
             }
+            if (varName == null) {
+                throw new IllegalArgumentException("function_score: varName must not be null");
+            }
             this.filter = filter;
             this.scoreFunction = scoreFunction;
+            this.varName = varName;
         }
 
         /**
@@ -367,12 +376,18 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         public FilterFunctionBuilder(StreamInput in) throws IOException {
             filter = in.readNamedWriteable(QueryBuilder.class);
             scoreFunction = in.readNamedWriteable(ScoreFunctionBuilder.class);
+            varName = in.readOptionalString();
         }
 
         @Override
         public void writeTo(StreamOutput out) throws IOException {
             out.writeNamedWriteable(filter);
             out.writeNamedWriteable(scoreFunction);
+            out.writeOptionalString(varName);
+        }
+
+        public String getVarName() {
+            return varName;
         }
 
         public QueryBuilder getFilter() {
