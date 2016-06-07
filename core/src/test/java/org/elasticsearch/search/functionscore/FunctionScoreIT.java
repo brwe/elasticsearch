@@ -66,8 +66,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
         refresh();
 
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(fieldValueFactorFunction("test")),
-            new FilterFunctionBuilder(weightFactorFunction(2f))
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta")
         };
 
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT);
@@ -76,6 +76,6 @@ public class FunctionScoreIT extends ESIntegTestCase {
             .setExplain(randomBoolean())
             .setQuery(queryBuilder)
             .get();
-        assertThat(response.getHits().getAt(0).score(), equalTo(10f));
+        assertThat(response.getHits().getAt(0).score(), equalTo(2.5f));
     }
 }

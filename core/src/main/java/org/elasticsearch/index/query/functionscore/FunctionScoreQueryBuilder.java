@@ -307,7 +307,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         for (FilterFunctionBuilder filterFunctionBuilder : filterFunctionBuilders) {
             Query filter = filterFunctionBuilder.getFilter().toQuery(context);
             ScoreFunction scoreFunction = filterFunctionBuilder.getScoreFunction().toFunction(context);
-            filterFunctions[i++] = new FilterFunction(filter, scoreFunction);
+            filterFunctions[i++] = new FilterFunction(filter, scoreFunction, filterFunctionBuilder.getVarName());
         }
 
         Query query = this.query.toQuery(context);
@@ -376,7 +376,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         public FilterFunctionBuilder(StreamInput in) throws IOException {
             filter = in.readNamedWriteable(QueryBuilder.class);
             scoreFunction = in.readNamedWriteable(ScoreFunctionBuilder.class);
-            varName = in.readOptionalString();
+            varName = in.readOptionalString();  // TODO make non-optional?
         }
 
         @Override
@@ -386,16 +386,16 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             out.writeOptionalString(varName);
         }
 
-        public String getVarName() {
-            return varName;
-        }
-
         public QueryBuilder getFilter() {
             return filter;
         }
 
         public ScoreFunctionBuilder<?> getScoreFunction() {
             return scoreFunction;
+        }
+
+        public String getVarName() {
+            return varName;
         }
 
         @Override

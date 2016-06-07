@@ -36,12 +36,7 @@ import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.script.LeafSearchScript;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A query that allows for a pluggable boost function / filter. If it matches
@@ -52,10 +47,16 @@ public class FiltersFunctionScoreQuery extends Query {
     public static class FilterFunction {
         public final Query filter;
         public final ScoreFunction function;
+        public final String varName;
 
+        // TODO remove this function and convert all to the constructure with the name
         public FilterFunction(Query filter, ScoreFunction function) {
+            this(filter, function, "");
+        }
+        public FilterFunction(Query filter, ScoreFunction function, String varName) {
             this.filter = filter;
             this.function = function;
+            this.varName = varName;
         }
 
         @Override
@@ -330,13 +331,15 @@ public class FiltersFunctionScoreQuery extends Query {
                 case SCRIPT:
                     // This is just a dummy implementation - it multiplies
                     // TODO replace with real implementation
+                    Map<String, LeafScoreFunction> scoreMap = new HashMap<>();
                     for (int i = 0; i < filterFunctions.length; i++) {
+                        scoreMap.put(filterFunctions[i].varName, functions[i]);
                         if (docSets[i].get(docId)) {
                             factor *= functions[i].score(docId, subQueryScore);
                         }
                     }
+                    factor = scoreMap.get("alpha").score(docId, subQueryScore)/scoreMap.get("beta").score(docId, subQueryScore);
                     break;
-                // here add the script execution?
                 default: // Avg / Total
                     double totalFactor = 0.0f;
                     double weightSum = 0;
