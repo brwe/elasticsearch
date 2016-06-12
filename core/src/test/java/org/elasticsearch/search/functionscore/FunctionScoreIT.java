@@ -65,9 +65,10 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
         refresh();
 
+        // TODO test with FunctionBuilder that doesn't have a name - maybe it should fail unless they all have a name
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
             new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta")
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
         };
 
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT);

@@ -33,7 +33,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lucene.Lucene;
-import org.elasticsearch.script.LeafSearchScript;
+import org.elasticsearch.script.SearchScript;
 
 import java.io.IOException;
 import java.util.*;
@@ -150,19 +150,21 @@ public class FiltersFunctionScoreQuery extends Query {
             filterWeights[i] = searcher.createNormalizedWeight(filterFunctions[i].filter, false);
         }
         Weight subQueryWeight = subQuery.createWeight(searcher, subQueryNeedsScores);
-        return new CustomBoostFactorWeight(this, subQueryWeight, filterWeights, subQueryNeedsScores);
+        return new CustomBoostFactorWeight(this, subQueryWeight, filterWeights, null, subQueryNeedsScores);
     }
 
     class CustomBoostFactorWeight extends Weight {
 
         final Weight subQueryWeight;
         final Weight[] filterWeights;
+        final SearchScript score_script;
         final boolean needsScores;
 
-        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, boolean needsScores) throws IOException {
+        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, SearchScript score_script, boolean needsScores) throws IOException {
             super(parent);
             this.subQueryWeight = subQueryWeight;
             this.filterWeights = filterWeights;
+            this.score_script = score_script;
             this.needsScores = needsScores;
         }
 
@@ -196,6 +198,7 @@ public class FiltersFunctionScoreQuery extends Query {
                 Scorer filterScorer = filterWeights[i].scorer(context);
                 docSets[i] = Lucene.asSequentialAccessBits(context.reader().maxDoc(), filterScorer);
             }
+
             // here we need to initialize the script like we do in script score too, like
 
            /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
@@ -329,9 +332,10 @@ public class FiltersFunctionScoreQuery extends Query {
                     }
                     break;
                 case SCRIPT:
-                    // This is just a dummy implementation - it multiplies
+                    // This is just a dummy implementation
                     // TODO replace with real implementation
                     Map<String, LeafScoreFunction> scoreMap = new HashMap<>();
+                    // make the script more complicated "_score * doc['popularity'].value / pow(param1, param2)"
                     for (int i = 0; i < filterFunctions.length; i++) {
                         scoreMap.put(filterFunctions[i].varName, functions[i]);
                         if (docSets[i].get(docId)) {
