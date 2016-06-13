@@ -45,7 +45,7 @@ import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryRewriteContext;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.script.Script;
-
+import org.elasticsearch.script.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,6 +55,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.*;
 
 /**
  * A query that uses a filters with a script associated with them to compute the
@@ -330,8 +331,17 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             return new FunctionScoreQuery(query, function, minScore, combineFunction, maxBoost);
         }
         // in all other cases we create a FiltersFunctionScoreQuery
+
+        // TODO this is scratch score_script code to test functionality - replace it soon with a parsed script from the user
+        Map<String, Object> params = new HashMap<>();
+        Script scoreScript = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+
+        SearchScript searchScoreScript = context.getScriptService().search(context.lookup(), scoreScript, ScriptContext.Standard.SEARCH,
+            Collections.emptyMap(), context.getClusterState());
+        // END TODO
+
         CombineFunction boostMode = this.boostMode == null ? DEFAULT_BOOST_MODE : this.boostMode;
-        return new FiltersFunctionScoreQuery(query, scoreMode, filterFunctions, maxBoost, minScore, boostMode);
+        return new FiltersFunctionScoreQuery(query, scoreMode, searchScoreScript, filterFunctions, maxBoost, minScore, boostMode);
     }
 
     public Script getCombineScript() {

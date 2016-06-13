@@ -20,12 +20,18 @@
 package org.elasticsearch.search.functionscore;
 
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.lucene.search.function.FiltersFunctionScoreQuery.ScoreMode;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder.FilterFunctionBuilder;
+import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.script.*;
 import org.elasticsearch.test.ESIntegTestCase;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.functionScoreQuery;
@@ -39,6 +45,12 @@ import static org.hamcrest.Matchers.equalTo;
  * Tests for the {@code field_value_factor} function in a function_score query.
  */
 public class FunctionScoreIT extends ESIntegTestCase {
+
+    @Override
+    protected Collection<Class<? extends Plugin>> nodePlugins() {
+        return pluginList(CustomNativeScriptFactory.TestPlugin.class);
+    }
+
     /**
      * @throws IOException
      *
@@ -78,5 +90,58 @@ public class FunctionScoreIT extends ESIntegTestCase {
             .setQuery(queryBuilder)
             .get();
         assertThat(response.getHits().getAt(0).score(), equalTo(2.5f));
+    }
+
+
+    public static class CustomNativeScriptFactory implements NativeScriptFactory {
+        public static class TestPlugin extends Plugin {
+            @Override
+            public String name() {
+                return "mock-native-script";
+            }
+            @Override
+            public String description() {
+                return "a mock native script for testing";
+            }
+            public void onModule(ScriptModule scriptModule) {
+                scriptModule.registerScript("custom", CustomNativeScriptFactory.class);
+            }
+        }
+        @Override
+        public ExecutableScript newScript(@Nullable Map<String, Object> params) {
+            return new CustomScript(params);
+        }
+        @Override
+        public boolean needsScores() {
+            return false;
+        }
+    }
+
+    static class CustomScript extends AbstractSearchScript {
+        private Map<String, Object> params;
+        private Map<String, Object> vars = new HashMap<>(2);
+
+        public CustomScript(Map<String, Object> params) {
+            this.params = params;
+        }
+
+        @Override
+        public Object run() {
+            if (vars.containsKey("ctx") && vars.get("ctx") instanceof Map) {
+                Map ctx = (Map) vars.get("ctx");
+                if (ctx.containsKey("_source") && ctx.get("_source") instanceof Map) {
+                    Map source = (Map) ctx.get("_source");
+                    source.putAll(params);
+                }
+            }
+            // return value does not matter, the UpdateHelper class
+            return null;
+        }
+
+        @Override
+        public void setNextVar(String name, Object value) {
+            vars.put(name, value);
+        }
+
     }
 }

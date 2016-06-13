@@ -33,6 +33,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.script.LeafSearchScript;
 import org.elasticsearch.script.SearchScript;
 
 import java.io.IOException;
@@ -101,6 +102,7 @@ public class FiltersFunctionScoreQuery extends Query {
     final Query subQuery;
     final FilterFunction[] filterFunctions;
     final ScoreMode scoreMode;
+    final SearchScript score_script;
     final float maxBoost;
 
     private final Float minScore;
@@ -108,9 +110,15 @@ public class FiltersFunctionScoreQuery extends Query {
 
     final protected CombineFunction combineFunction;
 
+    // TODO this is only uses in tests and in FunctionScoreQueryBuilder - remove this.
     public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, FilterFunction[] filterFunctions, float maxBoost, Float minScore, CombineFunction combineFunction) {
+        this(subQuery,scoreMode, null, filterFunctions, maxBoost, minScore, combineFunction);
+    }
+
+    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, SearchScript score_script, FilterFunction[] filterFunctions, float maxBoost, Float minScore, CombineFunction combineFunction) {
         this.subQuery = subQuery;
         this.scoreMode = scoreMode;
+        this.score_script = score_script;
         this.filterFunctions = filterFunctions;
         this.maxBoost = maxBoost;
         this.combineFunction = combineFunction;
@@ -150,7 +158,7 @@ public class FiltersFunctionScoreQuery extends Query {
             filterWeights[i] = searcher.createNormalizedWeight(filterFunctions[i].filter, false);
         }
         Weight subQueryWeight = subQuery.createWeight(searcher, subQueryNeedsScores);
-        return new CustomBoostFactorWeight(this, subQueryWeight, filterWeights, null, subQueryNeedsScores);
+        return new CustomBoostFactorWeight(this, subQueryWeight, filterWeights, score_script, subQueryNeedsScores);
     }
 
     class CustomBoostFactorWeight extends Weight {
@@ -164,7 +172,7 @@ public class FiltersFunctionScoreQuery extends Query {
             super(parent);
             this.subQueryWeight = subQueryWeight;
             this.filterWeights = filterWeights;
-            this.score_script = score_script;
+            this.score_script = score_script;  // TODO - should this be a Weight? Probably so in order to reflect needs_scores
             this.needsScores = needsScores;
         }
 
@@ -199,6 +207,7 @@ public class FiltersFunctionScoreQuery extends Query {
                 docSets[i] = Lucene.asSequentialAccessBits(context.reader().maxDoc(), filterScorer);
             }
 
+            final LeafSearchScript leafScoreScript = score_script.getLeafSearchScript(context);
             // here we need to initialize the script like we do in script score too, like
 
            /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
@@ -207,7 +216,7 @@ public class FiltersFunctionScoreQuery extends Query {
             ...
 
             */
-            return new FiltersFunctionFactorScorer(this, subQueryScorer, scoreMode, filterFunctions, maxBoost, functions, docSets, combineFunction, needsScores);
+            return new FiltersFunctionFactorScorer(this, subQueryScorer, scoreMode, leafScoreScript, filterFunctions, maxBoost, functions, docSets, combineFunction, needsScores);
         }
 
         @Override
@@ -262,16 +271,18 @@ public class FiltersFunctionScoreQuery extends Query {
     static class FiltersFunctionFactorScorer extends FilterScorer {
         private final FilterFunction[] filterFunctions;
         private final ScoreMode scoreMode;
+        private final LeafSearchScript scoreScript;
         private final LeafScoreFunction[] functions;
         private final Bits[] docSets;
         private final CombineFunction scoreCombiner;
         private final float maxBoost;
         private final boolean needsScores;
 
-        private FiltersFunctionFactorScorer(CustomBoostFactorWeight w, Scorer scorer, ScoreMode scoreMode, FilterFunction[] filterFunctions,
+        private FiltersFunctionFactorScorer(CustomBoostFactorWeight w, Scorer scorer, ScoreMode scoreMode, LeafSearchScript scoreScript, FilterFunction[] filterFunctions,
                                             float maxBoost, LeafScoreFunction[] functions, Bits[] docSets, CombineFunction scoreCombiner, boolean needsScores) throws IOException {
             super(scorer, w);
             this.scoreMode = scoreMode;
+            this.scoreScript = scoreScript;
             this.filterFunctions = filterFunctions;
             this.functions = functions;
             this.docSets = docSets;
