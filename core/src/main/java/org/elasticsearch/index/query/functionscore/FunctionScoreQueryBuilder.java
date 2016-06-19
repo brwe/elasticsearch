@@ -333,6 +333,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         // in all other cases we create a FiltersFunctionScoreQuery
 
         // TODO this is scratch score_script code to test functionality - replace it soon with a parsed script from the user
+        // sub-TODO see ScriptScoreFunctionBuilder for all the other pieces I need to implement like `doWriteTo`
+        // sub-TODO see ScriptScoreFunction for a class I probably need to wrap my script with rather than passing in a SearchScript and a Script seperately for explain
         Map<String, Object> params = new HashMap<>();
         Script scoreScript = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
 

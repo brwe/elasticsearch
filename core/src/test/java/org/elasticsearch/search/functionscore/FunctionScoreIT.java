@@ -38,6 +38,7 @@ import static org.elasticsearch.index.query.QueryBuilders.functionScoreQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.fieldValueFactorFunction;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.weightFactorFunction;
+import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.scriptFunction;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -78,9 +79,13 @@ public class FunctionScoreIT extends ESIntegTestCase {
         refresh();
 
         // TODO test with FunctionBuilder that doesn't have a name - maybe it should fail unless they all have a name
+        Map<String, Object> params = new HashMap<>();
+        Script script = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
             new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
             new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+            new FilterFunctionBuilder(matchAllQuery(), scriptFunction(script))
         };
 
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT);
@@ -135,7 +140,7 @@ public class FunctionScoreIT extends ESIntegTestCase {
                 }
             }
             // return value does not matter, the UpdateHelper class
-            return null;
+            return 1;
         }
 
         @Override
