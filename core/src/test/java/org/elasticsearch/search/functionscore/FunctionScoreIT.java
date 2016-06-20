@@ -43,6 +43,7 @@ import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.weightFactorFunction;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.scriptFunction;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
+import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.Matchers.equalTo;
 
 /**
@@ -74,7 +75,11 @@ public class FunctionScoreIT extends ESIntegTestCase {
                 .startObject("properties")
                 .startObject("test")
                 .field("type", "float")
-                .endObject()).get());
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+        ).get());
         ensureYellow();
 
         client().prepareIndex("test", "type1", "1").setSource("test", 5).get();
@@ -97,6 +102,7 @@ public class FunctionScoreIT extends ESIntegTestCase {
             .setExplain(randomBoolean())
             .setQuery(queryBuilder)
             .get();
+        assertSearchResponse(response);
         assertThat(response.getHits().getAt(0).score(), equalTo(2.5f));
     }
 
@@ -119,7 +125,7 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
         @Override
         public String getName() {
-            return "mock-native-script";
+            return "custom";
         }
     }
 
@@ -141,8 +147,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
 //                }
 //            }
 
-            double alpha = ((Double) vars.get("alpha")).doubleValue();
-            double beta= ((Double) vars.get("beta")).doubleValue();
+            double alpha = ((Number) vars.get("alpha")).doubleValue();
+            double beta= ((Number) vars.get("beta")).doubleValue();
 
             return alpha/beta;
         }
