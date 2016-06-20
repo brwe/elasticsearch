@@ -496,10 +496,87 @@ public class FunctionScoreTests extends ESTestCase {
         SearchScript searchScript = new SearchScript() {
             @Override
             public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
+                return new LeafSearchScript() {
+
+                    public Scorer scorer;
+                    Map<String, Double> vars = new HashMap<>();
+                    @Override
+                    public void setDocument(int doc) {
+                        // do nothing, this is just one doc
+                    }
+
+                    @Override
+                    public void setSource(Map<String, Object> source) {
+                        // not sure what to do here
+                    }
+
+                    @Override
+                    public long runAsLong() {
+                        return 0;
+                    }
+
+                    @Override
+                    public double runAsDouble() {
+                        double score = 0;
+                        for (Map.Entry<String, Double> var : vars.entrySet()) {
+                            score += var.getValue();
+                        }
+                        try {
+                            score += scorer.score();
+                        } catch (IOException e) {
+                            fail("Something went wrong with the CannedScorer");
+                        }
+                        return score;
+                    }
+
+                    @Override
+                    public void setNextVar(String name, Object value) {
+                        assert value instanceof Number;
+                        vars.put(name, ((Number) value).doubleValue());
+                    }
+
+                    @Override
+                    public Object run() {
+                        return null;
+                    }
+
+                    @Override
+                    public void setScorer(Scorer scorer) {
+                        this.scorer = scorer;
+                    }
+                };
+            }
+
+            @Override
+            public boolean needsScores() {
+                return true;
+            }
+        };
+
+        FiltersFunctionScoreQuery funcQuery = new FiltersFunctionScoreQuery(new MatchAllDocsQuery(), ScoreMode.SCRIPT, new
+            FiltersFunctionScoreQuery.CombineScoreScript(new Script("Man, I wish testing this stuff was easier..."), searchScript),
+            filterFunctions, Float.MAX_VALUE, 0.0f, CombineFunction.SUM);
+
+        TopDocs topDocsWithWeights = searcher.search(funcQuery, 1);
+        assertThat(topDocsWithWeights.scoreDocs[0].score, equalTo(8.0f));
+    }
+
+
+    public void testScriptScoreCombineExplanation() throws IOException, ExecutionException, InterruptedException {
+
+        FilterFunction[] filterFunctions = new FilterFunction[3];
+        filterFunctions[0] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(1), "a");
+        filterFunctions[1] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(2), "b");
+        filterFunctions[2] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(3), "c");
+        SearchScript searchScript = new SearchScript() {
+            @Override
+            public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
                 return new ExplainableSearchScript() {
+                    public Scorer scorer;
+
                     @Override
                     public Explanation explain(Explanation subQueryScore) throws IOException {
-                        return Explanation.match((float)runAsDouble(), "a+b+c", subQueryScore);
+                        return Explanation.match((float)runAsDouble(), "a+b+c+score("+ scorer.score()+")");
                     }
 
                     Map<String, Double> vars = new HashMap<>();
@@ -524,6 +601,11 @@ public class FunctionScoreTests extends ESTestCase {
                         for (Map.Entry<String, Double> var : vars.entrySet()) {
                             score += var.getValue();
                         }
+                        try {
+                            score += scorer.score();
+                        } catch (IOException e) {
+                            fail("Something went wrong with the CannedScorer");
+                        }
                         return score;
                     }
 
@@ -540,7 +622,7 @@ public class FunctionScoreTests extends ESTestCase {
 
                     @Override
                     public void setScorer(Scorer scorer) {
-                        // don't need the scorer - we just set the variable _score somewhere else?
+                        this.scorer = scorer;
                     }
                 };
             }
@@ -555,11 +637,10 @@ public class FunctionScoreTests extends ESTestCase {
             FiltersFunctionScoreQuery.CombineScoreScript(new Script("a+b+c"), searchScript),
             filterFunctions, Float.MAX_VALUE, 0.0f, CombineFunction.SUM);
 
-        TopDocs topDocsWithWeights = searcher.search(funcQuery, 1);
-        assertThat(topDocsWithWeights.scoreDocs[0].score, equalTo(7.0f));
         Explanation explanation = searcher.explain(funcQuery, 0);
-        assertThat(explanation.toString(), containsString("a+b+c"));
-
+        assertThat(explanation.toString(), equalTo("8.0 = sum of\n  1.0 = *:*, product of:\n    1.0 = boost\n    1.0 = queryNorm\n  7.0 =" +
+            " min of:\n    7.0 = function score, score mode [script:7.0 = a+b+c+score(1.0)\n]\n      1.0 = function score (var_name: a), " +
+            "product of:\n        1.0 = match filter: *:*\n        1.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          1.0 = weight\n      2.0 = function score (var_name: b), product of:\n        1.0 = match filter: *:*\n        2.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          2.0 = weight\n      3.0 = function score (var_name: c), product of:\n        1.0 = match filter: *:*\n        3.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          3.0 = weight\n    3.4028235E38 = maxBoost\n"));
     }
 
     public void testSimpleWeightedFunction() throws IOException, ExecutionException, InterruptedException {
