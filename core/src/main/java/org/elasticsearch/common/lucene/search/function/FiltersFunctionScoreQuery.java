@@ -22,12 +22,7 @@ package org.elasticsearch.common.lucene.search.function;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.Explanation;
-import org.apache.lucene.search.FilterScorer;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Scorer;
-import org.apache.lucene.search.Weight;
+import org.apache.lucene.search.*;
 import org.apache.lucene.util.Bits;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -80,6 +75,36 @@ public class FiltersFunctionScoreQuery extends Query {
     }
 
     public static class ScoreScript {
+
+        static final class CannedScorer extends Scorer {
+            protected int docid;
+            protected float score;
+
+            public CannedScorer() {
+                super(null);
+            }
+
+            @Override
+            public int docID() {
+                return docid;
+            }
+
+            @Override
+            public float score() throws IOException {
+                return score;
+            }
+
+            @Override
+            public int freq() throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public DocIdSetIterator iterator() {
+                throw new UnsupportedOperationException();
+            }
+        }
+
         private final Script sScript;
         private final SearchScript script;
 
@@ -89,7 +114,10 @@ public class FiltersFunctionScoreQuery extends Query {
         }
 
         public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
-            return script.getLeafSearchScript(context);
+            LeafSearchScript leafSearchScript = script.getLeafSearchScript(context);
+            final CannedScorer scorer = new CannedScorer();
+            leafSearchScript.setScorer(scorer);
+            return leafSearchScript;
         }
     }
     public enum ScoreMode implements Writeable {
