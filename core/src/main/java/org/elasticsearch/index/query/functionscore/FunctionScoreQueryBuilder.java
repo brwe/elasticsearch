@@ -340,11 +340,16 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params)
         );
 
-        FiltersFunctionScoreQuery.ScoreScript scoreScript = scoreScriptBuilder.toScoreScript(context);
+        SearchScript searchScript = context.getScriptService().search(context.lookup(),  new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params),
+            ScriptContext.Standard.SEARCH,
+            Collections.emptyMap(), context.getClusterState());
         // END TODO
 
         CombineFunction boostMode = this.boostMode == null ? DEFAULT_BOOST_MODE : this.boostMode;
-        return new FiltersFunctionScoreQuery(query, scoreMode, scoreScript, filterFunctions, maxBoost, minScore, boostMode);
+        return new FiltersFunctionScoreQuery(query, scoreMode, new FiltersFunctionScoreQuery.CombineScoreScript(scoreScriptBuilder
+            .script, searchScript), filterFunctions, maxBoost,
+            minScore,
+            boostMode);
     }
 
     public Script getCombineScript() {
@@ -455,11 +460,11 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             this.script = script;
         }
 
-        public FiltersFunctionScoreQuery.ScoreScript toScoreScript(QueryShardContext context) {
+        public FiltersFunctionScoreQuery.CombineScoreScript toScoreScript(QueryShardContext context) {
             SearchScript searchScript = context.getScriptService().search(context.lookup(), script, ScriptContext.Standard.SEARCH,
                 Collections.emptyMap(), context.getClusterState());
 
-            return new FiltersFunctionScoreQuery.ScoreScript(script, searchScript);
+            return new FiltersFunctionScoreQuery.CombineScoreScript(script, searchScript);
 
         }
 

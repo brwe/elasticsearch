@@ -22,6 +22,7 @@ package org.elasticsearch.index.query.functionscore;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
@@ -59,6 +60,10 @@ import org.elasticsearch.index.fielddata.IndexNumericFieldData;
 import org.elasticsearch.index.fielddata.ScriptDocValues;
 import org.elasticsearch.index.fielddata.SortedBinaryDocValues;
 import org.elasticsearch.index.fielddata.SortedNumericDoubleValues;
+import org.elasticsearch.script.ExplainableSearchScript;
+import org.elasticsearch.script.LeafSearchScript;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.script.SearchScript;
 import org.elasticsearch.search.MultiValueMode;
 import org.elasticsearch.test.ESTestCase;
 import org.junit.After;
@@ -66,8 +71,12 @@ import org.junit.Before;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 
@@ -252,8 +261,10 @@ public class FunctionScoreTests extends ESTestCase {
             LinearDecayFunctionBuilder.LINEAR_DECAY_FUNCTION, new IndexNumericFieldDataStub(), MultiValueMode.MAX);
     private static final ScoreFunction WEIGHT_FACTOR_FUNCTION = new WeightFactorFunction(4);
     private static final String TEXT = "The way out is through.";
-    private static final String FIELD = "test";
-    private static final Term TERM = new Term(FIELD, "through");
+    private static final String TEXT_FIELD = "test";
+    private static final String NUM_FIELD = "num";
+    private static final Integer NUM = 6;
+    private static final Term TERM = new Term(TEXT_FIELD, "through");
     private Directory dir;
     private IndexWriter w;
     private DirectoryReader reader;
@@ -264,7 +275,8 @@ public class FunctionScoreTests extends ESTestCase {
         dir = newDirectory();
         w = new IndexWriter(dir, newIndexWriterConfig(new StandardAnalyzer()));
         Document d = new Document();
-        d.add(new TextField(FIELD, TEXT, Field.Store.YES));
+        d.add(new TextField(TEXT_FIELD, TEXT, Field.Store.YES));
+        d.add(new IntPoint(NUM_FIELD, NUM));
         d.add(new TextField("_uid", "1", Field.Store.YES));
         w.addDocument(d);
         w.commit();
@@ -416,7 +428,7 @@ public class FunctionScoreTests extends ESTestCase {
         assertThat(explanation.getDescription(), equalTo("function score, score mode [avg]"));
         Explanation functionExplanation = randomExplanation.getDetails()[0].getDetails()[whichFunction];
         assertThat(functionExplanation.getDescription(), equalTo("function score, product of:"));
-        assertThat(functionExplanation.getDetails()[0].getDescription(), equalTo("match filter: " + FIELD + ":" + TERM.text()));
+        assertThat(functionExplanation.getDetails()[0].getDescription(), equalTo("match filter: " + TEXT_FIELD + ":" + TERM.text()));
         assertThat(functionExplanation.getDetails()[1].getDescription(), equalTo(functionExpl));
     }
 
@@ -473,6 +485,81 @@ public class FunctionScoreTests extends ESTestCase {
         protected int doHashCode() {
             return 0;
         }
+    }
+
+    public void testScriptScoreCombine() throws IOException, ExecutionException, InterruptedException {
+
+        FilterFunction[] filterFunctions = new FilterFunction[3];
+        filterFunctions[0] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(1), "a");
+        filterFunctions[1] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(2), "b");
+        filterFunctions[2] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(3), "c");
+        SearchScript searchScript = new SearchScript() {
+            @Override
+            public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
+                return new ExplainableSearchScript() {
+                    @Override
+                    public Explanation explain(Explanation subQueryScore) throws IOException {
+                        return Explanation.match((float)runAsDouble(), "a+b+c", subQueryScore);
+                    }
+
+                    Map<String, Double> vars = new HashMap<>();
+                    @Override
+                    public void setDocument(int doc) {
+                        // do nothing, this is just one doc
+                    }
+
+                    @Override
+                    public void setSource(Map<String, Object> source) {
+                        // not sure what to do here
+                    }
+
+                    @Override
+                    public long runAsLong() {
+                        return 0;
+                    }
+
+                    @Override
+                    public double runAsDouble() {
+                        double score = 0;
+                        for (Map.Entry<String, Double> var : vars.entrySet()) {
+                            score += var.getValue();
+                        }
+                        return score;
+                    }
+
+                    @Override
+                    public void setNextVar(String name, Object value) {
+                        assert value instanceof Number;
+                        vars.put(name, ((Number) value).doubleValue());
+                    }
+
+                    @Override
+                    public Object run() {
+                        return null;
+                    }
+
+                    @Override
+                    public void setScorer(Scorer scorer) {
+                        // don't need the scorer - we just set the variable _score somewhere else?
+                    }
+                };
+            }
+
+            @Override
+            public boolean needsScores() {
+                return true;
+            }
+        };
+
+        FiltersFunctionScoreQuery funcQuery = new FiltersFunctionScoreQuery(new MatchAllDocsQuery(), ScoreMode.SCRIPT, new
+            FiltersFunctionScoreQuery.CombineScoreScript(new Script("a+b+c"), searchScript),
+            filterFunctions, Float.MAX_VALUE, 0.0f, CombineFunction.SUM);
+
+        TopDocs topDocsWithWeights = searcher.search(funcQuery, 1);
+        assertThat(topDocsWithWeights.scoreDocs[0].score, equalTo(7.0f));
+        Explanation explanation = searcher.explain(funcQuery, 0);
+        assertThat(explanation.toString(), containsString("a+b+c"));
+
     }
 
     public void testSimpleWeightedFunction() throws IOException, ExecutionException, InterruptedException {

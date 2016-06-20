@@ -28,6 +28,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.script.ExplainableSearchScript;
 import org.elasticsearch.script.LeafSearchScript;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.SearchScript;
@@ -41,6 +42,8 @@ import java.util.*;
  */
 public class FiltersFunctionScoreQuery extends Query {
 
+
+
     public static class FilterFunction {
         public final Query filter;
         public final ScoreFunction function;
@@ -50,6 +53,7 @@ public class FiltersFunctionScoreQuery extends Query {
         public FilterFunction(Query filter, ScoreFunction function) {
             this(filter, function, "");
         }
+
         public FilterFunction(Query filter, ScoreFunction function, String varName) {
             this.filter = filter;
             this.function = function;
@@ -74,41 +78,41 @@ public class FiltersFunctionScoreQuery extends Query {
         }
     }
 
-    public static class ScoreScript {
+    static final class CannedScorer extends Scorer {
+        protected int docid;
+        protected float score;
 
-        static final class CannedScorer extends Scorer {
-            protected int docid;
-            protected float score;
-
-            public CannedScorer() {
-                super(null);
-            }
-
-            @Override
-            public int docID() {
-                return docid;
-            }
-
-            @Override
-            public float score() throws IOException {
-                return score;
-            }
-
-            @Override
-            public int freq() throws IOException {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public DocIdSetIterator iterator() {
-                throw new UnsupportedOperationException();
-            }
+        public CannedScorer() {
+            super(null);
         }
+
+        @Override
+        public int docID() {
+            return docid;
+        }
+
+        @Override
+        public float score() throws IOException {
+            return score;
+        }
+
+        @Override
+        public int freq() throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DocIdSetIterator iterator() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public static class CombineScoreScript {
 
         private final Script sScript;
         private final SearchScript script;
 
-        public ScoreScript(Script sScript, SearchScript script) {
+        public CombineScoreScript(Script sScript, SearchScript script) {
             this.sScript = sScript;
             this.script = script;
         }
@@ -144,7 +148,7 @@ public class FiltersFunctionScoreQuery extends Query {
     final Query subQuery;
     final FilterFunction[] filterFunctions;
     final ScoreMode scoreMode;
-    final ScoreScript scoreScript;
+    final CombineScoreScript scoreScript;
     final float maxBoost;
 
     private final Float minScore;
@@ -157,10 +161,11 @@ public class FiltersFunctionScoreQuery extends Query {
         this(subQuery,scoreMode, null, filterFunctions, maxBoost, minScore, combineFunction);
     }
 
-    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, ScoreScript scoreScript, FilterFunction[] filterFunctions, float maxBoost, Float minScore, CombineFunction combineFunction) {
+    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, CombineScoreScript searchScript, FilterFunction[] filterFunctions,
+                                     float maxBoost, Float minScore, CombineFunction combineFunction) {
         this.subQuery = subQuery;
         this.scoreMode = scoreMode;
-        this.scoreScript = scoreScript;
+        this.scoreScript = searchScript;
         this.filterFunctions = filterFunctions;
         this.maxBoost = maxBoost;
         this.combineFunction = combineFunction;
@@ -207,10 +212,11 @@ public class FiltersFunctionScoreQuery extends Query {
 
         final Weight subQueryWeight;
         final Weight[] filterWeights;
-        final ScoreScript scoreScript;
+        final CombineScoreScript scoreScript;
         final boolean needsScores;
 
-        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, ScoreScript scoreScript, boolean needsScores) throws IOException {
+        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, CombineScoreScript scoreScript, boolean needsScores)
+            throws IOException {
             super(parent);
             this.subQueryWeight = subQueryWeight;
             this.filterWeights = filterWeights;
@@ -248,8 +254,11 @@ public class FiltersFunctionScoreQuery extends Query {
                 Scorer filterScorer = filterWeights[i].scorer(context);
                 docSets[i] = Lucene.asSequentialAccessBits(context.reader().maxDoc(), filterScorer);
             }
+            LeafSearchScript leafScoreScript = null;
+            if (scoreScript != null) {
+                leafScoreScript = scoreScript.getLeafSearchScript(context);
+            }
 
-            final LeafSearchScript leafScoreScript = scoreScript.getLeafSearchScript(context);
             // here we need to initialize the script like we do in script score too, like
 
            /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
@@ -273,6 +282,10 @@ public class FiltersFunctionScoreQuery extends Query {
         @Override
         public Explanation explain(LeafReaderContext context, int doc) throws IOException {
 
+            LeafSearchScript leafScript = null;
+            if (scoreMode.equals(ScoreMode.SCRIPT)) {
+                leafScript = scoreScript.getLeafSearchScript(context);
+            }
             Explanation expl = subQueryWeight.explain(context, doc);
             if (!expl.isMatch()) {
                 return expl;
@@ -281,26 +294,50 @@ public class FiltersFunctionScoreQuery extends Query {
             List<Explanation> filterExplanations = new ArrayList<>();
             for (int i = 0; i < filterFunctions.length; ++i) {
                 Bits docSet = Lucene.asSequentialAccessBits(context.reader().maxDoc(),
-                        filterWeights[i].scorer(context));
+                    filterWeights[i].scorer(context));
                 if (docSet.get(doc)) {
                     FilterFunction filterFunction = filterFunctions[i];
                     Explanation functionExplanation = filterFunction.function.getLeafScoreFunction(context).explainScore(doc, expl);
                     double factor = functionExplanation.getValue();
                     float sc = CombineFunction.toFloat(factor);
                     Explanation filterExplanation = Explanation.match(sc, "function score, product of:",
-                            Explanation.match(1.0f, "match filter: " + filterFunction.filter.toString()), functionExplanation);
+                        Explanation.match(1.0f, "match filter: " + filterFunction.filter.toString()), functionExplanation);
                     filterExplanations.add(filterExplanation);
+                    if (leafScript != null) {
+                        leafScript.setNextVar(filterFunction.varName, filterExplanation.getValue());
+                    }
                 }
             }
+
             if (filterExplanations.size() > 0) {
                 FiltersFunctionFactorScorer scorer = functionScorer(context);
+                double score = scorer.computeScore(doc, expl.getValue());
+                String scoreModeExplanation = "[" + scoreMode.toString().toLowerCase(Locale.ROOT);
+                if (scoreMode.equals(ScoreMode.SCRIPT)) {
+                    if (leafScript instanceof ExplainableSearchScript) {
+                        leafScript.setDocument(doc);
+                        scoreModeExplanation += " with script:" + ((ExplainableSearchScript) leafScript).explain(expl).toString();
+
+                    } else {
+                        double scoreModeScore = leafScript.runAsDouble();
+                        String explanation = " with script:\"" + scoreScript.sScript + "\"";
+                        if (scoreScript.sScript.getParams() != null) {
+                            explanation += " and parameters: \n" + scoreScript.sScript.getParams().toString();
+                        }
+                        Explanation scoreExp = Explanation.match(
+                            expl.getValue(), "_score: ",
+                            expl);
+                        scoreModeExplanation += Explanation.match(
+                            CombineFunction.toFloat(scoreModeScore), explanation,
+                            scoreExp).toString();
+                    }
+
+                }
+                scoreModeExplanation += "]";
                 int actualDoc = scorer.iterator().advance(doc);
                 assert (actualDoc == doc);
-                double score = scorer.computeScore(doc, expl.getValue());
                 Explanation factorExplanation = Explanation.match(
-                        CombineFunction.toFloat(score),
-                        "function score, score mode [" + scoreMode.toString().toLowerCase(Locale.ROOT) + "]",
-                        filterExplanations);
+                    CombineFunction.toFloat(score), "function score, score mode " + scoreModeExplanation, filterExplanations);
                 expl = combineFunction.explain(expl, factorExplanation, maxBoost);
             }
             if (minScore != null && minScore > expl.getValue()) {
@@ -340,6 +377,7 @@ public class FiltersFunctionScoreQuery extends Query {
             // be costly to call score(), so we explicitly check if scores
             // are needed
             float subQueryScore = needsScores ? super.score() : 0f;
+
             double factor = computeScore(docId, subQueryScore);
             return scoreCombiner.combine(subQueryScore, factor, maxBoost);
         }
@@ -388,6 +426,7 @@ public class FiltersFunctionScoreQuery extends Query {
                     // This is just a dummy implementation
                     // TODO replace with real implementation
                     // make the script more complicated "_score * doc['popularity'].value / pow(param1, param2)"
+                    // here set next var and also _score - no need for canned scorer
                     for (int i = 0; i < filterFunctions.length; i++) {
                         scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
                     }
