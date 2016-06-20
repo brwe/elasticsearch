@@ -22,6 +22,7 @@ package org.elasticsearch.search.functionscore;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.lucene.search.function.FiltersFunctionScoreQuery.ScoreMode;
+import org.elasticsearch.index.fielddata.ScriptDocValues;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder.FilterFunctionBuilder;
 import org.elasticsearch.plugins.Plugin;
@@ -46,7 +47,6 @@ import static org.elasticsearch.index.query.QueryBuilders.functionScoreQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.fieldValueFactorFunction;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.weightFactorFunction;
-import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.scriptFunction;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertSearchResponse;
 import static org.hamcrest.Matchers.equalTo;
@@ -58,18 +58,15 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return pluginList(CustomNativeScriptFactory.TestPlugin.class);
+        return pluginList(CustomNativeScriptFactory.TestPlugin.class, CustomNativeScriptFactoryWithDocAccess.TestPlugin.class);
     }
 
     /**
-     * @throws IOException
-     *
-     * TODO:
-     *  test with missing value
-     *  test with parameters
-     *  test with query that acts as a filter
-     *  test with incorrect name (should reaise readable acception)
-     *
+     * @throws IOException TODO:
+     *                     test with missing value
+     *                     test with parameters
+     *                     test with query that acts as a filter
+     *                     test with incorrect name (should reaise readable acception)
      */
     public void testFunctionScoreWithScoreScript() throws IOException {
         assertAcked(prepareCreate("test").addMapping(
@@ -101,7 +98,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
 //            new FilterFunctionBuilder(matchAllQuery(), scriptFunction(script))
         };
 
-        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT);
+        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setCombineScript
+            (script);
 
         SearchResponse response = client().prepareSearch("test")
             .setExplain(randomBoolean())
@@ -119,10 +117,12 @@ public class FunctionScoreIT extends ESIntegTestCase {
                 return Collections.singletonList(new CustomNativeScriptFactory());
             }
         }
+
         @Override
         public ExecutableScript newScript(@Nullable Map<String, Object> params) {
             return new CustomScript(params);
         }
+
         @Override
         public boolean needsScores() {
             return false;
@@ -151,11 +151,99 @@ public class FunctionScoreIT extends ESIntegTestCase {
 //                    source.putAll(params);
 //                }
 //            }
-
             double alpha = ((Number) vars.get("alpha")).doubleValue();
-            double beta= ((Number) vars.get("beta")).doubleValue();
+            double beta = ((Number) vars.get("beta")).doubleValue();
 
-            return alpha/beta;
+            return alpha / beta;
+        }
+
+        @Override
+        public void setNextVar(String name, Object value) {
+            vars.put(name, value);
+        }
+
+    }
+
+    public void testFunctionScoreWithScoreScriptWithDocAccess() throws IOException {
+        assertAcked(prepareCreate("test").addMapping(
+            "type1",
+            jsonBuilder()
+                .startObject()
+                .startObject("type1")
+                .startObject("properties")
+                .startObject("test")
+                .field("type", "float")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+        ).get());
+        ensureYellow();
+
+        client().prepareIndex("test", "type1", "1").setSource("test", 5).get();
+
+        refresh();
+
+        // TODO test with FunctionBuilder that doesn't have a name - maybe it should fail unless they all have a name
+        Map<String, Object> params = new HashMap<>();
+        Script script = new Script("custom_with_doc_access", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+
+        FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+        };
+
+        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setCombineScript
+            (script);
+
+        SearchResponse response = client().prepareSearch("test")
+            .setExplain(randomBoolean())
+            .setQuery(queryBuilder)
+            .get();
+        assertSearchResponse(response);
+        assertThat(response.getHits().getAt(0).score(), equalTo(12f));
+    }
+
+
+    public static class CustomNativeScriptFactoryWithDocAccess implements NativeScriptFactory {
+        public static class TestPlugin extends Plugin implements ScriptPlugin {
+            @Override
+            public List<NativeScriptFactory> getNativeScripts() {
+                return Collections.singletonList(new CustomNativeScriptFactoryWithDocAccess());
+            }
+        }
+
+        @Override
+        public ExecutableScript newScript(@Nullable Map<String, Object> params) {
+            return new CustomScriptWithDocAccess(params);
+        }
+
+        @Override
+        public boolean needsScores() {
+            return false;
+        }
+
+        @Override
+        public String getName() {
+            return "custom_with_doc_access";
+        }
+    }
+
+    static class CustomScriptWithDocAccess extends AbstractSearchScript {
+
+        private Map<String, Object> vars = new HashMap<>();
+
+        public CustomScriptWithDocAccess(Map<String, Object> params) {
+
+        }
+
+        @Override
+        public Object run() {
+            double score = 0;
+            for (Map.Entry<String, Object> entry : vars.entrySet()) {
+                score += ((Number) entry.getValue()).doubleValue();
+            }
+            return score + ((Number) ((ScriptDocValues) doc().get("test")).getValues().get(0)).doubleValue();
         }
 
         @Override

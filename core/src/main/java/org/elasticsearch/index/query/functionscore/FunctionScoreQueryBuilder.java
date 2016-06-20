@@ -363,6 +363,11 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         return combineScript;
     }
 
+    public FunctionScoreQueryBuilder setCombineScript(Script combineScript) {
+        this.combineScript = combineScript;
+        return this;
+    }
+
     /**
      * Function to be associated with an optional filter, meaning it will be executed only for the documents
      * that match the given filter.
