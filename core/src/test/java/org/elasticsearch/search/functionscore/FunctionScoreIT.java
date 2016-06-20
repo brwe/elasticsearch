@@ -25,12 +25,15 @@ import org.elasticsearch.common.lucene.search.function.FiltersFunctionScoreQuery
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder.FilterFunctionBuilder;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.plugins.ScriptPlugin;
 import org.elasticsearch.script.*;
 import org.elasticsearch.test.ESIntegTestCase;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -99,17 +102,10 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
 
     public static class CustomNativeScriptFactory implements NativeScriptFactory {
-        public static class TestPlugin extends Plugin {
+        public static class TestPlugin extends Plugin implements ScriptPlugin {
             @Override
-            public String name() {
-                return "mock-native-script";
-            }
-            @Override
-            public String description() {
-                return "a mock native script for testing";
-            }
-            public void onModule(ScriptModule scriptModule) {
-                scriptModule.registerScript("custom", CustomNativeScriptFactory.class);
+            public List<NativeScriptFactory> getNativeScripts() {
+                return Collections.singletonList(new CustomNativeScriptFactory());
             }
         }
         @Override
@@ -119,6 +115,11 @@ public class FunctionScoreIT extends ESIntegTestCase {
         @Override
         public boolean needsScores() {
             return false;
+        }
+
+        @Override
+        public String getName() {
+            return "mock-native-script";
         }
     }
 
