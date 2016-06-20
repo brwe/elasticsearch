@@ -85,7 +85,7 @@ public class FunctionScoreIT extends ESIntegTestCase {
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
             new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
             new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
-            new FilterFunctionBuilder(matchAllQuery(), scriptFunction(script))
+//            new FilterFunctionBuilder(matchAllQuery(), scriptFunction(script))
         };
 
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT);
@@ -132,15 +132,18 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
         @Override
         public Object run() {
-            if (vars.containsKey("ctx") && vars.get("ctx") instanceof Map) {
-                Map ctx = (Map) vars.get("ctx");
-                if (ctx.containsKey("_source") && ctx.get("_source") instanceof Map) {
-                    Map source = (Map) ctx.get("_source");
-                    source.putAll(params);
-                }
-            }
-            // return value does not matter, the UpdateHelper class
-            return 1;
+//            if (vars.containsKey("ctx") && vars.get("ctx") instanceof Map) {
+//                Map ctx = (Map) vars.get("ctx");
+//                if (ctx.containsKey("_source") && ctx.get("_source") instanceof Map) {
+//                    Map source = (Map) ctx.get("_source");
+//                    source.putAll(params);
+//                }
+//            }
+
+            double alpha = ((Double) vars.get("alpha")).doubleValue();
+            double beta= ((Double) vars.get("beta")).doubleValue();
+
+            return alpha/beta;
         }
 
         @Override

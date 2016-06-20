@@ -34,6 +34,7 @@ import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.script.LeafSearchScript;
+import org.elasticsearch.script.Script;
 import org.elasticsearch.script.SearchScript;
 
 import java.io.IOException;
@@ -78,6 +79,19 @@ public class FiltersFunctionScoreQuery extends Query {
         }
     }
 
+    public static class ScoreScript {
+        private final Script sScript;
+        private final SearchScript script;
+
+        public ScoreScript(Script sScript, SearchScript script) {
+            this.sScript = sScript;
+            this.script = script;
+        }
+
+        public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
+            return script.getLeafSearchScript(context);
+        }
+    }
     public enum ScoreMode implements Writeable {
         FIRST, AVG, MAX, SUM, MIN, MULTIPLY, SCRIPT;
 
@@ -102,7 +116,7 @@ public class FiltersFunctionScoreQuery extends Query {
     final Query subQuery;
     final FilterFunction[] filterFunctions;
     final ScoreMode scoreMode;
-    final SearchScript score_script;
+    final ScoreScript scoreScript;
     final float maxBoost;
 
     private final Float minScore;
@@ -115,10 +129,10 @@ public class FiltersFunctionScoreQuery extends Query {
         this(subQuery,scoreMode, null, filterFunctions, maxBoost, minScore, combineFunction);
     }
 
-    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, SearchScript score_script, FilterFunction[] filterFunctions, float maxBoost, Float minScore, CombineFunction combineFunction) {
+    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, ScoreScript scoreScript, FilterFunction[] filterFunctions, float maxBoost, Float minScore, CombineFunction combineFunction) {
         this.subQuery = subQuery;
         this.scoreMode = scoreMode;
-        this.score_script = score_script;
+        this.scoreScript = scoreScript;
         this.filterFunctions = filterFunctions;
         this.maxBoost = maxBoost;
         this.combineFunction = combineFunction;
@@ -158,21 +172,21 @@ public class FiltersFunctionScoreQuery extends Query {
             filterWeights[i] = searcher.createNormalizedWeight(filterFunctions[i].filter, false);
         }
         Weight subQueryWeight = subQuery.createWeight(searcher, subQueryNeedsScores);
-        return new CustomBoostFactorWeight(this, subQueryWeight, filterWeights, score_script, subQueryNeedsScores);
+        return new CustomBoostFactorWeight(this, subQueryWeight, filterWeights, scoreScript, subQueryNeedsScores);
     }
 
     class CustomBoostFactorWeight extends Weight {
 
         final Weight subQueryWeight;
         final Weight[] filterWeights;
-        final SearchScript score_script;
+        final ScoreScript scoreScript;
         final boolean needsScores;
 
-        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, SearchScript score_script, boolean needsScores) throws IOException {
+        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, ScoreScript scoreScript, boolean needsScores) throws IOException {
             super(parent);
             this.subQueryWeight = subQueryWeight;
             this.filterWeights = filterWeights;
-            this.score_script = score_script;  // TODO - should this be a Weight? Probably so in order to reflect needs_scores
+            this.scoreScript = scoreScript;  // TODO - should this be a Weight? Probably so in order to reflect needs_scores
             this.needsScores = needsScores;
         }
 
@@ -207,7 +221,7 @@ public class FiltersFunctionScoreQuery extends Query {
                 docSets[i] = Lucene.asSequentialAccessBits(context.reader().maxDoc(), filterScorer);
             }
 
-            final LeafSearchScript leafScoreScript = score_script.getLeafSearchScript(context);
+            final LeafSearchScript leafScoreScript = scoreScript.getLeafSearchScript(context);
             // here we need to initialize the script like we do in script score too, like
 
            /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
@@ -345,15 +359,12 @@ public class FiltersFunctionScoreQuery extends Query {
                 case SCRIPT:
                     // This is just a dummy implementation
                     // TODO replace with real implementation
-                    Map<String, LeafScoreFunction> scoreMap = new HashMap<>();
                     // make the script more complicated "_score * doc['popularity'].value / pow(param1, param2)"
                     for (int i = 0; i < filterFunctions.length; i++) {
-                        scoreMap.put(filterFunctions[i].varName, functions[i]);
-                        if (docSets[i].get(docId)) {
-                            factor *= functions[i].score(docId, subQueryScore);
-                        }
+                        scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
                     }
-                    factor = scoreMap.get("alpha").score(docId, subQueryScore)/scoreMap.get("beta").score(docId, subQueryScore);
+                    factor = scoreScript.runAsDouble();
+
                     break;
                 default: // Avg / Total
                     double totalFactor = 0.0f;

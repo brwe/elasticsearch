@@ -330,20 +330,21 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             }
             return new FunctionScoreQuery(query, function, minScore, combineFunction, maxBoost);
         }
-        // in all other cases we create a FiltersFunctionScoreQuery
 
+        // in all other cases we create a FiltersFunctionScoreQuery
         // TODO this is scratch score_script code to test functionality - replace it soon with a parsed script from the user
         // sub-TODO see ScriptScoreFunctionBuilder for all the other pieces I need to implement like `doWriteTo`
         // sub-TODO see ScriptScoreFunction for a class I probably need to wrap my script with rather than passing in a SearchScript and a Script seperately for explain
         Map<String, Object> params = new HashMap<>();
-        Script scoreScript = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+        ScoreScriptBuilder scoreScriptBuilder = new ScoreScriptBuilder(
+            new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params)
+        );
 
-        SearchScript searchScoreScript = context.getScriptService().search(context.lookup(), scoreScript, ScriptContext.Standard.SEARCH,
-            Collections.emptyMap(), context.getClusterState());
+        FiltersFunctionScoreQuery.ScoreScript scoreScript = scoreScriptBuilder.toScoreScript(context);
         // END TODO
 
         CombineFunction boostMode = this.boostMode == null ? DEFAULT_BOOST_MODE : this.boostMode;
-        return new FiltersFunctionScoreQuery(query, scoreMode, searchScoreScript, filterFunctions, maxBoost, minScore, boostMode);
+        return new FiltersFunctionScoreQuery(query, scoreMode, scoreScript, filterFunctions, maxBoost, minScore, boostMode);
     }
 
     public Script getCombineScript() {
@@ -446,6 +447,27 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             return this;
         }
     }
+
+    private static class ScoreScriptBuilder {
+        Script script;
+
+        public ScoreScriptBuilder(Script script) {
+            this.script = script;
+        }
+
+        public FiltersFunctionScoreQuery.ScoreScript toScoreScript(QueryShardContext context) {
+            SearchScript searchScript = context.getScriptService().search(context.lookup(), script, ScriptContext.Standard.SEARCH,
+                Collections.emptyMap(), context.getClusterState());
+
+            return new FiltersFunctionScoreQuery.ScoreScript(script, searchScript);
+
+        }
+
+        // TODO add doXContext stuff here
+
+
+    }
+
 
     @Override
     protected QueryBuilder doRewrite(QueryRewriteContext queryRewriteContext) throws IOException {
