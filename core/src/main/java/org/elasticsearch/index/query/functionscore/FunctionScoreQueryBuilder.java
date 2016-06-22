@@ -96,6 +96,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     private Float minScore = null;
 
     private final FilterFunctionBuilder[] filterFunctionBuilders;
+    private final ScoreScriptBuilder scoreScriptBuilder;
+
     private Script combineScript;
 
     /**
@@ -104,7 +106,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
      * @param query the query that needs to be custom scored
      */
     public FunctionScoreQueryBuilder(QueryBuilder query) {
-        this(query, new FilterFunctionBuilder[0]);
+        this(query, new FilterFunctionBuilder[0], null);
     }
 
     /**
@@ -113,7 +115,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
      * @param filterFunctionBuilders the filters and functions
      */
     public FunctionScoreQueryBuilder(FilterFunctionBuilder[] filterFunctionBuilders) {
-        this(new MatchAllQueryBuilder(), filterFunctionBuilders);
+        this(new MatchAllQueryBuilder(), filterFunctionBuilders, null);
     }
 
     /**
@@ -122,7 +124,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
      * @param scoreFunctionBuilder score function that is executed
      */
     public FunctionScoreQueryBuilder(ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-        this(new MatchAllQueryBuilder(), new FilterFunctionBuilder[]{new FilterFunctionBuilder(scoreFunctionBuilder)});
+        this(new MatchAllQueryBuilder(), new FilterFunctionBuilder[]{new FilterFunctionBuilder(scoreFunctionBuilder)}, null);
     }
 
     /**
@@ -132,7 +134,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
      * @param scoreFunctionBuilder score function that is executed
      */
     public FunctionScoreQueryBuilder(QueryBuilder query, ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-        this(query, new FilterFunctionBuilder[]{new FilterFunctionBuilder(scoreFunctionBuilder)});
+        this(query, new FilterFunctionBuilder[]{new FilterFunctionBuilder(scoreFunctionBuilder)}, null);
     }
 
     /**
@@ -141,7 +143,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
      * @param query the query that defines which documents the function_score query will be executed on.
      * @param filterFunctionBuilders the filters and functions
      */
-    public FunctionScoreQueryBuilder(QueryBuilder query, FilterFunctionBuilder[] filterFunctionBuilders) {
+    public FunctionScoreQueryBuilder(QueryBuilder query, FilterFunctionBuilder[] filterFunctionBuilders,
+                                     ScoreScriptBuilder scoreScriptBuilder) {
         if (query == null) {
             throw new IllegalArgumentException("function_score: query must not be null");
         }
@@ -155,6 +158,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
         this.query = query;
         this.filterFunctionBuilders = filterFunctionBuilders;
+        this.scoreScriptBuilder = scoreScriptBuilder;
     }
 
     /**
@@ -168,6 +172,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         minScore = in.readOptionalFloat();
         boostMode = in.readOptionalWriteable(CombineFunction::readFromStream);
         scoreMode = FiltersFunctionScoreQuery.ScoreMode.readFromStream(in);
+        scoreScriptBuilder = ScoreScriptBuilder.readFromStream(in);
     }
 
     @Override
@@ -178,6 +183,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         out.writeOptionalFloat(minScore);
         out.writeOptionalWriteable(boostMode);
         scoreMode.writeTo(out);
+        scoreScriptBuilder.writeTo(out);
     }
 
     /**
@@ -353,10 +359,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         // END TODO
 
         CombineFunction boostMode = this.boostMode == null ? DEFAULT_BOOST_MODE : this.boostMode;
-        return new FiltersFunctionScoreQuery(query, scoreMode, new FiltersFunctionScoreQuery.CombineScoreScript(scoreScriptBuilder
-            .script, searchScript), filterFunctions, maxBoost,
-            minScore,
-            boostMode);
+        return new FiltersFunctionScoreQuery(query, scoreMode, scoreScriptBuilder.toScoreScript(context), filterFunctions, maxBoost,
+            minScore, boostMode);
     }
 
     public Script getCombineScript() {
@@ -477,9 +481,15 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                 Collections.emptyMap(), context.getClusterState());
 
             return new FiltersFunctionScoreQuery.CombineScoreScript(script, searchScript);
-
         }
 
+        public static ScoreScriptBuilder readFromStream(StreamInput in) {
+            return null; //TODO implement
+        }
+
+        public static void writeTo(StreamOutput out) throws IOException {
+            //TODO implement
+        }
         // TODO add doXContext stuff here
 
 
@@ -497,7 +507,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             rewrittenBuilders[i] = rewrite;
         }
         if (queryBuilder != query || rewritten) {
-            FunctionScoreQueryBuilder newQueryBuilder = new FunctionScoreQueryBuilder(queryBuilder, rewrittenBuilders);
+            FunctionScoreQueryBuilder newQueryBuilder = new FunctionScoreQueryBuilder(queryBuilder, rewrittenBuilders, null);
             newQueryBuilder.scoreMode = scoreMode;
             newQueryBuilder.minScore = minScore;
             newQueryBuilder.maxBoost = maxBoost;
@@ -619,7 +629,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
 
         FunctionScoreQueryBuilder functionScoreQueryBuilder = new FunctionScoreQueryBuilder(query,
-                filterFunctionBuilders.toArray(new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()]));
+                filterFunctionBuilders.toArray(new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()]), null);
         if (combineFunction != null) {
             functionScoreQueryBuilder.boostMode(combineFunction);
         }

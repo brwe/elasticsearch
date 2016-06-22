@@ -125,6 +125,8 @@ public class FiltersFunctionScoreQuery extends Query {
     }
 
     public static class CombineScoreScript {
+        // TODO per https://github.com/elastic/elasticsearch/issues/17116#issuecomment-223044222
+        // should we call this ScoreScript? This is a little less confusing to me since we also have a "combineFunction"
 
         private final Script sScript;
         private final SearchScript script;

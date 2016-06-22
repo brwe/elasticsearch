@@ -410,7 +410,7 @@ public abstract class QueryBuilders {
      * @return the function score query
      */
     public static FunctionScoreQueryBuilder functionScoreQuery(QueryBuilder queryBuilder, FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionBuilders) {
-        return new FunctionScoreQueryBuilder(queryBuilder, filterFunctionBuilders);
+        return new FunctionScoreQueryBuilder(queryBuilder, filterFunctionBuilders, null);
     }
 
     /**
