@@ -385,7 +385,7 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
             "          \"var_name\": \"score_b\"\n" +
             "        }\n" +
             "      ],\n" +
-            "      \"combine_script\": {\n" +
+            "      \"score_script\": {\n" +
             "        \"lang\": \"mockscript\",\n" +
             "        \"inline\": \"score_a*score_b+42+c\",\n" +
             "        \"params\": {\n" +

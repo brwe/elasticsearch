@@ -124,14 +124,11 @@ public class FiltersFunctionScoreQuery extends Query {
         }
     }
 
-    public static class CombineScoreScript {
-        // TODO per https://github.com/elastic/elasticsearch/issues/17116#issuecomment-223044222
-        // should we call this ScoreScript? This is a little less confusing to me since we also have a "combineFunction"
-
+    public static class ScoreScript {
         private final Script sScript;
         private final SearchScript script;
 
-        public CombineScoreScript(Script sScript, SearchScript script) {
+        public ScoreScript(Script sScript, SearchScript script) {
             this.sScript = sScript;
             this.script = script;
         }
@@ -167,7 +164,7 @@ public class FiltersFunctionScoreQuery extends Query {
     final Query subQuery;
     final FilterFunction[] filterFunctions;
     final ScoreMode scoreMode;
-    final CombineScoreScript scoreScript;
+    final ScoreScript scoreScript;
     final float maxBoost;
 
     private final Float minScore;
@@ -180,7 +177,7 @@ public class FiltersFunctionScoreQuery extends Query {
         this(subQuery,scoreMode, null, filterFunctions, maxBoost, minScore, combineFunction);
     }
 
-    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, CombineScoreScript searchScript, FilterFunction[] filterFunctions,
+    public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, ScoreScript searchScript, FilterFunction[] filterFunctions,
                                      float maxBoost, Float minScore, CombineFunction combineFunction) {
         this.subQuery = subQuery;
         this.scoreMode = scoreMode;
@@ -231,10 +228,10 @@ public class FiltersFunctionScoreQuery extends Query {
 
         final Weight subQueryWeight;
         final Weight[] filterWeights;
-        final CombineScoreScript scoreScript;
+        final ScoreScript scoreScript;
         final boolean needsScores;
 
-        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, CombineScoreScript scoreScript, boolean needsScores)
+        public CustomBoostFactorWeight(Query parent, Weight subQueryWeight, Weight[] filterWeights, ScoreScript scoreScript, boolean needsScores)
             throws IOException {
             super(parent);
             this.subQueryWeight = subQueryWeight;

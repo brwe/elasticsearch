@@ -76,7 +76,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 
@@ -554,7 +553,7 @@ public class FunctionScoreTests extends ESTestCase {
         };
 
         FiltersFunctionScoreQuery funcQuery = new FiltersFunctionScoreQuery(new MatchAllDocsQuery(), ScoreMode.SCRIPT, new
-            FiltersFunctionScoreQuery.CombineScoreScript(new Script("Man, I wish testing this stuff was easier..."), searchScript),
+            FiltersFunctionScoreQuery.ScoreScript(new Script("Man, I wish testing this stuff was easier..."), searchScript),
             filterFunctions, Float.MAX_VALUE, 0.0f, CombineFunction.SUM);
 
         TopDocs topDocsWithWeights = searcher.search(funcQuery, 1);
@@ -634,7 +633,7 @@ public class FunctionScoreTests extends ESTestCase {
         };
 
         FiltersFunctionScoreQuery funcQuery = new FiltersFunctionScoreQuery(new MatchAllDocsQuery(), ScoreMode.SCRIPT, new
-            FiltersFunctionScoreQuery.CombineScoreScript(new Script("a+b+c"), searchScript),
+            FiltersFunctionScoreQuery.ScoreScript(new Script("a+b+c"), searchScript),
             filterFunctions, Float.MAX_VALUE, 0.0f, CombineFunction.SUM);
 
         Explanation explanation = searcher.explain(funcQuery, 0);

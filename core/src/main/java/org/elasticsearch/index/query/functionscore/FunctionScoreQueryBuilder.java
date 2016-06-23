@@ -44,17 +44,14 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryRewriteContext;
 import org.elasticsearch.index.query.QueryShardContext;
-import org.elasticsearch.script.NativeScriptEngineService;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptContext;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.SearchScript;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -79,7 +76,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     public static final ParseField FILTER_FIELD = new ParseField("filter");
     public static final ParseField FUNCTIONS_FIELD = new ParseField("functions");
     public static final ParseField SCORE_MODE_FIELD = new ParseField("score_mode");
-    public static final ParseField COMBINE_SCRIPT_FIELD = new ParseField("combine_script"); //TODO combine_script or score_script?
+    public static final ParseField SCORE_SCRIPT_FIELD = new ParseField("score_script");
     public static final ParseField BOOST_MODE_FIELD = new ParseField("boost_mode");
     public static final ParseField MAX_BOOST_FIELD = new ParseField("max_boost");
     public static final ParseField MIN_SCORE_FIELD = new ParseField("min_score");
@@ -352,7 +349,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         return scoreScriptBuilder.script;
     }
 
-    public FunctionScoreQueryBuilder setCombineScript(Script combineScript) {
+    public FunctionScoreQueryBuilder setScoreScript(Script scoreScript) {
         //TODO implement or remove - currently the combineScript is really the Script inside of ScoreScriptBuilder and
         // a ScoreScriptBuilder is final so it can only be created in the Constructor. I did this because query and
         // filterFunctionBuilders were final for some reason
@@ -453,18 +450,18 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
     }
 
-    private static class ScoreScriptBuilder { // TODO combineScript or scoreScript?
+    private static class ScoreScriptBuilder {
         Script script;
 
         public ScoreScriptBuilder(Script script) {
             this.script = script;
         }
 
-        public FiltersFunctionScoreQuery.CombineScoreScript toScoreScript(QueryShardContext context) { // TODO combineScript or scoreScript?
+        public FiltersFunctionScoreQuery.ScoreScript toScoreScript(QueryShardContext context) {
             SearchScript searchScript = context.getScriptService().search(context.lookup(), script, ScriptContext.Standard.SEARCH,
                 Collections.emptyMap(), context.getClusterState());
 
-            return new FiltersFunctionScoreQuery.CombineScoreScript(script, searchScript);
+            return new FiltersFunctionScoreQuery.ScoreScript(script, searchScript);
         }
 
         public static ScoreScriptBuilder readFromStream(StreamInput in) {
@@ -534,7 +531,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                                 NAME);
                     }
                     query = parseContext.parseInnerQueryBuilder().orElse(QueryBuilders.matchAllQuery());
-                } else if (parseContext.getParseFieldMatcher().match(currentFieldName, COMBINE_SCRIPT_FIELD)) {
+                } else if (parseContext.getParseFieldMatcher().match(currentFieldName, SCORE_SCRIPT_FIELD)) {
                     Script script = Script.parse(parser, parseContext.getParseFieldMatcher());
                     scoreScriptBuilder = new ScoreScriptBuilder(script);
                 } else {
@@ -629,16 +626,14 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT && scoreScriptBuilder == null) {
             // TODO what should the first arg be here?
             // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
-            // TODO combine_script vs score_script?
             throw new ParsingException(parser.getTokenLocation(),
-                "if [score_mode] is [script] then a script must be specified in the [combine_script] field.");
+                "if [score_mode] is [script] then a script must be specified in the [score_script] field.");
         }
         if (scoreScriptBuilder != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
             // TODO what should the first arg be here?
             // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
-            // TODO combine_script vs score_script?
             throw new ParsingException(parser.getTokenLocation(),
-                "a [combine_script] may only be specified for [score_mode = script].");
+                "a [score_script] may only be specified for [score_mode = script].");
         }
 
         return Optional.of(functionScoreQueryBuilder);

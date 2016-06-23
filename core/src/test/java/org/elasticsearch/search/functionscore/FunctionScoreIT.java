@@ -104,7 +104,7 @@ public class FunctionScoreIT extends ESIntegTestCase {
 //            new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params)
 //        );
 
-        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setCombineScript
+        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setScoreScript
             (script);
 
         SearchResponse response = client().prepareSearch("test")
@@ -199,7 +199,7 @@ public class FunctionScoreIT extends ESIntegTestCase {
             new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
         };
 
-        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setCombineScript
+        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setScoreScript
             (script);
 
         SearchResponse response = client().prepareSearch("test")
