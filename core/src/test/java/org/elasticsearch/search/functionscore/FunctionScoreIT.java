@@ -98,6 +98,12 @@ public class FunctionScoreIT extends ESIntegTestCase {
 //            new FilterFunctionBuilder(matchAllQuery(), scriptFunction(script))
         };
 
+// TODO - below make queryBuilder take a script
+//        Map<String, Object> params = new HashMap<>();
+//        ScoreScriptBuilder scoreScriptBuilder = new ScoreScriptBuilder(
+//            new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params)
+//        );
+
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders).scoreMode(ScoreMode.SCRIPT).setCombineScript
             (script);
 

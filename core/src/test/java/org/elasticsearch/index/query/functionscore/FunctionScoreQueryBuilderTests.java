@@ -393,7 +393,8 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
             "        }\n" +
             "      },\n" +
             "      \"boost_mode\": \"replace\"\n" +
-            "    }";
+            "    }\n" +
+            "}";
 
         FunctionScoreQueryBuilder queryBuilder = (FunctionScoreQueryBuilder)parseQuery(functionScoreQuery);
         assertThat(queryBuilder.scoreMode(), equalTo(FiltersFunctionScoreQuery.ScoreMode.SCRIPT));

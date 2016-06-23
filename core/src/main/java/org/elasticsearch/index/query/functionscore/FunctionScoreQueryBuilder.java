@@ -74,10 +74,12 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     static final String MISPLACED_FUNCTION_MESSAGE_PREFIX = "you can either define [functions] array or a single function, not both. ";
 
     public static final ParseField WEIGHT_FIELD = new ParseField("weight");
+    public static final ParseField VAR_NAME_FIELD = new ParseField("var_name");
     public static final ParseField QUERY_FIELD = new ParseField("query");
     public static final ParseField FILTER_FIELD = new ParseField("filter");
     public static final ParseField FUNCTIONS_FIELD = new ParseField("functions");
     public static final ParseField SCORE_MODE_FIELD = new ParseField("score_mode");
+    public static final ParseField COMBINE_SCRIPT_FIELD = new ParseField("combine_script"); //TODO combine_script or score_script?
     public static final ParseField BOOST_MODE_FIELD = new ParseField("boost_mode");
     public static final ParseField MAX_BOOST_FIELD = new ParseField("max_boost");
     public static final ParseField MIN_SCORE_FIELD = new ParseField("min_score");
@@ -97,8 +99,6 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
 
     private final FilterFunctionBuilder[] filterFunctionBuilders;
     private final ScoreScriptBuilder scoreScriptBuilder;
-
-    private Script combineScript;
 
     /**
      * Creates a function_score query without functions
@@ -343,32 +343,19 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
 
         // in all other cases we create a FiltersFunctionScoreQuery
-        // TODO this is scratch score_script code to test functionality - replace it soon with a parsed script from the user
-        // sub-TODO see ScriptScoreFunctionBuilder for all the other pieces I need to implement like `doWriteTo`
-        // sub-TODO see ScriptScoreFunction for a class I probably need to wrap my script with rather than passing in a SearchScript and a
-        // Script seperately for explain
-        Map<String, Object> params = new HashMap<>();
-        ScoreScriptBuilder scoreScriptBuilder = new ScoreScriptBuilder(
-            new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params)
-        );
-
-        SearchScript searchScript = context.getScriptService().search(context.lookup(),  new Script("custom",
-            ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params),
-            ScriptContext.Standard.SEARCH,
-            Collections.emptyMap(), context.getClusterState());
-        // END TODO
-
         CombineFunction boostMode = this.boostMode == null ? DEFAULT_BOOST_MODE : this.boostMode;
         return new FiltersFunctionScoreQuery(query, scoreMode, scoreScriptBuilder.toScoreScript(context), filterFunctions, maxBoost,
             minScore, boostMode);
     }
 
     public Script getCombineScript() {
-        return combineScript;
+        return scoreScriptBuilder.script;
     }
 
     public FunctionScoreQueryBuilder setCombineScript(Script combineScript) {
-        this.combineScript = combineScript;
+        //TODO implement or remove - currently the combineScript is really the Script inside of ScoreScriptBuilder and
+        // a ScoreScriptBuilder is final so it can only be created in the Constructor. I did this because query and
+        // filterFunctionBuilders were final for some reason
         return this;
     }
 
@@ -382,11 +369,11 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         private final String varName;
 
         public FilterFunctionBuilder(ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-            this(new MatchAllQueryBuilder(), scoreFunctionBuilder, "");
+            this(new MatchAllQueryBuilder(), scoreFunctionBuilder, null);
         }
 
         public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-            this(filter, scoreFunctionBuilder, "");
+            this(filter, scoreFunctionBuilder, null);
         }
 
         public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunction, String varName) {
@@ -395,9 +382,6 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             }
             if (scoreFunction == null) {
                 throw new IllegalArgumentException("function_score: function must not be null");
-            }
-            if (varName == null) {
-                throw new IllegalArgumentException("function_score: varName must not be null");
             }
             this.filter = filter;
             this.scoreFunction = scoreFunction;
@@ -469,14 +453,14 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
     }
 
-    private static class ScoreScriptBuilder {
+    private static class ScoreScriptBuilder { // TODO combineScript or scoreScript?
         Script script;
 
         public ScoreScriptBuilder(Script script) {
             this.script = script;
         }
 
-        public FiltersFunctionScoreQuery.CombineScoreScript toScoreScript(QueryShardContext context) {
+        public FiltersFunctionScoreQuery.CombineScoreScript toScoreScript(QueryShardContext context) { // TODO combineScript or scoreScript?
             SearchScript searchScript = context.getScriptService().search(context.lookup(), script, ScriptContext.Standard.SEARCH,
                 Collections.emptyMap(), context.getClusterState());
 
@@ -490,9 +474,6 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         public static void writeTo(StreamOutput out) throws IOException {
             //TODO implement
         }
-        // TODO add doXContext stuff here
-
-
     }
 
 
@@ -530,6 +511,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         String queryName = null;
 
         FiltersFunctionScoreQuery.ScoreMode scoreMode = FunctionScoreQueryBuilder.DEFAULT_SCORE_MODE;
+        ScoreScriptBuilder scoreScriptBuilder = null;
         float maxBoost = FunctionScoreQuery.DEFAULT_MAX_BOOST;
         Float minScore = null;
 
@@ -552,6 +534,9 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                                 NAME);
                     }
                     query = parseContext.parseInnerQueryBuilder().orElse(QueryBuilders.matchAllQuery());
+                } else if (parseContext.getParseFieldMatcher().match(currentFieldName, COMBINE_SCRIPT_FIELD)) {
+                    Script script = Script.parse(parser, parseContext.getParseFieldMatcher());
+                    scoreScriptBuilder = new ScoreScriptBuilder(script);
                 } else {
                     if (singleFunctionFound) {
                         throw new ParsingException(parser.getTokenLocation(),
@@ -573,7 +558,6 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                             .fromXContent(parseContext);
                     filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(scoreFunction));
                 }
-                // here also parse the script!
             } else if (token == XContentParser.Token.START_ARRAY) {
                 if (parseContext.getParseFieldMatcher().match(currentFieldName, FUNCTIONS_FIELD)) {
                     if (singleFunctionFound) {
@@ -629,7 +613,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
 
         FunctionScoreQueryBuilder functionScoreQueryBuilder = new FunctionScoreQueryBuilder(query,
-                filterFunctionBuilders.toArray(new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()]), null);
+            filterFunctionBuilders.toArray(new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()]),
+            scoreScriptBuilder);
         if (combineFunction != null) {
             functionScoreQueryBuilder.boostMode(combineFunction);
         }
@@ -641,10 +626,22 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         functionScoreQueryBuilder.boost(boost);
         functionScoreQueryBuilder.queryName(queryName);
 
-        // make sure that if score_mode is set to script then we have a script and that we do not have a script if score-mode is set to
-        // something different.
-        return Optional.of(functionScoreQueryBuilder);
+        if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT && scoreScriptBuilder == null) {
+            // TODO what should the first arg be here?
+            // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
+            // TODO combine_script vs score_script?
+            throw new ParsingException(parser.getTokenLocation(),
+                "if [score_mode] is [script] then a script must be specified in the [combine_script] field.");
+        }
+        if (scoreScriptBuilder != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
+            // TODO what should the first arg be here?
+            // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
+            // TODO combine_script vs score_script?
+            throw new ParsingException(parser.getTokenLocation(),
+                "a [combine_script] may only be specified for [score_mode = script].");
+        }
 
+        return Optional.of(functionScoreQueryBuilder);
     }
 
     private static void handleMisplacedFunctionsDeclaration(XContentLocation contentLocation, String errorString) {
@@ -662,6 +659,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             QueryBuilder filter = null;
             ScoreFunctionBuilder<?> scoreFunction = null;
             Float functionWeight = null;
+            String varName = null;
             if (token != XContentParser.Token.START_OBJECT) {
                 throw new ParsingException(parser.getTokenLocation(),
                         "failed to parse [{}]. malformed query, expected a [{}] while parsing functions but got a [{}] instead",
@@ -685,6 +683,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                     } else if (token.isValue()) {
                         if (parseContext.getParseFieldMatcher().match(currentFieldName, WEIGHT_FIELD)) {
                             functionWeight = parser.floatValue();
+                        } else if (parseContext.getParseFieldMatcher().match(currentFieldName, VAR_NAME_FIELD)) {
+                            varName = parser.text();
                         } else {
                             throw new ParsingException(parser.getTokenLocation(), "failed to parse [{}] query. field [{}] is not supported",
                                     NAME, currentFieldName);
@@ -706,7 +706,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                 throw new ParsingException(parser.getTokenLocation(),
                         "failed to parse [{}] query. an entry in functions list is missing a function.", NAME);
             }
-            filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(filter, scoreFunction));
+            filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(filter, scoreFunction, varName));
         }
         return currentFieldName;
     }
