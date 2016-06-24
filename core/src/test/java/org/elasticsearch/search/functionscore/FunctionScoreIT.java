@@ -61,13 +61,6 @@ public class FunctionScoreIT extends ESIntegTestCase {
         return pluginList(CustomNativeScriptFactory.TestPlugin.class, CustomNativeScriptFactoryWithDocAccess.TestPlugin.class);
     }
 
-    /**
-     * @throws IOException TODO:
-     *                     test with missing value
-     *                     test with parameters
-     *                     test with query that acts as a filter
-     *                     test with incorrect name (should reaise readable acception)
-     */
     public void testFunctionScoreWithScoreScript() throws IOException {
         assertAcked(prepareCreate("test").addMapping(
             "type1",
@@ -88,21 +81,14 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
         refresh();
 
-        // TODO test with FunctionBuilder that doesn't have a name - maybe it should fail unless they all have a name
         Map<String, Object> params = new HashMap<>();
         Script script = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
 
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
             new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
             new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
-//            new FilterFunctionBuilder(matchAllQuery(), scriptFunction(script))
         };
 
-// TODO - below make queryBuilder take a script
-//        Map<String, Object> params = new HashMap<>();
-//        ScoreScriptBuilder scoreScriptBuilder = new ScoreScriptBuilder(
-//            new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params)
-//        );
 
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders, script).scoreMode(ScoreMode.SCRIPT);
 
@@ -189,7 +175,6 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
         refresh();
 
-        // TODO test with FunctionBuilder that doesn't have a name - maybe it should fail unless they all have a name
         Map<String, Object> params = new HashMap<>();
         Script script = new Script("custom_with_doc_access", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
 

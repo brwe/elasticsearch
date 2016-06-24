@@ -61,9 +61,8 @@ public class FiltersFunctionScoreQuery extends Query {
         public final ScoreFunction function;
         public final String varName;
 
-        // TODO remove this function and convert all to the constructure with the name
         public FilterFunction(Query filter, ScoreFunction function) {
-            this(filter, function, "");
+            this(filter, function, null);
         }
 
         public FilterFunction(Query filter, ScoreFunction function, String varName) {
@@ -172,7 +171,6 @@ public class FiltersFunctionScoreQuery extends Query {
 
     final protected CombineFunction combineFunction;
 
-    // TODO this is only uses in tests and in FunctionScoreQueryBuilder - remove this.
     public FiltersFunctionScoreQuery(Query subQuery, ScoreMode scoreMode, FilterFunction[] filterFunctions, float maxBoost, Float minScore, CombineFunction combineFunction) {
         this(subQuery,scoreMode, null, filterFunctions, maxBoost, minScore, combineFunction);
     }
@@ -236,7 +234,7 @@ public class FiltersFunctionScoreQuery extends Query {
             super(parent);
             this.subQueryWeight = subQueryWeight;
             this.filterWeights = filterWeights;
-            this.scoreScript = scoreScript;  // TODO - should this be a Weight? Probably so in order to reflect needs_scores
+            this.scoreScript = scoreScript;
             this.needsScores = needsScores;
         }
 
@@ -447,16 +445,12 @@ public class FiltersFunctionScoreQuery extends Query {
                     }
                     break;
                 case SCRIPT:
-                    // This is just a dummy implementation
-                    // TODO replace with real implementation
-                    // make the script more complicated "_score * doc['popularity'].value / pow(param1, param2)"
                     for (int i = 0; i < filterFunctions.length; i++) {
                         scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
                     }
                     cannedScorer.docid = docId;
                     cannedScorer.score = subQueryScore;
                     factor = scoreScript.runAsDouble();
-
                     break;
                 default: // Avg / Total
                     double totalFactor = 0.0f;

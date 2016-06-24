@@ -391,7 +391,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         public FilterFunctionBuilder(StreamInput in) throws IOException {
             filter = in.readNamedWriteable(QueryBuilder.class);
             scoreFunction = in.readNamedWriteable(ScoreFunctionBuilder.class);
-            varName = in.readOptionalString();  // TODO make non-optional?
+            varName = in.readOptionalString();
         }
 
         @Override
@@ -599,16 +599,14 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         functionScoreQueryBuilder.queryName(queryName);
 
         if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT && scoreScript == null) {
-            // TODO what should the first arg be here?
-            // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
             throw new ParsingException(parser.getTokenLocation(),
-                "if [score_mode] is [script] then a script must be specified in the [score_script] field.");
+                "if [{}] is [{}] then a script must be specified in the [{}] field.",
+                SCORE_MODE_FIELD, FiltersFunctionScoreQuery.ScoreMode.SCRIPT, SCORE_SCRIPT_FIELD);
         }
         if (scoreScript != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
-            // TODO what should the first arg be here?
-            // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
             throw new ParsingException(parser.getTokenLocation(),
-                "a [score_script] may only be specified for [score_mode = script].");
+                "a [{}] may only be specified for [{} = {}].", SCORE_SCRIPT_FIELD, SCORE_MODE_FIELD,
+                FiltersFunctionScoreQuery.ScoreMode.SCRIPT);
         }
 
         return Optional.of(functionScoreQueryBuilder);

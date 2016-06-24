@@ -414,8 +414,7 @@ public class FunctionScoreTests extends ESTestCase {
             CombineFunction combineFunction, ScoreFunction... scoreFunctions) {
         FilterFunction[] filterFunctions = new FilterFunction[scoreFunctions.length];
         for (int i = 0; i < scoreFunctions.length; i++) {
-            filterFunctions[i] = new FiltersFunctionScoreQuery.FilterFunction(
-                new TermQuery(TERM), scoreFunctions[i]);
+            filterFunctions[i] = new FiltersFunctionScoreQuery.FilterFunction(new TermQuery(TERM), scoreFunctions[i]);
         }
         return new FiltersFunctionScoreQuery(new TermQuery(TERM), scoreMode, filterFunctions, Float.MAX_VALUE, Float.MAX_VALUE * -1,
                 combineFunction);
@@ -639,7 +638,11 @@ public class FunctionScoreTests extends ESTestCase {
         Explanation explanation = searcher.explain(funcQuery, 0);
         assertThat(explanation.toString(), equalTo("8.0 = sum of\n  1.0 = *:*, product of:\n    1.0 = boost\n    1.0 = queryNorm\n  7.0 =" +
             " min of:\n    7.0 = function score, score mode [script:7.0 = a+b+c+score(1.0)\n]\n      1.0 = function score (var_name: a), " +
-            "product of:\n        1.0 = match filter: *:*\n        1.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          1.0 = weight\n      2.0 = function score (var_name: b), product of:\n        1.0 = match filter: *:*\n        2.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          2.0 = weight\n      3.0 = function score (var_name: c), product of:\n        1.0 = match filter: *:*\n        3.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          3.0 = weight\n    3.4028235E38 = maxBoost\n"));
+            "product of:\n        1.0 = match filter: *:*\n        1.0 = product of:\n          1.0 = constant score 1.0 - no function " +
+            "provided\n          1.0 = weight\n      2.0 = function score (var_name: b), product of:\n        1.0 = match filter: " +
+            "*:*\n        2.0 = product of:\n          1.0 = constant score 1.0 - no function provided\n          2.0 = weight\n      " +
+            "3.0 = function score (var_name: c), product of:\n        1.0 = match filter: *:*\n        3.0 = product of:\n          " +
+            "1.0 = constant score 1.0 - no function provided\n          3.0 = weight\n    3.4028235E38 = maxBoost\n"));
     }
 
     public void testSimpleWeightedFunction() throws IOException, ExecutionException, InterruptedException {
