@@ -95,7 +95,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     private Float minScore = null;
 
     private final FilterFunctionBuilder[] filterFunctionBuilders;
-    private final ScoreScriptBuilder scoreScriptBuilder;
+    private final Script scoreScript;
 
     /**
      * Creates a function_score query without functions
@@ -141,7 +141,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
      * @param filterFunctionBuilders the filters and functions
      */
     public FunctionScoreQueryBuilder(QueryBuilder query, FilterFunctionBuilder[] filterFunctionBuilders,
-                                     ScoreScriptBuilder scoreScriptBuilder) {
+                                     Script scoreScript) {
         if (query == null) {
             throw new IllegalArgumentException("function_score: query must not be null");
         }
@@ -155,7 +155,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
         this.query = query;
         this.filterFunctionBuilders = filterFunctionBuilders;
-        this.scoreScriptBuilder = scoreScriptBuilder;
+        this.scoreScript = scoreScript;
     }
 
     /**
@@ -169,7 +169,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         minScore = in.readOptionalFloat();
         boostMode = in.readOptionalWriteable(CombineFunction::readFromStream);
         scoreMode = FiltersFunctionScoreQuery.ScoreMode.readFromStream(in);
-        scoreScriptBuilder = ScoreScriptBuilder.readFromStream(in);
+        scoreScript = in.readOptionalWriteable(Script::new);
     }
 
     @Override
@@ -180,7 +180,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         out.writeOptionalFloat(minScore);
         out.writeOptionalWriteable(boostMode);
         scoreMode.writeTo(out);
-        scoreScriptBuilder.writeTo(out);
+        out.writeOptionalWriteable(scoreScript);
     }
 
     /**
@@ -340,20 +340,20 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
 
         // in all other cases we create a FiltersFunctionScoreQuery
+        FiltersFunctionScoreQuery.ScoreScript filtFuncScoreQueryScoreScript = null;
+        if (scoreScript != null) {
+            SearchScript searchScoreScript = context.getScriptService().search(context.lookup(), scoreScript, ScriptContext.Standard.SEARCH,
+                Collections.emptyMap(), context.getClusterState());
+            filtFuncScoreQueryScoreScript = new FiltersFunctionScoreQuery.ScoreScript(scoreScript, searchScoreScript);
+        }
+
         CombineFunction boostMode = this.boostMode == null ? DEFAULT_BOOST_MODE : this.boostMode;
-        return new FiltersFunctionScoreQuery(query, scoreMode, scoreScriptBuilder.toScoreScript(context), filterFunctions, maxBoost,
-            minScore, boostMode);
+        return new FiltersFunctionScoreQuery(query, scoreMode, filtFuncScoreQueryScoreScript, filterFunctions, maxBoost, minScore,
+            boostMode);
     }
 
-    public Script getCombineScript() {
-        return scoreScriptBuilder.script;
-    }
-
-    public FunctionScoreQueryBuilder setScoreScript(Script scoreScript) {
-        //TODO implement or remove - currently the combineScript is really the Script inside of ScoreScriptBuilder and
-        // a ScoreScriptBuilder is final so it can only be created in the Constructor. I did this because query and
-        // filterFunctionBuilders were final for some reason
-        return this;
+    public Script getScoreScript() {
+        return scoreScript;
     }
 
     /**
@@ -450,30 +450,6 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
     }
 
-    private static class ScoreScriptBuilder {
-        Script script;
-
-        public ScoreScriptBuilder(Script script) {
-            this.script = script;
-        }
-
-        public FiltersFunctionScoreQuery.ScoreScript toScoreScript(QueryShardContext context) {
-            SearchScript searchScript = context.getScriptService().search(context.lookup(), script, ScriptContext.Standard.SEARCH,
-                Collections.emptyMap(), context.getClusterState());
-
-            return new FiltersFunctionScoreQuery.ScoreScript(script, searchScript);
-        }
-
-        public static ScoreScriptBuilder readFromStream(StreamInput in) {
-            return null; //TODO implement
-        }
-
-        public static void writeTo(StreamOutput out) throws IOException {
-            //TODO implement
-        }
-    }
-
-
     @Override
     protected QueryBuilder doRewrite(QueryRewriteContext queryRewriteContext) throws IOException {
         QueryBuilder queryBuilder = this.query.rewrite(queryRewriteContext);
@@ -508,7 +484,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         String queryName = null;
 
         FiltersFunctionScoreQuery.ScoreMode scoreMode = FunctionScoreQueryBuilder.DEFAULT_SCORE_MODE;
-        ScoreScriptBuilder scoreScriptBuilder = null;
+        Script scoreScript = null;
         float maxBoost = FunctionScoreQuery.DEFAULT_MAX_BOOST;
         Float minScore = null;
 
@@ -532,8 +508,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                     }
                     query = parseContext.parseInnerQueryBuilder().orElse(QueryBuilders.matchAllQuery());
                 } else if (parseContext.getParseFieldMatcher().match(currentFieldName, SCORE_SCRIPT_FIELD)) {
-                    Script script = Script.parse(parser, parseContext.getParseFieldMatcher());
-                    scoreScriptBuilder = new ScoreScriptBuilder(script);
+                    scoreScript = Script.parse(parser, parseContext.getParseFieldMatcher());
                 } else {
                     if (singleFunctionFound) {
                         throw new ParsingException(parser.getTokenLocation(),
@@ -611,7 +586,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
 
         FunctionScoreQueryBuilder functionScoreQueryBuilder = new FunctionScoreQueryBuilder(query,
             filterFunctionBuilders.toArray(new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()]),
-            scoreScriptBuilder);
+            scoreScript);
         if (combineFunction != null) {
             functionScoreQueryBuilder.boostMode(combineFunction);
         }
@@ -623,13 +598,13 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         functionScoreQueryBuilder.boost(boost);
         functionScoreQueryBuilder.queryName(queryName);
 
-        if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT && scoreScriptBuilder == null) {
+        if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT && scoreScript == null) {
             // TODO what should the first arg be here?
             // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
             throw new ParsingException(parser.getTokenLocation(),
                 "if [score_mode] is [script] then a script must be specified in the [score_script] field.");
         }
-        if (scoreScriptBuilder != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
+        if (scoreScript != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
             // TODO what should the first arg be here?
             // TODO replace hardcoded strings with constants like SCORE_MODE_FIELD
             throw new ParsingException(parser.getTokenLocation(),

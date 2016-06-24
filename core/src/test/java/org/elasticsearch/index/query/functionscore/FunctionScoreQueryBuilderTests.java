@@ -398,11 +398,11 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
 
         FunctionScoreQueryBuilder queryBuilder = (FunctionScoreQueryBuilder)parseQuery(functionScoreQuery);
         assertThat(queryBuilder.scoreMode(), equalTo(FiltersFunctionScoreQuery.ScoreMode.SCRIPT));
-        assertNotNull(queryBuilder.getCombineScript());
-        assertThat(queryBuilder.getCombineScript().getLang(), equalTo("mockscript"));
-        assertThat(queryBuilder.getCombineScript().getScript(), equalTo("score_a*score_b+42+c"));
-        assertThat(queryBuilder.getCombineScript().getParams().get("c"), equalTo(13));
-        assertThat(queryBuilder.getCombineScript().getType(), equalTo(ScriptService.ScriptType.INLINE));
+        assertNotNull(queryBuilder.getScoreScript());
+        assertThat(queryBuilder.getScoreScript().getLang(), equalTo("mockscript"));
+        assertThat(queryBuilder.getScoreScript().getScript(), equalTo("score_a*score_b+42+c"));
+        assertThat(queryBuilder.getScoreScript().getParams().get("c"), equalTo(13));
+        assertThat(queryBuilder.getScoreScript().getType(), equalTo(ScriptService.ScriptType.INLINE));
     }
 
     public void testParseSingleFunction() throws IOException {

@@ -416,6 +416,18 @@ public abstract class QueryBuilders {
     /**
      * A query that allows to define a custom scoring function
      *
+     * @param queryBuilder The query to custom score
+     * @param filterFunctionBuilders the filters and functions to execute
+     * @return the function score query
+     */
+    public static FunctionScoreQueryBuilder functionScoreQuery(QueryBuilder queryBuilder,
+            FunctionScoreQueryBuilder.FilterFunctionBuilder[] filterFunctionBuilders, Script script) {
+        return new FunctionScoreQueryBuilder(queryBuilder, filterFunctionBuilders, script);
+    }
+
+    /**
+     * A query that allows to define a custom scoring function
+     *
      * @param filterFunctionBuilders the filters and functions to execute
      * @return the function score query
      */
