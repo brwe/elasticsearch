@@ -302,6 +302,7 @@ public class FiltersFunctionScoreQuery extends Query {
             LeafSearchScript leafScript = null;
             if (scoreMode.equals(ScoreMode.SCRIPT)) {
                 leafScript = scoreScript.getLeafSearchScript(context);
+                leafScript.setDocument(doc);
             }
             Explanation expl = subQueryWeight.explain(context, doc);
             if (!expl.isMatch()) {
@@ -448,6 +449,7 @@ public class FiltersFunctionScoreQuery extends Query {
                     for (int i = 0; i < filterFunctions.length; i++) {
                         scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
                     }
+                    scoreScript.setDocument(docId);
                     cannedScorer.docid = docId;
                     cannedScorer.score = subQueryScore;
                     factor = scoreScript.runAsDouble();
