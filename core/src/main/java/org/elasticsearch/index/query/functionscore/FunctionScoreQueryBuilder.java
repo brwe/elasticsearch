@@ -52,11 +52,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 
 /**
@@ -155,11 +157,17 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
         if (scoreScript != null) {
             this.scoreMode = FiltersFunctionScoreQuery.ScoreMode.SCRIPT;
+            Set<String> varNames = new HashSet<>();
             for (FilterFunctionBuilder filterFunctionBuilder : filterFunctionBuilders) {
-                if (filterFunctionBuilder.getVarName() == null) {
+                String varName = filterFunctionBuilder.getVarName();
+                if (varName == null) {
                     throw new IllegalArgumentException("function_score: when a script is specified var_name must be specified for " +
                         "each function");
                 }
+                if (varNames.contains(varName)) {
+                    throw new IllegalArgumentException("function_score: each function must have a unique var_name");
+                }
+                varNames.add(varName);
             }
         }
 

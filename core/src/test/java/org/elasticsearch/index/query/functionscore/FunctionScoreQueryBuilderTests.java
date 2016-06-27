@@ -88,13 +88,48 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
 
     @Override
     protected FunctionScoreQueryBuilder doCreateTestQueryBuilder() {
-        FunctionScoreQueryBuilder functionScoreQueryBuilder = createRandomFunctionScoreBuilder();
+        FunctionScoreQueryBuilder functionScoreQueryBuilder = null;
+        switch (randomIntBetween(0, 3)) {
+            case 0:
+                FilterFunctionBuilder[] functions = new FilterFunctionBuilder[randomIntBetween(0, 3)];
+                for (int i = 0; i < functions.length; i++) {
+                    String varName = "var" + Integer.toString(i);
+                    functions[i] = new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction(), varName);
+                }
+                if (randomBoolean()) {
+                    Map<String, Object> params = Collections.emptyMap();
+                    Script script = new Script("some smart script", ScriptService.ScriptType.INLINE, MockScriptEngine.NAME, params);
+                    functionScoreQueryBuilder =  new FunctionScoreQueryBuilder(RandomQueryBuilder.createQuery(random()), functions, script);
+                } else {
+                    functionScoreQueryBuilder = new FunctionScoreQueryBuilder(functions);
+                }
+                break;
+            case 1:
+                functionScoreQueryBuilder = new FunctionScoreQueryBuilder(randomScoreFunction());
+                break;
+            case 2:
+                functionScoreQueryBuilder = new FunctionScoreQueryBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction());
+                break;
+            case 3:
+                functionScoreQueryBuilder = new FunctionScoreQueryBuilder(RandomQueryBuilder.createQuery(random()));
+                break;
+            default:
+                throw new UnsupportedOperationException();
+        }
+
         if (randomBoolean()) {
             functionScoreQueryBuilder.boostMode(randomFrom(CombineFunction.values()));
         }
         if (randomBoolean()) {
-            functionScoreQueryBuilder.scoreMode(randomFrom(FiltersFunctionScoreQuery.ScoreMode.values()));
-            // here also add the script in case we randomly pick the script combine mode
+            // set the scoreMode - but only if scoreScript is null (otherwise scoreMode must be 'script')
+            if (functionScoreQueryBuilder.getScoreScript() == null ) {
+                FiltersFunctionScoreQuery.ScoreMode scoreMode = randomFrom(FiltersFunctionScoreQuery.ScoreMode.values());
+                if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
+                    // since we don't have a script we can't set scoreMode to script - just use average
+                    scoreMode = FiltersFunctionScoreQuery.ScoreMode.AVG;
+                }
+                functionScoreQueryBuilder.scoreMode(scoreMode);
+            }
         }
         if (randomBoolean()) {
             functionScoreQueryBuilder.maxBoost(randomFloat());
@@ -103,32 +138,6 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
             functionScoreQueryBuilder.setMinScore(randomFloat());
         }
         return functionScoreQueryBuilder;
-    }
-
-    /**
-     * Creates a random function score query using only constructor params. The caller is responsible for randomizing fields set outside of
-     * the constructor.
-     */
-    private static FunctionScoreQueryBuilder createRandomFunctionScoreBuilder() {
-        switch (randomIntBetween(0, 3)) {
-        case 0:
-            FilterFunctionBuilder[] functions = new FilterFunctionBuilder[randomIntBetween(0, 3)];
-            for (int i = 0; i < functions.length; i++) {
-                functions[i] = new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction());
-            }
-            if (randomBoolean()) {
-                return new FunctionScoreQueryBuilder(RandomQueryBuilder.createQuery(random()), functions, null);
-            }
-            return new FunctionScoreQueryBuilder(functions);
-        case 1:
-            return new FunctionScoreQueryBuilder(randomScoreFunction());
-        case 2:
-            return new FunctionScoreQueryBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction());
-        case 3:
-            return new FunctionScoreQueryBuilder(RandomQueryBuilder.createQuery(random()));
-        default:
-            throw new UnsupportedOperationException();
-        }
     }
 
     private static ScoreFunctionBuilder<?> randomScoreFunction() {
@@ -274,17 +283,23 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
         Script script = new Script("alpha+beta", ScriptService.ScriptType.INLINE, "mock_script", null);
         expectThrows(IllegalArgumentException.class, () -> new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders, script));
 
-        // FunctionScoreQueryBuilder with script should error if scoreMode is set to anything besides scoreMode
+        // FunctionScoreQueryBuilder with script should error if any of the functions have the same name
         FilterFunctionBuilder[] functionBuilders2 = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "alpha"),
+        };
+        expectThrows(IllegalArgumentException.class, () -> new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders2, script));
+
+        // FunctionScoreQueryBuilder with script should error if scoreMode is set to anything besides scoreMode
+        FilterFunctionBuilder[] functionBuilders3 = new FilterFunctionBuilder[]{
             new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
             new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
         };
-        Script script2 = new Script("alpha+beta", ScriptService.ScriptType.INLINE, "mock_script", null);
-        FunctionScoreQueryBuilder builder = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders2, script2);
+        FunctionScoreQueryBuilder builder = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders3, script);
         expectThrows(IllegalArgumentException.class, () -> builder.scoreMode(FiltersFunctionScoreQuery.ScoreMode.AVG));
 
         // FunctionScoreQueryBuilder without script should error if scoreMode is set to script
-        FunctionScoreQueryBuilder builder2 = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders2, null);
+        FunctionScoreQueryBuilder builder2 = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders3, null);
         expectThrows(IllegalArgumentException.class, () -> builder2.scoreMode(FiltersFunctionScoreQuery.ScoreMode.SCRIPT));
     }
 
