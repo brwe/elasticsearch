@@ -446,6 +446,7 @@ public class FiltersFunctionScoreQuery extends Query {
                     }
                     break;
                 case SCRIPT:
+                    // TODO: What if a function does not match? which value does the variables for scripting get?
                     for (int i = 0; i < filterFunctions.length; i++) {
                         scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
                     }

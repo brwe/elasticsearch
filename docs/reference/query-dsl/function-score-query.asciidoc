@@ -82,6 +82,60 @@ First, each document is scored by the defined functions. The parameter
                 is applied
 `max`::         maximum score is used
 `min`::         minimum score is used
+`script`::      use script to determine the final score
+
+In the last case `score_mode: script` a script must be defined in the `score_script` parameter, see <<modules-scripting-using>> for the
+format. I addition, each function must contain a parameter `var_name` which can then be used as a parameter in the script. For example,
+the following query will multiply the result of the first two functions and then subtract the result of the third:
+
+[source,js]
+--------------------------------------------------
+POST test/_search
+{
+  "query": {
+    "function_score": {
+      "functions": [
+        {
+          "filter": {
+            "term": {
+              "text": "happy"
+            }
+          },
+          "weight": 10,
+          "var_name": "first" <1>
+        },
+        {
+          "filter": {
+            "term": {
+              "text": "hippo"
+            }
+          },
+          "weight": 10,
+          "var_name": "second" <1>
+        },
+        {
+          "weight": 10,
+          "var_name": "third" <1>
+        }
+      ],
+      "score_script": { <2>
+        "lang": "groovy",
+        "script": "first / second - third"
+      },
+      "score_mode": "script", <3>
+      "boost_mode": "replace"
+    }
+  }
+}
+--------------------------------------------------
+// CONSOLE
+
+<1> name that is later used as variable name in the `score_script`
+<2> The script to use when the individual scores are combined
+<3> score_mode "script" must be set in this case
+
+
+TODO: What to do when a function does not match? Decide and then add doc.
 
 Because scores can be on different scales (for example, between 0 and 1 for decay functions but arbitrary for `field_value_factor`) and also because sometimes a different impact of functions on the score is desirable, the score of each function can be adjusted with a user defined `weight` (). The `weight` can be defined per function in the `functions` array (example above) and is multiplied with the score computed by the respective function.
 If weight is given without any other function declaration, `weight` acts as a function that simply returns the `weight`.
