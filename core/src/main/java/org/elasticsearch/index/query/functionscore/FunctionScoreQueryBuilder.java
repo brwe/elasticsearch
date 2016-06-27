@@ -300,6 +300,10 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         if (minScore != null) {
             builder.field(MIN_SCORE_FIELD.getPreferredName(), minScore);
         }
+        if (getScoreScript()!=null) {
+            builder.field(SCORE_SCRIPT_FIELD.getPreferredName());
+            getScoreScript().toXContent(builder, params);
+        }
         printBoostAndQueryName(builder);
         builder.endObject();
     }
@@ -444,6 +448,9 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             builder.field(FILTER_FIELD.getPreferredName());
             filter.toXContent(builder, params);
             scoreFunction.toXContent(builder, params);
+            if (varName != null) {
+                builder.field(VAR_NAME_FIELD.getPreferredName(), varName);
+            }
             builder.endObject();
             return builder;
         }
