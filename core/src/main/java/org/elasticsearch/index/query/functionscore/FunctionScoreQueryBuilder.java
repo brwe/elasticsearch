@@ -153,9 +153,21 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                 throw new IllegalArgumentException("function_score: each filter and function must not be null");
             }
         }
+        if (scoreScript != null) {
+            this.scoreMode = FiltersFunctionScoreQuery.ScoreMode.SCRIPT;
+            for (FilterFunctionBuilder filterFunctionBuilder : filterFunctionBuilders) {
+                if (filterFunctionBuilder.getVarName() == null) {
+                    throw new IllegalArgumentException("function_score: when a script is specified var_name must be specified for " +
+                        "each function");
+                }
+            }
+        }
+
+
         this.query = query;
         this.filterFunctionBuilders = filterFunctionBuilders;
         this.scoreScript = scoreScript;
+
     }
 
     /**
@@ -204,6 +216,11 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     public FunctionScoreQueryBuilder scoreMode(FiltersFunctionScoreQuery.ScoreMode scoreMode) {
         if (scoreMode == null) {
             throw new IllegalArgumentException("[" + NAME + "]  requires 'score_mode' field");
+        }
+        if ( (scoreScript != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) ||
+            (scoreScript == null && scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT)) {
+            throw new IllegalArgumentException("[score_mode] may only be [" + FiltersFunctionScoreQuery.ScoreMode.SCRIPT +
+                "] when [score_script] is specified");
         }
         this.scoreMode = scoreMode;
         return this;

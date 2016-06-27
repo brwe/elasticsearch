@@ -256,13 +256,36 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
             null));
         expectThrows(IllegalArgumentException.class, () -> new FunctionScoreQueryBuilder(null, new FilterFunctionBuilder[0], null));
         expectThrows(IllegalArgumentException.class,
-                () -> new FunctionScoreQueryBuilder(matchAllQuery(), new FilterFunctionBuilder[] { null }, null));
+            () -> new FunctionScoreQueryBuilder(matchAllQuery(), new FilterFunctionBuilder[] { null }, null));
         expectThrows(IllegalArgumentException.class, () -> new FilterFunctionBuilder((ScoreFunctionBuilder<?>) null));
         expectThrows(IllegalArgumentException.class, () -> new FilterFunctionBuilder(null, randomFunction(123)));
         expectThrows(IllegalArgumentException.class, () -> new FilterFunctionBuilder(matchAllQuery(), null));
         FunctionScoreQueryBuilder builder = new FunctionScoreQueryBuilder(matchAllQuery());
         expectThrows(IllegalArgumentException.class, () -> builder.scoreMode(null));
         expectThrows(IllegalArgumentException.class, () -> builder.boostMode(null));
+    }
+
+    public void testIllegalArgumentsRelatedToScriptScoring() {
+        // FunctionScoreQueryBuilder with script should error if any of the functions doesn't have a var_name
+        FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test")),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+        };
+        Script script = new Script("alpha+beta", ScriptService.ScriptType.INLINE, "mock_script", null);
+        expectThrows(IllegalArgumentException.class, () -> new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders, script));
+
+        // FunctionScoreQueryBuilder with script should error if scoreMode is set to anything besides scoreMode
+        FilterFunctionBuilder[] functionBuilders2 = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+        };
+        Script script2 = new Script("alpha+beta", ScriptService.ScriptType.INLINE, "mock_script", null);
+        FunctionScoreQueryBuilder builder = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders2, script2);
+        expectThrows(IllegalArgumentException.class, () -> builder.scoreMode(FiltersFunctionScoreQuery.ScoreMode.AVG));
+
+        // FunctionScoreQueryBuilder without script should error if scoreMode is set to script
+        FunctionScoreQueryBuilder builder2 = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders2, null);
+        expectThrows(IllegalArgumentException.class, () -> builder2.scoreMode(FiltersFunctionScoreQuery.ScoreMode.SCRIPT));
     }
 
     public void testParseFunctionsArray() throws IOException {

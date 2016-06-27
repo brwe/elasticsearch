@@ -135,13 +135,6 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
         @Override
         public Object run() {
-//            if (vars.containsKey("ctx") && vars.get("ctx") instanceof Map) {
-//                Map ctx = (Map) vars.get("ctx");
-//                if (ctx.containsKey("_source") && ctx.get("_source") instanceof Map) {
-//                    Map source = (Map) ctx.get("_source");
-//                    source.putAll(params);
-//                }
-//            }
             double alpha = ((Number) vars.get("alpha")).doubleValue();
             double beta = ((Number) vars.get("beta")).doubleValue();
 
