@@ -36,7 +36,9 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
 import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder.FilterFunctionBuilder;
+import org.elasticsearch.index.query.functionscore.GaussDecayFunctionBuilder;
 import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
+import org.elasticsearch.index.query.functionscore.WeightBuilder;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.MultiValueMode;
 import org.elasticsearch.search.SearchHits;
@@ -834,5 +836,35 @@ public class DecayFunctionScoreIT extends ESIntegTestCase {
         assertSearchHits(sr, "1", "2");
         sh = sr.getHits();
         assertThat((double) (sh.getAt(0).getScore()), closeTo((sh.getAt(1).getScore()), 1.e-6d));
+    }
+
+    public void testExplainWithStuff() throws Exception {
+
+        // Index for testing MIN and MAX
+        client().prepareIndex().setType("type").setId("1").setIndex("test")
+            .setSource(jsonBuilder().startObject()
+                .field("test", "value")
+                .field("age", 76)
+                .endObject()).get();
+        refresh();
+
+
+
+        ActionFuture<SearchResponse> response = client().search(
+            searchRequest().source(
+                searchSource().explain(true).query(functionScoreQuery(new FilterFunctionBuilder[]{
+                    new FilterFunctionBuilder(new GaussDecayFunctionBuilder("age", 64, 5, 3).setWeight(2.0f)),
+                new FilterFunctionBuilder(new WeightBuilder().setWeight(2.0f))})
+                    .scoreMode(ScoreMode.AVG)
+                    .boostMode(CombineFunction.SUM)
+                )));
+        SearchResponse sr = response.actionGet();
+        assertSearchHits(sr, "1");
+        SearchHits sh = sr.getHits();
+
+
+        assertThat(sh.getAt(0).explanation().getValue(), equalTo(sh.getAt(0).score()));
+
+
     }
 }

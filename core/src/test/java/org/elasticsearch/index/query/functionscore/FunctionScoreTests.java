@@ -750,6 +750,8 @@ public class FunctionScoreTests extends ESTestCase {
         assertThat(searchResult.scoreDocs[0].score, equalTo(exp1.getValue()));
     }
 
+
+
     private static class DummyScoreFunction extends ScoreFunction {
         protected DummyScoreFunction(CombineFunction scoreCombiner) {
             super(scoreCombiner);

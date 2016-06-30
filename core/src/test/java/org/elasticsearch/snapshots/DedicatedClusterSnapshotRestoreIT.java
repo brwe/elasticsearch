@@ -477,6 +477,11 @@ public class DedicatedClusterSnapshotRestoreIT extends AbstractSnapshotIntegTest
             }, 1, TimeUnit.MINUTES);
             SnapshotsStatusResponse snapshotsStatusResponse = client().admin().cluster().prepareSnapshotStatus("test-repo").setSnapshots("test-snap-2").get();
             List<SnapshotStatus> snapshotStatuses = snapshotsStatusResponse.getSnapshots();
+            if (snapshotStatuses.size() > 1) {
+                for (SnapshotStatus snapshotStatus : snapshotStatuses) {
+                    logger.info("status : {}", snapshotStatus.toString());
+                }
+            }
             assertThat(snapshotStatuses.size(), equalTo(1));
             SnapshotStatus snapshotStatus = snapshotStatuses.get(0);
             logger.info("State: [{}], Reason: [{}]", createSnapshotResponse.getSnapshotInfo().state(), createSnapshotResponse.getSnapshotInfo().reason());
