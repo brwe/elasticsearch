@@ -21,6 +21,7 @@ package org.elasticsearch.search.functionscore;
 
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.lucene.search.function.CombineFunction;
 import org.elasticsearch.common.lucene.search.function.FiltersFunctionScoreQuery.ScoreMode;
 import org.elasticsearch.index.fielddata.ScriptDocValues;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -58,7 +59,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return pluginList(CustomNativeScriptFactory.TestPlugin.class, CustomNativeScriptFactoryWithDocAccess.TestPlugin.class);
+        return pluginList(CustomNativeScriptFactory.TestPlugin.class, CustomNativeScriptFactoryWithDocAccess.TestPlugin.class,
+            CustomNativeScriptFactoryWith_score.TestPlugin.class);
     }
 
     public void testFunctionScoreWithScoreScript() throws IOException {
@@ -226,6 +228,107 @@ public class FunctionScoreIT extends ESIntegTestCase {
                 score += ((Number) entry.getValue()).doubleValue();
             }
             return score + ((Number) ((ScriptDocValues) doc().get("test")).getValues().get(0)).doubleValue();
+        }
+
+        @Override
+        public void setNextVar(String name, Object value) {
+            vars.put(name, value);
+        }
+
+    }
+
+
+
+    public void testFunctionScoreWithScoreScriptAnd_score() throws IOException {
+        assertAcked(prepareCreate("test").addMapping(
+            "type1",
+            jsonBuilder()
+                .startObject()
+                .startObject("type1")
+                .startObject("properties")
+                .startObject("test")
+                .field("type", "float")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+        ).get());
+        ensureYellow();
+
+        client().prepareIndex("test", "type1", "1").setSource("test", 5).get();
+
+        refresh();
+
+        Map<String, Object> params = new HashMap<>();
+        Script script = new Script("custom_with_score", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+
+        FilterFunctionBuilder[] functionBuildersInner = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f))
+        };
+        FilterFunctionBuilder[] functionBuildersOuter = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "a"),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "b")
+        };
+
+
+        QueryBuilder queryBuilderInner = functionScoreQuery(matchAllQuery(), functionBuildersInner).scoreMode(ScoreMode.SUM).boostMode
+            (CombineFunction.REPLACE);
+        QueryBuilder queryBuilderOuter = functionScoreQuery(queryBuilderInner, functionBuildersOuter, script).scoreMode(ScoreMode.SCRIPT)
+            .boostMode(CombineFunction.SUM);
+
+        SearchResponse response = client().prepareSearch("test")
+            .setExplain(randomBoolean())
+            .setQuery(queryBuilderOuter)
+            .get();
+        assertSearchResponse(response);
+        assertThat(response.getHits().getAt(0).score(), equalTo(6f));
+    }
+
+
+    public static class CustomNativeScriptFactoryWith_score implements NativeScriptFactory {
+        public static class TestPlugin extends Plugin implements ScriptPlugin {
+            @Override
+            public List<NativeScriptFactory> getNativeScripts() {
+                return Collections.singletonList(new CustomNativeScriptFactoryWith_score());
+            }
+        }
+
+        @Override
+        public ExecutableScript newScript(@Nullable Map<String, Object> params) {
+            return new CustomScriptWith_score(params);
+        }
+
+        @Override
+        public boolean needsScores() {
+            return false;
+        }
+
+        @Override
+        public String getName() {
+            return "custom_with_score";
+        }
+    }
+
+    static class CustomScriptWith_score extends AbstractSearchScript {
+
+        private Map<String, Object> vars = new HashMap<>(2);
+
+        public CustomScriptWith_score(Map<String, Object> params) {
+
+        }
+
+        @Override
+        public Object run() {
+            double a = ((Number) vars.get("a")).doubleValue();
+            double _score = 0;
+            try {
+                _score = score();
+            } catch (IOException e) {
+                throw new RuntimeException("score could not be accessed", e);
+            }
+
+
+            return a*_score;
         }
 
         @Override
