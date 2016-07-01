@@ -47,14 +47,11 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
-
 /**
  * A query that allows for a pluggable boost function / filter. If it matches
  * the filter, it will be boosted by the formula.
  */
 public class FiltersFunctionScoreQuery extends Query {
-
-
 
     public static class FilterFunction {
         public final Query filter;
@@ -167,7 +164,6 @@ public class FiltersFunctionScoreQuery extends Query {
     final float maxBoost;
 
     private final Float minScore;
-    // here add a variable for the script code
 
     final protected CombineFunction combineFunction;
 
@@ -254,8 +250,6 @@ public class FiltersFunctionScoreQuery extends Query {
         }
 
         private FiltersFunctionFactorScorer functionScorer(LeafReaderContext context) throws IOException {
-
-
             Scorer subQueryScorer = subQueryWeight.scorer(context);
             if (subQueryScorer == null) {
                 return null;
@@ -275,14 +269,6 @@ public class FiltersFunctionScoreQuery extends Query {
                 leafScoreScript.setScorer(cannedScorer);
             }
 
-            // here we need to initialize the script like we do in script score too, like
-
-           /* final LeafSearchScript leafScript = script.getLeafSearchScript(ctx);
-            final CannedScorer scorer = new CannedScorer();
-            leafScript.setScorer(scorer);
-            ...
-
-            */
             return new FiltersFunctionFactorScorer(this, subQueryScorer, scoreMode, leafScoreScript, cannedScorer, filterFunctions, maxBoost,
                 functions, docSets, combineFunction, needsScores);
         }
