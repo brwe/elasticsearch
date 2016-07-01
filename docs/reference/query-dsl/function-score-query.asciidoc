@@ -134,6 +134,8 @@ POST test/_search
 <2> The script to use when the individual scores are combined
 <3> score_mode "script" must be set in this case
 
+The language for `score_script` cannot be `expression`. In case you use painless the name of the varaible has to be prefixed with
+`params.` in the script (not the `var_name`).
 
 TODO: What to do when a function does not match? Decide and then add doc.
 
