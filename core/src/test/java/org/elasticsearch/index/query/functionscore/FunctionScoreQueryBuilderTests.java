@@ -94,7 +94,7 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
                 FilterFunctionBuilder[] functions = new FilterFunctionBuilder[randomIntBetween(0, 3)];
                 for (int i = 0; i < functions.length; i++) {
                     String varName = "var" + Integer.toString(i);
-                    functions[i] = new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction(), varName);
+                    functions[i] = new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction(), varName, 1.0f);
                 }
                 if (randomBoolean()) {
                     Map<String, Object> params = Collections.emptyMap();
@@ -278,22 +278,22 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
         // FunctionScoreQueryBuilder with script should error if any of the functions doesn't have a var_name
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
             new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test")),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", null),
         };
         Script script = new Script("alpha+beta", ScriptService.ScriptType.INLINE, "mock_script", null);
         expectThrows(IllegalArgumentException.class, () -> new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders, script));
 
         // FunctionScoreQueryBuilder with script should error if any of the functions have the same name
         FilterFunctionBuilder[] functionBuilders2 = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "alpha"),
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha", null),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "alpha", null),
         };
         expectThrows(IllegalArgumentException.class, () -> new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders2, script));
 
         // FunctionScoreQueryBuilder with script should error if scoreMode is set to anything besides scoreMode
         FilterFunctionBuilder[] functionBuilders3 = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha", null),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", null),
         };
         FunctionScoreQueryBuilder builder = new FunctionScoreQueryBuilder(matchAllQuery(), functionBuilders3, script);
         expectThrows(IllegalArgumentException.class, () -> builder.scoreMode(FiltersFunctionScoreQuery.ScoreMode.AVG));

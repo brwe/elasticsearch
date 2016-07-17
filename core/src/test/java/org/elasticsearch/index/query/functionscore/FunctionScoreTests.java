@@ -488,9 +488,9 @@ public class FunctionScoreTests extends ESTestCase {
     public void testScriptScoreCombine() throws IOException, ExecutionException, InterruptedException {
 
         FilterFunction[] filterFunctions = new FilterFunction[3];
-        filterFunctions[0] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(1), "a");
-        filterFunctions[1] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(2), "b");
-        filterFunctions[2] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(3), "c");
+        filterFunctions[0] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(1), "a", null);
+        filterFunctions[1] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(2), "b", null);
+        filterFunctions[2] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(3), "c", null);
         SearchScript searchScript = new SearchScript() {
             @Override
             public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
@@ -563,9 +563,9 @@ public class FunctionScoreTests extends ESTestCase {
     public void testScriptScoreCombineExplanation() throws IOException, ExecutionException, InterruptedException {
 
         FilterFunction[] filterFunctions = new FilterFunction[3];
-        filterFunctions[0] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(1), "a");
-        filterFunctions[1] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(2), "b");
-        filterFunctions[2] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(3), "c");
+        filterFunctions[0] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(1), "a", null);
+        filterFunctions[1] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(2), "b", null);
+        filterFunctions[2] = new FilterFunction(new MatchAllDocsQuery(), new WeightFactorFunction(3), "c", null);
         SearchScript searchScript = new SearchScript() {
             @Override
             public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {

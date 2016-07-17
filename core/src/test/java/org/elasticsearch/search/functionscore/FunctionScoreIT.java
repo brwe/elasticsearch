@@ -46,6 +46,7 @@ import java.util.Map;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.elasticsearch.index.query.QueryBuilders.functionScoreQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.fieldValueFactorFunction;
 import static org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders.weightFactorFunction;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
@@ -87,8 +88,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
         Script script = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
 
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha", null),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", null),
         };
 
 
@@ -102,6 +103,84 @@ public class FunctionScoreIT extends ESIntegTestCase {
         assertThat(response.getHits().getAt(0).score(), equalTo(2.5f));
     }
 
+    public void testFunctionScoreWithScoreScriptAndWithNoMatchSpecified() throws IOException {
+        Float noMatchScore = 9.0f;
+
+        assertAcked(prepareCreate("test").addMapping(
+            "type1",
+            jsonBuilder()
+                .startObject()
+                .startObject("type1")
+                .startObject("properties")
+                .startObject("test")
+                .field("type", "string")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+        ).get());
+        ensureYellow();
+
+        client().prepareIndex("test", "type1", "1").setSource("test", "sometoken").get();
+
+        refresh();
+
+        Map<String, Object> params = new HashMap<>();
+        Script script = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+
+        FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(termQuery("test","someothertoken"), weightFactorFunction(7f), "alpha", noMatchScore),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", noMatchScore),
+        };
+
+        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders, script).scoreMode(ScoreMode.SCRIPT);
+
+        SearchResponse response = client().prepareSearch("test")
+            .setExplain(randomBoolean())
+            .setQuery(queryBuilder)
+            .get();
+        assertSearchResponse(response);
+        assertThat(response.getHits().getAt(0).score(), equalTo(4.5f));
+    }
+
+    public void testFunctionScoreWithScoreScriptAndWithNoMatchDefault() throws IOException {
+        Float noMatchScore = null;
+        assertAcked(prepareCreate("test").addMapping(
+            "type1",
+            jsonBuilder()
+                .startObject()
+                .startObject("type1")
+                .startObject("properties")
+                .startObject("test")
+                .field("type", "string")
+                .endObject()
+                .endObject()
+                .endObject()
+                .endObject()
+        ).get());
+        ensureYellow();
+
+        client().prepareIndex("test", "type1", "1").setSource("test", "sometoken").get();
+
+        refresh();
+
+        Map<String, Object> params = new HashMap<>();
+        Script script = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
+
+        FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
+            new FilterFunctionBuilder(termQuery("test","someothertoken"), weightFactorFunction(7f), "alpha", noMatchScore),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", noMatchScore),
+        };
+
+        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders, script).scoreMode(ScoreMode.SCRIPT);
+
+        SearchResponse response = client().prepareSearch("test")
+            .setExplain(randomBoolean())
+            .setQuery(queryBuilder)
+            .get();
+        assertSearchResponse(response);
+        assertThat(response.getHits().getAt(0).score(), equalTo(0.0f));
+    }
 
     public static class CustomNativeScriptFactory implements NativeScriptFactory {
         public static class TestPlugin extends Plugin implements ScriptPlugin {
@@ -174,8 +253,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
         Script script = new Script("custom_with_doc_access", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
 
         FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha"),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta"),
+            new FilterFunctionBuilder(matchAllQuery(), fieldValueFactorFunction("test"), "alpha", null),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", null),
         };
 
         QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders, script).scoreMode(ScoreMode.SCRIPT);
@@ -266,8 +345,8 @@ public class FunctionScoreIT extends ESIntegTestCase {
             new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f))
         };
         FilterFunctionBuilder[] functionBuildersOuter = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "a"),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "b")
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "a", null),
+            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "b", null)
         };
 
 

@@ -34,6 +34,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilder;
 import org.elasticsearch.script.ExplainableSearchScript;
 import org.elasticsearch.script.LeafSearchScript;
 import org.elasticsearch.script.Script;
@@ -57,15 +58,18 @@ public class FiltersFunctionScoreQuery extends Query {
         public final Query filter;
         public final ScoreFunction function;
         public final String varName;
+        public final Float noMatchScore;
+        public static final Float DEFAULT_NO_MATCH_SCORE = 0.0f;
 
         public FilterFunction(Query filter, ScoreFunction function) {
-            this(filter, function, null);
+            this(filter, function, null, null);
         }
 
-        public FilterFunction(Query filter, ScoreFunction function, String varName) {
+        public FilterFunction(Query filter, ScoreFunction function, String varName, Float noMatchScore) {
             this.filter = filter;
             this.function = function;
             this.varName = varName;
+            this.noMatchScore = noMatchScore;
         }
 
         @Override
@@ -77,12 +81,15 @@ public class FiltersFunctionScoreQuery extends Query {
                 return false;
             }
             FilterFunction that = (FilterFunction) o;
-            return Objects.equals(this.filter, that.filter) && Objects.equals(this.function, that.function);
+            return Objects.equals(this.filter, that.filter) &&
+                Objects.equals(this.function, that.function) &&
+                Objects.equals(this.varName, that.varName) &&
+                Objects.equals(this.noMatchScore, that.noMatchScore) ;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), filter, function);
+            return Objects.hash(super.hashCode(), filter, function, varName, noMatchScore);
         }
     }
 
@@ -365,8 +372,8 @@ public class FiltersFunctionScoreQuery extends Query {
         private final boolean needsScores;
 
         private FiltersFunctionFactorScorer(CustomBoostFactorWeight w, Scorer scorer, ScoreMode scoreMode, LeafSearchScript scoreScript,
-                                            CannedScorer cannedScorer, FilterFunction[] filterFunctions,
-                                            float maxBoost, LeafScoreFunction[] functions, Bits[] docSets, CombineFunction scoreCombiner, boolean needsScores) throws IOException {
+                CannedScorer cannedScorer, FilterFunction[] filterFunctions, float maxBoost, LeafScoreFunction[] functions, Bits[] docSets,
+                CombineFunction scoreCombiner, boolean needsScores) throws IOException {
             super(scorer, w);
             this.scoreMode = scoreMode;
             this.scoreScript = scoreScript;
@@ -432,9 +439,14 @@ public class FiltersFunctionScoreQuery extends Query {
                     }
                     break;
                 case SCRIPT:
-                    // TODO: What if a function does not match? which value does the variables for scripting get?
                     for (int i = 0; i < filterFunctions.length; i++) {
-                        scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
+                        if (docSets[i].get(docId)) {
+                            scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
+                        } else if (filterFunctions[i].noMatchScore != null) {
+                            scoreScript.setNextVar(filterFunctions[i].varName,filterFunctions[i].noMatchScore);
+                        } else {
+                            scoreScript.setNextVar(filterFunctions[i].varName, FilterFunction.DEFAULT_NO_MATCH_SCORE);
+                        }
                     }
                     scoreScript.setDocument(docId);
                     cannedScorer.docid = docId;

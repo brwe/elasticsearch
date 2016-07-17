@@ -73,6 +73,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
     static final String MISPLACED_FUNCTION_MESSAGE_PREFIX = "you can either define [functions] array or a single function, not both. ";
 
     public static final ParseField WEIGHT_FIELD = new ParseField("weight");
+    public static final ParseField NO_MATCH_SCORE_FIELD = new ParseField("no_match_score");
     public static final ParseField VAR_NAME_FIELD = new ParseField("var_name");
     public static final ParseField QUERY_FIELD = new ParseField("query");
     public static final ParseField FILTER_FIELD = new ParseField("filter");
@@ -345,7 +346,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         for (FilterFunctionBuilder filterFunctionBuilder : filterFunctionBuilders) {
             Query filter = filterFunctionBuilder.getFilter().toQuery(context);
             ScoreFunction scoreFunction = filterFunctionBuilder.getScoreFunction().toFunction(context);
-            filterFunctions[i++] = new FilterFunction(filter, scoreFunction, filterFunctionBuilder.getVarName());
+            filterFunctions[i++] = new FilterFunction(filter, scoreFunction, filterFunctionBuilder.getVarName(),
+                filterFunctionBuilder.getNoMatchScore());
         }
 
         Query query = this.query.toQuery(context);
@@ -393,16 +395,17 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         private final QueryBuilder filter;
         private final ScoreFunctionBuilder<?> scoreFunction;
         private final String varName;
+        private final Float noMatchScore;
 
         public FilterFunctionBuilder(ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-            this(new MatchAllQueryBuilder(), scoreFunctionBuilder, null);
+            this(new MatchAllQueryBuilder(), scoreFunctionBuilder, null, null);
         }
 
         public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunctionBuilder) {
-            this(filter, scoreFunctionBuilder, null);
+            this(filter, scoreFunctionBuilder, null, null);
         }
 
-        public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunction, String varName) {
+        public FilterFunctionBuilder(QueryBuilder filter, ScoreFunctionBuilder<?> scoreFunction, String varName, Float noMatchWeight) {
             if (filter == null) {
                 throw new IllegalArgumentException("function_score: filter must not be null");
             }
@@ -412,6 +415,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             this.filter = filter;
             this.scoreFunction = scoreFunction;
             this.varName = varName;
+            this.noMatchScore = noMatchWeight;
         }
 
         /**
@@ -421,6 +425,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             filter = in.readNamedWriteable(QueryBuilder.class);
             scoreFunction = in.readNamedWriteable(ScoreFunctionBuilder.class);
             varName = in.readOptionalString();
+            noMatchScore = in.readOptionalFloat();
         }
 
         @Override
@@ -428,6 +433,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             out.writeNamedWriteable(filter);
             out.writeNamedWriteable(scoreFunction);
             out.writeOptionalString(varName);
+            out.writeOptionalFloat(noMatchScore);
         }
 
         public QueryBuilder getFilter() {
@@ -440,6 +446,10 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
 
         public String getVarName() {
             return varName;
+        }
+
+        public Float getNoMatchScore() {
+            return noMatchScore;
         }
 
         @Override
@@ -457,7 +467,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
 
         @Override
         public int hashCode() {
-            return Objects.hash(filter, scoreFunction);
+            return Objects.hash(filter, scoreFunction, varName, noMatchScore);
         }
 
         @Override
@@ -470,7 +480,9 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             }
             FilterFunctionBuilder that = (FilterFunctionBuilder) obj;
             return Objects.equals(this.filter, that.filter) &&
-                    Objects.equals(this.scoreFunction, that.scoreFunction);
+                Objects.equals(this.scoreFunction, that.scoreFunction) &&
+                Objects.equals(this.varName, that.varName) &&
+                Objects.equals(this.noMatchScore, that.noMatchScore);
         }
 
         public FilterFunctionBuilder rewrite(QueryRewriteContext context) throws IOException {
@@ -660,6 +672,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             ScoreFunctionBuilder<?> scoreFunction = null;
             Float functionWeight = null;
             String varName = null;
+            Float noMatchScore = null;
             if (token != XContentParser.Token.START_OBJECT) {
                 throw new ParsingException(parser.getTokenLocation(),
                         "failed to parse [{}]. malformed query, expected a [{}] while parsing functions but got a [{}] instead",
@@ -685,6 +698,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                             functionWeight = parser.floatValue();
                         } else if (parseContext.getParseFieldMatcher().match(currentFieldName, VAR_NAME_FIELD)) {
                             varName = parser.text();
+                        } else if (parseContext.getParseFieldMatcher().match(currentFieldName, NO_MATCH_SCORE_FIELD)) {
+                            noMatchScore = parser.floatValue();
                         } else {
                             throw new ParsingException(parser.getTokenLocation(), "failed to parse [{}] query. field [{}] is not supported",
                                     NAME, currentFieldName);
@@ -706,7 +721,7 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                 throw new ParsingException(parser.getTokenLocation(),
                         "failed to parse [{}] query. an entry in functions list is missing a function.", NAME);
             }
-            filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(filter, scoreFunction, varName));
+            filterFunctionBuilders.add(new FunctionScoreQueryBuilder.FilterFunctionBuilder(filter, scoreFunction, varName, noMatchScore));
         }
         return currentFieldName;
     }
