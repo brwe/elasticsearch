@@ -461,6 +461,9 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             if (varName != null) {
                 builder.field(VAR_NAME_FIELD.getPreferredName(), varName);
             }
+            if (noMatchScore != null) {
+                builder.field(NO_MATCH_SCORE_FIELD.getPreferredName(), noMatchScore);
+            }
             builder.endObject();
             return builder;
         }
