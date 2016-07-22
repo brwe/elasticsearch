@@ -98,7 +98,8 @@ public class FunctionScoreQueryBuilderTests extends AbstractQueryTestCase<Functi
                     if (randomIntBetween(0,1) == 1) {
                         noMatchScore = 1.0f;
                     }
-                    functions[i] = new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction(), varName, noMatchScore);
+                    functions[i] = new FilterFunctionBuilder(RandomQueryBuilder.createQuery(random()), randomScoreFunction(), varName,
+                        noMatchScore);
                 }
                 if (randomBoolean()) {
                     Map<String, Object> params = Collections.emptyMap();
