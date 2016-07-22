@@ -333,7 +333,7 @@ public class FiltersFunctionScoreQuery extends Query {
                         scoreModeExplanation += ":" + ((ExplainableSearchScript) leafScript).explain(expl).toString();
 
                     } else {
-                        double scoreModeScore = leafScript.runAsDouble();
+                        double scoreModeScore = scorer.getScriptFactor(doc, expl.getValue());
                         String explanation = ":\"" + scoreScript.sScript + "\"";
                         if (scoreScript.sScript.getParams() != null) {
                             explanation += " and parameters: \n" + scoreScript.sScript.getParams().toString();
@@ -439,19 +439,7 @@ public class FiltersFunctionScoreQuery extends Query {
                     }
                     break;
                 case SCRIPT:
-                    for (int i = 0; i < filterFunctions.length; i++) {
-                        if (docSets[i].get(docId)) {
-                            scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
-                        } else if (filterFunctions[i].noMatchScore != null) {
-                            scoreScript.setNextVar(filterFunctions[i].varName,filterFunctions[i].noMatchScore);
-                        } else {
-                            scoreScript.setNextVar(filterFunctions[i].varName, FilterFunction.DEFAULT_NO_MATCH_SCORE);
-                        }
-                    }
-                    scoreScript.setDocument(docId);
-                    cannedScorer.docid = docId;
-                    cannedScorer.score = subQueryScore;
-                    factor = scoreScript.runAsDouble();
+                    factor = getScriptFactor(docId, subQueryScore);
                     break;
                 default: // Avg / Total
                     double totalFactor = 0.0f;
@@ -474,6 +462,24 @@ public class FiltersFunctionScoreQuery extends Query {
                     }
                     break;
             }
+            return factor;
+        }
+
+        double getScriptFactor(int docId, float subQueryScore) {
+            double factor;
+            for (int i = 0; i < filterFunctions.length; i++) {
+                if (docSets[i].get(docId)) {
+                    scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
+                } else if (filterFunctions[i].noMatchScore != null) {
+                    scoreScript.setNextVar(filterFunctions[i].varName,filterFunctions[i].noMatchScore);
+                } else {
+                    scoreScript.setNextVar(filterFunctions[i].varName, FilterFunction.DEFAULT_NO_MATCH_SCORE);
+                }
+            }
+            scoreScript.setDocument(docId);
+            cannedScorer.docid = docId;
+            cannedScorer.score = subQueryScore;
+            factor = scoreScript.runAsDouble();
             return factor;
         }
     }
