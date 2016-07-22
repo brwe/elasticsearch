@@ -300,26 +300,13 @@ public class FiltersFunctionScoreQuery extends Query {
                 return expl;
             }
             // First: Gather explanations for all filters
-            List<Explanation> filterExplanations = new ArrayList<>();
-            for (int i = 0; i < filterFunctions.length; ++i) {
-                Bits docSet = Lucene.asSequentialAccessBits(context.reader().maxDoc(),
-                    filterWeights[i].scorer(context));
-                if (docSet.get(doc)) {
-                    FilterFunction filterFunction = filterFunctions[i];
-                    Explanation functionExplanation = filterFunction.function.getLeafScoreFunction(context).explainScore(doc, expl);
-                    double factor = functionExplanation.getValue();
-                    float sc = CombineFunction.toFloat(factor);
-                    Explanation filterExplanation = Explanation.match(sc, "function score" + (scoreMode.equals(ScoreMode.SCRIPT) ?
-                            " (var_name: " + filterFunction.varName + ")" : "") + ", product of:",
-                        Explanation.match(1.0f, "match filter: " + filterFunction.filter.toString()),
-                        functionExplanation);
-                    filterExplanations.add(filterExplanation);
-                    if (scoreMode.equals(ScoreMode.SCRIPT)) {
-                        leafScript.setNextVar(filterFunction.varName, filterExplanation.getValue());
-                    }
-                }
-            }
+            List<Explanation> filterExplanations = getFilterFunctionsExplanations(context, doc, leafScript, expl);
 
+            expl = getFunctionScoreExplanation(context, doc, leafScript, expl, filterExplanations);
+            return expl;
+        }
+
+        private Explanation getFunctionScoreExplanation(LeafReaderContext context, int doc, LeafSearchScript leafScript, Explanation expl, List<Explanation> filterExplanations) throws IOException {
             if (filterExplanations.size() > 0) {
                 FiltersFunctionFactorScorer scorer = functionScorer(context);
                 double score = scorer.computeScore(doc, expl.getValue());
@@ -355,6 +342,35 @@ public class FiltersFunctionScoreQuery extends Query {
                 expl = Explanation.noMatch("Score value is too low, expected at least " + minScore + " but got " + expl.getValue(), expl);
             }
             return expl;
+        }
+
+        private List<Explanation> getFilterFunctionsExplanations(LeafReaderContext context, int doc, LeafSearchScript leafScript,
+                                                                 Explanation expl) throws IOException {
+            List<Explanation> filterExplanations = new ArrayList<>();
+            for (int i = 0; i < filterFunctions.length; ++i) {
+                // figure out if it matches or not
+                Bits docSet = Lucene.asSequentialAccessBits(context.reader().maxDoc(),
+                    filterWeights[i].scorer(context));
+                if (docSet.get(doc)) {
+                    FilterFunction filterFunction = filterFunctions[i];
+                    Explanation functionExplanation = filterFunction.function.getLeafScoreFunction(context).explainScore(doc, expl);
+                    double factor = functionExplanation.getValue();
+                    float sc = CombineFunction.toFloat(factor);
+                    Explanation filterExplanation = Explanation.match(sc, "function score" + (scoreMode.equals(ScoreMode.SCRIPT) ?
+                            " (var_name: " + filterFunction.varName + ")" : "") + ", product of:",
+                        Explanation.match(1.0f, "match filter: " + filterFunction.filter.toString()),
+                        functionExplanation);
+                    filterExplanations.add(filterExplanation);
+                    if (scoreMode.equals(ScoreMode.SCRIPT)) {
+                        leafScript.setNextVar(filterFunction.varName, filterExplanation.getValue());
+                    }
+                } else if (filterFunctions[i].noMatchScore != null) {
+                    filterExplanations.add(Explanation.match(filterFunctions[i].noMatchScore, "no_match_score" + (filterFunctions[i]
+                        .varName != null ? "(var_name: " + filterFunctions[i].varName + ")" : "") + filterFunctions[i].noMatchScore
+                        + " (filter did not match)"));
+                }
+            }
+            return filterExplanations;
         }
     }
 
