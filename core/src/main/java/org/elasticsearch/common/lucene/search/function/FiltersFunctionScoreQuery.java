@@ -138,8 +138,6 @@ public class FiltersFunctionScoreQuery extends Query {
 
         public LeafSearchScript getLeafSearchScript(LeafReaderContext context) throws IOException {
             LeafSearchScript leafSearchScript = script.getLeafSearchScript(context);
-            final CannedScorer scorer = new CannedScorer();
-            leafSearchScript.setScorer(scorer);
             return leafSearchScript;
         }
     }
