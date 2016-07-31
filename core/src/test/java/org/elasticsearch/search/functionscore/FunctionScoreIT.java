@@ -143,45 +143,6 @@ public class FunctionScoreIT extends ESIntegTestCase {
         assertThat(response.getHits().getAt(0).score(), equalTo(4.5f));
     }
 
-    public void testFunctionScoreWithScoreScriptAndWithNoMatchDefault() throws IOException {
-        Float noMatchScore = null;
-        assertAcked(prepareCreate("test").addMapping(
-            "type1",
-            jsonBuilder()
-                .startObject()
-                .startObject("type1")
-                .startObject("properties")
-                .startObject("test")
-                .field("type", "string")
-                .endObject()
-                .endObject()
-                .endObject()
-                .endObject()
-        ).get());
-        ensureYellow();
-
-        client().prepareIndex("test", "type1", "1").setSource("test", "sometoken").get();
-
-        refresh();
-
-        Map<String, Object> params = new HashMap<>();
-        Script script = new Script("custom", ScriptService.ScriptType.INLINE, NativeScriptEngineService.NAME, params);
-
-        FilterFunctionBuilder[] functionBuilders = new FilterFunctionBuilder[]{
-            new FilterFunctionBuilder(termQuery("test","someothertoken"), weightFactorFunction(7f), "alpha", noMatchScore),
-            new FilterFunctionBuilder(matchAllQuery(), weightFactorFunction(2f), "beta", noMatchScore),
-        };
-
-        QueryBuilder queryBuilder = functionScoreQuery(matchAllQuery(), functionBuilders, script).scoreMode(ScoreMode.SCRIPT);
-
-        SearchResponse response = client().prepareSearch("test")
-            .setExplain(randomBoolean())
-            .setQuery(queryBuilder)
-            .get();
-        assertSearchResponse(response);
-        assertThat(response.getHits().getAt(0).score(), equalTo(0.0f));
-    }
-
     public static class CustomNativeScriptFactory implements NativeScriptFactory {
         public static class TestPlugin extends Plugin implements ScriptPlugin {
             @Override

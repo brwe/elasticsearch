@@ -59,7 +59,6 @@ public class FiltersFunctionScoreQuery extends Query {
         public final ScoreFunction function;
         public final String varName;
         public final Float noMatchScore;
-        public static final Float DEFAULT_NO_MATCH_SCORE = 0.0f;
 
         public FilterFunction(Query filter, ScoreFunction function) {
             this(filter, function, null, null);
@@ -486,8 +485,6 @@ public class FiltersFunctionScoreQuery extends Query {
                     scoreScript.setNextVar(filterFunctions[i].varName, functions[i].score(docId, subQueryScore));
                 } else if (filterFunctions[i].noMatchScore != null) {
                     scoreScript.setNextVar(filterFunctions[i].varName,filterFunctions[i].noMatchScore);
-                } else {
-                    scoreScript.setNextVar(filterFunctions[i].varName, FilterFunction.DEFAULT_NO_MATCH_SCORE);
                 }
             }
             scoreScript.setDocument(docId);

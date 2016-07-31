@@ -59,6 +59,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 
 /**
@@ -86,6 +88,8 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
 
     public static final CombineFunction DEFAULT_BOOST_MODE = CombineFunction.MULTIPLY;
     public static final FiltersFunctionScoreQuery.ScoreMode DEFAULT_SCORE_MODE = FiltersFunctionScoreQuery.ScoreMode.MULTIPLY;
+
+    public static final Pattern varNamePattern = Pattern.compile("^([A-Za-z][A-Za-z0-9_]*)$");
 
     private final QueryBuilder query;
 
@@ -631,6 +635,35 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
             query = new MatchAllQueryBuilder();
         }
 
+        if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
+            if (scoreScript == null) {
+                throw new ParsingException(null,
+                    "failed to parse [{}] query. if [{}] is [{}] then a script must be specified in the [{}] field.",
+                    NAME, SCORE_MODE_FIELD, FiltersFunctionScoreQuery.ScoreMode.SCRIPT, SCORE_SCRIPT_FIELD);
+            }
+            for (FunctionScoreQueryBuilder.FilterFunctionBuilder filterFunctionBuilder: filterFunctionBuilders) {
+                if (filterFunctionBuilder.getVarName() == null) {
+                    throw new ParsingException(null,
+                        "failed to parse [{}] query. if [{}] is [{}] then a [{}] must be specified for each function.",
+                        NAME, SCORE_MODE_FIELD, FiltersFunctionScoreQuery.ScoreMode.SCRIPT, VAR_NAME_FIELD);
+                }
+            }
+        } else {
+            if (scoreScript != null) {
+                throw new ParsingException(null,
+                    "failed to parse [{}] query. [{}] may only be specified for [{} = {}].",
+                    NAME, SCORE_SCRIPT_FIELD, SCORE_MODE_FIELD,
+                    FiltersFunctionScoreQuery.ScoreMode.SCRIPT);
+            }
+            for (FunctionScoreQueryBuilder.FilterFunctionBuilder filterFunctionBuilder: filterFunctionBuilders) {
+                if (filterFunctionBuilder.getNoMatchScore() != null) {
+                    throw new ParsingException(null,
+                        "failed to parse [{}] query. [{}] may only be specified when [{} = {}].",
+                        NAME, NO_MATCH_SCORE_FIELD, SCORE_MODE_FIELD, FiltersFunctionScoreQuery.ScoreMode.SCRIPT);
+                }
+            }
+        }
+
         FunctionScoreQueryBuilder functionScoreQueryBuilder = new FunctionScoreQueryBuilder(query,
             filterFunctionBuilders.toArray(new FunctionScoreQueryBuilder.FilterFunctionBuilder[filterFunctionBuilders.size()]),
             scoreScript);
@@ -644,17 +677,6 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
         }
         functionScoreQueryBuilder.boost(boost);
         functionScoreQueryBuilder.queryName(queryName);
-
-        if (scoreMode == FiltersFunctionScoreQuery.ScoreMode.SCRIPT && scoreScript == null) {
-            throw new ParsingException(parser.getTokenLocation(),
-                "if [{}] is [{}] then a script must be specified in the [{}] field.",
-                SCORE_MODE_FIELD, FiltersFunctionScoreQuery.ScoreMode.SCRIPT, SCORE_SCRIPT_FIELD);
-        }
-        if (scoreScript != null && scoreMode != FiltersFunctionScoreQuery.ScoreMode.SCRIPT) {
-            throw new ParsingException(parser.getTokenLocation(),
-                "a [{}] may only be specified for [{} = {}].", SCORE_SCRIPT_FIELD, SCORE_MODE_FIELD,
-                FiltersFunctionScoreQuery.ScoreMode.SCRIPT);
-        }
 
         return Optional.of(functionScoreQueryBuilder);
     }
@@ -701,6 +723,13 @@ public class FunctionScoreQueryBuilder extends AbstractQueryBuilder<FunctionScor
                             functionWeight = parser.floatValue();
                         } else if (parseContext.getParseFieldMatcher().match(currentFieldName, VAR_NAME_FIELD)) {
                             varName = parser.text();
+                            Matcher matcher = varNamePattern.matcher(varName);
+                            if (!matcher.matches()) {
+                                throw new ParsingException(parser.getTokenLocation(),
+                                    "failed to parse [{}] query. [var_name] must be must only contain letters, numbers, " +
+                                    "or underscore and must start with a letter.",
+                                    NAME, currentFieldName);
+                            }
                         } else if (parseContext.getParseFieldMatcher().match(currentFieldName, NO_MATCH_SCORE_FIELD)) {
                             noMatchScore = parser.floatValue();
                         } else {
