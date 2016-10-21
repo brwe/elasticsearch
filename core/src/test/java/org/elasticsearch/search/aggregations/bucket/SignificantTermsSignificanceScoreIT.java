@@ -20,6 +20,8 @@ package org.elasticsearch.search.aggregations.bucket;
 
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.Settings;
@@ -50,6 +52,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.support.XContentParseContext;
 import org.elasticsearch.test.ESIntegTestCase;
+import org.elasticsearch.test.client.RandomizingClient;
 import org.elasticsearch.test.search.aggregations.bucket.SharedSignificantTermsTestMethods;
 
 import java.io.IOException;
@@ -487,7 +490,9 @@ public class SignificantTermsSignificanceScoreIT extends ESIntegTestCase {
     public void testScriptScore() throws ExecutionException, InterruptedException, IOException {
         indexRandomFrequencies01(randomBoolean() ? "text" : "long");
         ScriptHeuristic scriptHeuristic = getScriptSignificanceHeuristic();
-        SearchResponse response = client().prepareSearch(INDEX_NAME)
+        Client client = client();
+        logger.info("{}", client.admin().cluster().prepareState().get().getState().prettyPrint());
+        SearchResponse response = client.prepareSearch(INDEX_NAME)
                 .addAggregation(terms("class").field(CLASS_FIELD)
                         .subAggregation(significantTerms("mySignificantTerms")
                         .field(TEXT_FIELD)

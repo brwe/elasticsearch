@@ -21,6 +21,8 @@
 package org.elasticsearch.search.aggregations.bucket.significant.heuristics;
 
 
+import org.apache.logging.log4j.message.ParameterizedMessage;
+import org.apache.logging.log4j.util.Supplier;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -39,6 +41,11 @@ import org.elasticsearch.search.internal.SearchContext;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static java.lang.Thread.sleep;
 
 public class ScriptHeuristic extends SignificanceHeuristic {
     public static final String NAME = "script_heuristic";
@@ -49,6 +56,9 @@ public class ScriptHeuristic extends SignificanceHeuristic {
     private final LongAccessor supersetDfHolder;
     private final Script script;
     ExecutableScript executableScript = null;
+    final AtomicBoolean initializing = new AtomicBoolean(false);
+
+    private final String uuid;
 
     public ScriptHeuristic(Script script) {
         subsetSizeHolder = new LongAccessor();
@@ -56,6 +66,10 @@ public class ScriptHeuristic extends SignificanceHeuristic {
         subsetDfHolder = new LongAccessor();
         supersetDfHolder = new LongAccessor();
         this.script = script;
+        uuid = UUID.randomUUID().toString();
+        ESLoggerFactory.getLogger("script heuristic")
+            .info((Supplier<?>) () -> new ParameterizedMessage("ctor [{}]", uuid), new Exception());
+
     }
 
     /**
@@ -72,20 +86,40 @@ public class ScriptHeuristic extends SignificanceHeuristic {
 
     @Override
     public void initialize(InternalAggregation.ReduceContext context) {
-        initialize(context.scriptService().executable(script, ScriptContext.Standard.AGGS, Collections.emptyMap()));
+        initialize(context.scriptService().executable(script, ScriptContext.Standard.AGGS, Collections.emptyMap()), "no shard, reduce " +
+            "context");
     }
 
     @Override
     public void initialize(SearchContext context) {
-        initialize(context.getQueryShardContext().getExecutableScript(script, ScriptContext.Standard.AGGS, Collections.emptyMap()));
+        initialize(context.getQueryShardContext().getExecutableScript(script, ScriptContext.Standard.AGGS, Collections.emptyMap()),
+            context.indexShard().shardId().toString());
     }
 
-    public void initialize(ExecutableScript executableScript) {
+    public void initialize(ExecutableScript executableScript, String shard) {
+        initializing.set(true);
+        ESLoggerFactory.getLogger("script heuristic")
+            .info((Supplier<?>) () -> new ParameterizedMessage("initializing [{}] on shard {}", uuid, shard), new Exception());
+
+
+
         executableScript.setNextVar("_subset_freq", subsetDfHolder);
         executableScript.setNextVar("_subset_size", subsetSizeHolder);
         executableScript.setNextVar("_superset_freq", supersetDfHolder);
         executableScript.setNextVar("_superset_size", supersetSizeHolder);
+
+
+        try {
+            sleep(1000);
+        } catch (InterruptedException e) {
+
+
+        }
+
         this.executableScript = executableScript;
+        ESLoggerFactory.getLogger("script heuristic").info("end initialize {}", uuid);
+        initializing.set(false);
+
     }
 
     /**
@@ -99,6 +133,17 @@ public class ScriptHeuristic extends SignificanceHeuristic {
      */
     @Override
     public double getScore(long subsetFreq, long subsetSize, long supersetFreq, long supersetSize) {
+        boolean concurrentlyInitializing = initializing.get();
+        if (concurrentlyInitializing == true) {
+            try {
+                ESLoggerFactory.getLogger("script heuristic")
+                    .info((Supplier<?>) () -> new ParameterizedMessage("get score [{}]", uuid), new Exception());
+            } catch (NullPointerException e) {
+                ESLoggerFactory.getLogger("script heuristic").info("uuid was null");
+            }
+            assert(concurrentlyInitializing == false);
+        }
+
         if (executableScript == null) {
             //In tests, wehn calling assertSearchResponse(..) the response is streamed one additional time with an arbitrary version, see assertVersionSerializable(..).
             // Now, for version before 1.5.0 the score is computed after streaming the response but for scripts the script does not exists yet.
